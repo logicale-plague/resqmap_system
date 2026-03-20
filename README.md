@@ -2,6 +2,20 @@
 
 A mobile, offline-first disaster management system that helps evacuation centers track capacity, manage evacuees, monitor medical supplies, and coordinate with responders, while syncing data to authorities once connectivity is restored.
 
+==============================================================================================
+
+## Developer Roles:
+### Logicale-Plague
+- Improve app functionality and runtime, app testing
+### Maruuu
+- Integration of offline maps, locators, AI
+### way2donatt / Ozanii
+- Frontend / improve UI UX for priority 1
+### banm1do
+- Pitch
+
+==============================================================================================
+
 ## Development Priority Order:
 
 ### Priority 1
@@ -10,6 +24,9 @@ A mobile, offline-first disaster management system that helps evacuation centers
 - Registration (name (optional), age group, medical flag (yes/no))
 - Offline storage
 - Synchronization when online (with resolving conflicts)
+- Smart predictions
+- Visual analytics
+- Minimal UI
 
 ### Priority 2
 - Local sharing
@@ -21,9 +38,6 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ### Priority 4
 - Mesh networking
-- Smart predictions
-- Minimal UI
-- Visual analytics
 
 ==============================================================================================
 
@@ -36,9 +50,6 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ### Command Center ---------------------------------- (Priority 1)
 - Receive synced 
-
-### Data Carrier Personnel (drivers, personnel) ----- (Priority 2)
-- Shares evacuation center information from place to place
 
 ### Evacuees / Public users ------------------------- (Priority 2)
 - Find evacuation centers (offline maps)
@@ -55,11 +66,11 @@ A mobile, offline-first disaster management system that helps evacuation centers
 ### Offline Evacuation Center Locator
 - Uses GPS + offline maps						(1)
 - Shows capacity status							(1)
-- Share information (from another center)		(2)
+- Share information (from another center)		(1)
 
 ### Smart Capacity Tracking
 - Auto-calculate occupancy						(1)
-- Overcrowding risk prediction					(4)
+- Overcrowding risk prediction					(1)
 
 ### Offline registration system
 - Assigns each evacuee:							(1)
@@ -78,10 +89,10 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ### Medical Supply Tracking
 - Tracks stock levels, usage rate				(3)
-- Estimates days remaining						(4)
+- Estimates days remaining						(1)
 
 ### Supply Prediction System
-- Predict needs using:							(4)
+- Predict needs using:							(1)
 	- number of evacuees
 	- age groups
 	- common post-disaster diseases
@@ -105,15 +116,8 @@ A mobile, offline-first disaster management system that helps evacuation centers
 	- Age group (child, adult, elderly)
 	- Medical condition (none, minor, serious)
 	- Save (offline)
-- Sharing Screen
-	- Toggle enable local sharing
-	- Shows connected devices
-- Alert Screen
-	- Warning (e.g. "90% CAPACITY REACHED")
-	- Button (sends alerts to nearby users)
 - Sync Screen
 	- Status (offline / synced)
-	- Get recent information of other centers
 	- Button (upload to command center)
 
 ### Command Center (Priority 1)
@@ -121,8 +125,6 @@ A mobile, offline-first disaster management system that helps evacuation centers
 	- Total evacuation centers
 	- Overcrowded centers
 	- Supply shortages
-- Heat Map Screen
-	- Centers with capacity indicators
 - Resource Monitoring
 	- Monitors centers' medicine supplies and capacity
 
