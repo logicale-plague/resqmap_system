@@ -1,8 +1,8 @@
-# kalig_onan_evac_system
+### Kalig-Onan Evacuation Center System
 
 A mobile, offline-first disaster management system that helps evacuation centers track capacity, manage evacuees, monitor medical supplies, and coordinate with responders, while syncing data to authorities once connectivity is restored.
 
-### Development Priority Order:
+## Development Priority Order:
 
 # Priority 1
 - Locator (offline preloaded maps, GPS-based positioning)
@@ -27,7 +27,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ==============================================================================================
 
-### Users:
+## Users:
 
 # Evacuation Center Personnel --------------------- (Priority 1)
 - Manage evacuees
@@ -50,7 +50,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ==============================================================================================
 
-### Core Features:
+## Core Features:
 
 # Offline Evacuation Center Locator
 - Uses GPS + offline maps						(1)
@@ -92,7 +92,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ==============================================================================================
 
-### What the users should see
+## What the users should see
 
 # Evacuation Center Staff (Priority 1)
 - Dashboard Screen
