@@ -1,0 +1,31 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/evacuee.dart';
+import 'database_provider.dart';
+
+final allEvacueesProvider = FutureProvider<List<Evacuee>>((ref) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getAllEvacuees();
+});
+
+final evacueeCountProvider = FutureProvider<int>((ref) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getEvacueeCount();
+});
+
+final unsyncedEvacueesProvider = FutureProvider<List<Evacuee>>((ref) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getUnsyncedEvacuees();
+});
+
+final evacueeProvider = FutureProvider.family<Evacuee?, String>((
+  ref,
+  id,
+) async {
+  final db = ref.watch(databaseServiceProvider);
+  final evacuees = await db.getAllEvacuees();
+  try {
+    return evacuees.firstWhere((e) => e.id == id);
+  } catch (e) {
+    return null;
+  }
+});
