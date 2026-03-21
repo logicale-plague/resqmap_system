@@ -5,20 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:kalig_onan_evac_system/core/utils/router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/index.dart';
 import 'services/database_service.dart';
 import 'services/id_service.dart';
 import 'models/index.dart';
-
-final _routes = {
-  '/dashboard': (context) => const DashboardScreen(),
-  '/register': (context) => const RegistrationScreen(),
-  '/evacuees': (context) => const EvacueesScreen(),
-  '/alerts': (context) => const AlertsScreen(),
-  '/supplies': (context) => const SuppliesScreen(),
-  '/sync': (context) => const SyncScreen(),
-};
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,8 +57,8 @@ Future<void> _initializeSampleData() async {
       name: 'Community Center - Downtown',
       latitude: 14.5995,
       longitude: 120.9842,
-      totalCapacity: 500,
-      currentOccupancy: 150,
+      totalCapacity: 0,
+      currentOccupancy: 0,
       status: CenterStatus.operational,
       medicalAvailable: true,
       lastUpdated: DateTime.now(),
@@ -75,6 +66,40 @@ Future<void> _initializeSampleData() async {
     );
 
     await db.insertEvacuationCenter(sampleCenter);
+
+    final stations = [
+      Station(
+        id: IdService.newId(),
+        name: 'Station A - General',
+        evacuationCenterId: sampleCenter.id,
+        capacity: 200,
+      ),
+      Station(
+        id: IdService.newId(),
+        name: 'Station B - Children',
+        evacuationCenterId: sampleCenter.id,
+        capacity: 120,
+        allowedAgeGroup: AgeGroup.child,
+      ),
+      Station(
+        id: IdService.newId(),
+        name: 'Station C - Elderly Care',
+        evacuationCenterId: sampleCenter.id,
+        capacity: 90,
+        allowedAgeGroup: AgeGroup.elderly,
+      ),
+      Station(
+        id: IdService.newId(),
+        name: 'Station D - Serious Medical',
+        evacuationCenterId: sampleCenter.id,
+        capacity: 70,
+        allowedMedicalCondition: MedicalCondition.serious,
+      ),
+    ];
+
+    for (final station in stations) {
+      await db.insertStation(station);
+    }
 
     // Add sample supplies
     final supplies = [
@@ -112,7 +137,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Kalig Onan Evacuation System',
       theme: ThemeData(
@@ -131,8 +156,7 @@ class MainApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.light,
-      home: const DashboardScreen(),
-      routes: _routes,
+      routerConfig: router,
     );
   }
 }

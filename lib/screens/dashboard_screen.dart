@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/feature/maps_page.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
+import 'widgets/screen_components.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -42,6 +44,15 @@ class DashboardScreen extends ConsumerWidget {
     EvacuationCenter center,
     int evacueeCount,
   ) {
+    final safeCapacity = center.totalCapacity;
+    final availableSpaces = (safeCapacity - evacueeCount).clamp(
+      0,
+      safeCapacity,
+    );
+    final occupancyRate = safeCapacity == 0
+        ? 0.0
+        : (evacueeCount / safeCapacity * 100);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -78,7 +89,7 @@ class DashboardScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _buildInfoCard(
+                child: MetricCard(
                   title: 'Total Capacity',
                   value: center.totalCapacity.toString(),
                   icon: Icons.people,
@@ -86,7 +97,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildInfoCard(
+                child: MetricCard(
                   title: 'Current Occupancy',
                   value: evacueeCount.toString(),
                   icon: Icons.group,
@@ -100,19 +111,18 @@ class DashboardScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _buildInfoCard(
+                child: MetricCard(
                   title: 'Available Spaces',
-                  value: (center.totalCapacity - evacueeCount).toString(),
+                  value: availableSpaces.toString(),
                   icon: Icons.chair,
                   color: Colors.green,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildInfoCard(
+                child: MetricCard(
                   title: 'Occupancy Rate',
-                  value:
-                      '${(evacueeCount / center.totalCapacity * 100).toStringAsFixed(1)}%',
+                  value: '${occupancyRate.toStringAsFixed(1)}%',
                   icon: Icons.trending_up,
                 ),
               ),
@@ -151,14 +161,11 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             children: [
-              _buildActionButton(
+              QuickActionButton(
                 icon: Icons.add_circle_outline,
                 label: 'Add Evacuee',
                 onPressed: () async {
-                  final result = await Navigator.pushNamed(
-                    context,
-                    '/register',
-                  );
+                  final result = await context.push('/register');
                   if (result == true && context.mounted) {
                     ref.invalidate(currentCenterProvider);
                     ref.invalidate(evacueeCountProvider);
@@ -166,43 +173,43 @@ class DashboardScreen extends ConsumerWidget {
                 },
                 color: Colors.green,
               ),
-              _buildActionButton(
+              QuickActionButton(
                 icon: Icons.remove_circle_outline,
                 label: 'Remove Evacuee',
                 onPressed: () => _removeEvacuee(context, ref),
                 color: Colors.red,
               ),
-              _buildActionButton(
+              QuickActionButton(
                 icon: Icons.medical_services,
                 label: 'Supplies',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/supplies');
+                  context.push('/supplies');
                 },
                 color: Colors.blue,
               ),
-              _buildActionButton(
-                icon: Icons.notifications,
-                label: 'Alerts',
+              QuickActionButton(
+                icon: Icons.meeting_room,
+                label: 'Stations',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/alerts');
+                  context.push('/stations');
                 },
                 color: Colors.orange,
               ),
-              _buildActionButton(
+              QuickActionButton(
                 icon: Icons.people,
                 label: 'Evacuees',
                 onPressed: () async {
-                  await Navigator.pushNamed(context, '/evacuees');
+                  await context.push('/evacuees');
                   ref.invalidate(currentCenterProvider);
                   ref.invalidate(evacueeCountProvider);
                 },
                 color: Colors.purple,
               ),
-              _buildActionButton(
+              QuickActionButton(
                 icon: Icons.sync,
                 label: 'Sync',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/sync');
+                  context.push('/sync');
                 },
                 color: Colors.teal,
               ),
@@ -299,70 +306,5 @@ class DashboardScreen extends ConsumerWidget {
       case CenterStatus.closed:
         return 'CLOSED';
     }
-  }
-
-  Widget _buildInfoCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    Color color = Colors.blue,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required Color color,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
   }
 }

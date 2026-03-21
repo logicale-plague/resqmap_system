@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
+import 'widgets/screen_components.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -12,8 +13,6 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 }
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
-  final _nameController = TextEditingController();
-
   AgeGroup? _selectedAgeGroup;
   MedicalCondition? _selectedMedicalCondition;
   bool _isSubmitting = false;
@@ -23,12 +22,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     super.initState();
     _selectedAgeGroup = AgeGroup.adult;
     _selectedMedicalCondition = MedicalCondition.none;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
   }
 
   Future<void> _submitForm() async {
@@ -43,9 +36,27 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
     try {
       final db = ref.read(databaseServiceProvider);
+      final center = await db.getCurrentCenter();
+      if (center == null) {
+        throw Exception('No evacuation center assigned');
+      }
+
+      final eligibleStations = await db.getEligibleStations(
+        centerId: center.id,
+        ageGroup: _selectedAgeGroup!,
+        medicalCondition: _selectedMedicalCondition!,
+      );
+
+      if (eligibleStations.isEmpty) {
+        throw Exception('No eligible station available for this evacuee');
+      }
+
+      final assignedStation = eligibleStations.first;
+
       final evacuee = Evacuee(
         id: IdService.newId(),
-        name: _nameController.text.isEmpty ? null : _nameController.text,
+        name: null,
+        stationId: assignedStation.id,
         ageGroup: _selectedAgeGroup!,
         medicalCondition: _selectedMedicalCondition!,
         registeredAt: DateTime.now(),
@@ -57,12 +68,17 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Evacuee registered successfully')),
+        SnackBar(
+          content: Text(
+            'Arrival logged. Assigned to ${assignedStation.name}. Register name in Stations screen.',
+          ),
+        ),
       );
 
       // Refresh the providers
       ref.invalidate(allEvacueesProvider);
       ref.invalidate(evacueeCountProvider);
+      ref.invalidate(unnamedEvacueesByStationProvider(assignedStation.id));
 
       Navigator.pop(context, true);
     } catch (e) {
@@ -77,6 +93,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final centerAsync = ref.watch(currentCenterProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register Evacuee'),
@@ -87,20 +105,16 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Name Field
-            Text(
-              'Name (Optional)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'Enter evacuee name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                prefixIcon: const Icon(Icons.person),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                border: Border.all(color: Colors.blue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Arrival Intake: Select age group and condition. The system will auto-assign a station and create an unnamed evacuee record.',
               ),
             ),
             const SizedBox(height: 28),
@@ -116,34 +130,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               crossAxisSpacing: 12,
               children: AgeGroup.values.map((ageGroup) {
                 final isSelected = _selectedAgeGroup == ageGroup;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedAgeGroup = ageGroup),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.blue : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? Colors.blue : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _getAgeGroupIcon(ageGroup),
-                        const SizedBox(height: 8),
-                        Text(
-                          ageGroup.name.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
+                return SelectableOptionCard(
+                  isSelected: isSelected,
+                  onTap: () => setState(() {
+                    _selectedAgeGroup = ageGroup;
+                  }),
+                  icon: _getAgeGroupIcon(ageGroup),
+                  label: ageGroup.name.toUpperCase(),
+                  selectedColor: Colors.blue,
                 );
               }).toList(),
             ),
@@ -163,37 +157,96 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               crossAxisSpacing: 12,
               children: MedicalCondition.values.map((condition) {
                 final isSelected = _selectedMedicalCondition == condition;
-                return GestureDetector(
-                  onTap: () =>
-                      setState(() => _selectedMedicalCondition = condition),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.orange : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? Colors.orange : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _getMedicalConditionIcon(condition),
-                        const SizedBox(height: 8),
-                        Text(
-                          condition.name.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
+                return SelectableOptionCard(
+                  isSelected: isSelected,
+                  onTap: () => setState(() {
+                    _selectedMedicalCondition = condition;
+                  }),
+                  icon: _getMedicalConditionIcon(condition),
+                  label: condition.name.toUpperCase(),
+                  selectedColor: Colors.orange,
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 28),
+
+            Text(
+              'Station Assignment',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            centerAsync.when(
+              data: (center) {
+                if (center == null ||
+                    _selectedAgeGroup == null ||
+                    _selectedMedicalCondition == null) {
+                  return const Text(
+                    'Select age group and medical condition to preview auto-assigned stations.',
+                  );
+                }
+
+                final eligibleStationsAsync = ref.watch(
+                  eligibleStationsProvider((
+                    centerId: center.id,
+                    ageGroup: _selectedAgeGroup!,
+                    medicalCondition: _selectedMedicalCondition!,
+                  )),
+                );
+
+                return eligibleStationsAsync.when(
+                  data: (stations) {
+                    if (stations.isEmpty) {
+                      return const Text(
+                        'No station can accept this age group and medical condition.',
+                      );
+                    }
+
+                    final assignedStation = stations.first;
+
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        border: Border.all(color: Colors.green),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Auto-assigned station:',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(assignedStation.name),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Rule: ${_stationLabel(assignedStation)}',
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(),
+                  ),
+                  error: (err, stack) => Text(
+                    'Error loading stations: $err',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              ),
+              error: (err, stack) => Text(
+                'Error loading center: $err',
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
             const SizedBox(height: 40),
 
@@ -222,7 +275,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                         ),
                       )
                     : const Text(
-                        'REGISTER',
+                        'LOG ARRIVAL',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -234,6 +287,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         ),
       ),
     );
+  }
+
+  String _stationLabel(Station station) {
+    final ageLabel = station.allowedAgeGroup?.name ?? 'Any age group';
+    final medicalLabel =
+        station.allowedMedicalCondition?.name ?? 'Any condition';
+    return '${station.name} ($ageLabel / $medicalLabel)';
   }
 
   Widget _getAgeGroupIcon(AgeGroup ageGroup) {

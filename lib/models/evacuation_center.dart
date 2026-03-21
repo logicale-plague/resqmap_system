@@ -25,8 +25,9 @@ class EvacuationCenter {
     this.synced = false,
   });
 
-  double get occupancyPercentage =>
-      (currentOccupancy / totalCapacity * 100).clamp(0, 100);
+  double get occupancyPercentage => totalCapacity == 0
+      ? 0
+      : (currentOccupancy / totalCapacity * 100).clamp(0, 100);
 
   int get availableSpaces =>
       (totalCapacity - currentOccupancy).clamp(0, totalCapacity);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
+import 'widgets/screen_components.dart';
 
 class EvacueesScreen extends ConsumerWidget {
   const EvacueesScreen({super.key});
@@ -9,6 +10,11 @@ class EvacueesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final evacueesAsync = ref.watch(allEvacueesProvider);
+    final centerAsync = ref.watch(currentCenterProvider);
+    final currentCenter = centerAsync.asData?.value;
+    final stationsAsync = currentCenter == null
+        ? const AsyncValue<List<Station>>.data([])
+        : ref.watch(stationsByCenterProvider(currentCenter.id));
 
     return Scaffold(
       appBar: AppBar(
@@ -17,6 +23,11 @@ class EvacueesScreen extends ConsumerWidget {
       ),
       body: evacueesAsync.when(
         data: (evacuees) {
+          final stationsById = <String, Station>{
+            for (final station in stationsAsync.value ?? [])
+              station.id: station,
+          };
+
           if (evacuees.isEmpty) {
             return Center(
               child: Column(
@@ -65,22 +76,18 @@ class EvacueesScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Chip(
-                            label: Text(_getAgeGroupDisplay(evacuee.ageGroup)),
-                            backgroundColor: Colors.blue[100],
-                            labelStyle: const TextStyle(fontSize: 12),
+                          AppTagChip(
+                            label: _getAgeGroupDisplay(evacuee.ageGroup),
+                            color: Colors.blue[100]!,
                           ),
                           const SizedBox(width: 8),
-                          Chip(
-                            label: Text(
-                              _getMedicalConditionDisplay(
-                                evacuee.medicalCondition,
-                              ),
+                          AppTagChip(
+                            label: _getMedicalConditionDisplay(
+                              evacuee.medicalCondition,
                             ),
-                            backgroundColor: _getMedicalConditionColor(
+                            color: _getMedicalConditionColor(
                               evacuee.medicalCondition,
                             ).withAlpha(80),
-                            labelStyle: const TextStyle(fontSize: 12),
                           ),
                         ],
                       ),
@@ -89,6 +96,18 @@ class EvacueesScreen extends ConsumerWidget {
                         'Registered: ${evacuee.registeredAt.toLocal().toString().substring(0, 16)}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
+                      if (evacuee.stationId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Station: ${stationsById[evacuee.stationId!]?.name ?? 'Unknown'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   trailing: IconButton(
