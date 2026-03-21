@@ -1,6 +1,6 @@
 name: kalig_onan_evac_system
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -17,6 +17,10 @@ dependencies:
   flutter_dotenv: ^6.0.0
   supabase_flutter: ^2.12.0
   flutter_riverpod: ^3.3.1
+  mapbox_maps_flutter: ^2.20.0
+  geolocator: ^14.0.2
+  permission_handler: ^12.0.1
+  location: ^8.0.1
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +31,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/.env
+    - assets/map_icons/
