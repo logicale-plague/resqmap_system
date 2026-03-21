@@ -3,6 +3,7 @@ enum CenterStatus { operational, nearCapacity, atCapacity, closed }
 class EvacuationCenter {
   final String id;
   final String name;
+  final String commandCenterId;
   final double latitude;
   final double longitude;
   final int totalCapacity;
@@ -15,6 +16,7 @@ class EvacuationCenter {
   const EvacuationCenter({
     required this.id,
     required this.name,
+    required this.commandCenterId,
     required this.latitude,
     required this.longitude,
     required this.totalCapacity,
@@ -36,6 +38,7 @@ class EvacuationCenter {
     return {
       'id': id,
       'name': name,
+      'commandCenterId': commandCenterId,
       'latitude': latitude,
       'longitude': longitude,
       'totalCapacity': totalCapacity,
@@ -51,6 +54,11 @@ class EvacuationCenter {
     return EvacuationCenter(
       id: map['id'] as String,
       name: map['name'] as String,
+      commandCenterId:
+          map['commandCenterId'] as String? ??
+          map['commandcenterid'] as String? ??
+          map['command_center_id'] as String? ??
+          'default-command-center',
       latitude: (map['latitude'] as num).toDouble(),
       longitude: (map['longitude'] as num).toDouble(),
       totalCapacity: map['totalCapacity'] as int,
@@ -65,6 +73,7 @@ class EvacuationCenter {
   EvacuationCenter copyWith({
     String? id,
     String? name,
+    String? commandCenterId,
     double? latitude,
     double? longitude,
     int? totalCapacity,
@@ -77,6 +86,7 @@ class EvacuationCenter {
     return EvacuationCenter(
       id: id ?? this.id,
       name: name ?? this.name,
+      commandCenterId: commandCenterId ?? this.commandCenterId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       totalCapacity: totalCapacity ?? this.totalCapacity,
@@ -90,5 +100,5 @@ class EvacuationCenter {
 
   @override
   String toString() =>
-      'EvacuationCenter(id: $id, name: $name, occupancy: $currentOccupancy/$totalCapacity)';
+      'EvacuationCenter(id: $id, name: $name, commandCenterId: $commandCenterId, occupancy: $currentOccupancy/$totalCapacity)';
 }

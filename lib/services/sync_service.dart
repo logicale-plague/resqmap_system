@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../providers/alert_providers.dart';
+import '../providers/evacuation_center_providers.dart';
+import '../providers/evacuee_providers.dart';
+import '../providers/station_providers.dart';
+import '../providers/supply_providers.dart';
 import 'database_service.dart';
 import 'id_service.dart';
 import '../models/index.dart';
@@ -202,6 +207,13 @@ class SyncService {
     final remote = EvacuationCenter(
       id: _readString(row, 'id'),
       name: _readString(row, 'name'),
+      commandCenterId:
+          _readAnyOrNull(
+            row,
+            'commandcenterid',
+            fallback: 'commandCenterId',
+          )?.toString() ??
+          'default-command-center',
       latitude: _readNum(row, 'latitude').toDouble(),
       longitude: _readNum(row, 'longitude').toDouble(),
       totalCapacity: _readNum(
@@ -378,6 +390,7 @@ class SyncService {
     return {
       'id': center.id,
       'name': center.name,
+      'commandcenterid': center.commandCenterId,
       'latitude': center.latitude,
       'longitude': center.longitude,
       'totalcapacity': center.totalCapacity,

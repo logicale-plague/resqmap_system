@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/database_service.dart';
 import 'services/id_service.dart';
 import 'models/index.dart';
+import 'providers/index.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,7 @@ Future<void> _initializeSampleData() async {
     final sampleCenter = EvacuationCenter(
       id: IdService.newId(),
       name: 'Community Center - Downtown',
+      commandCenterId: 'default-command-center',
       latitude: 14.5995,
       longitude: 120.9842,
       totalCapacity: 0,
