@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
+import 'widgets/screen_components.dart';
 
 class EvacueesScreen extends ConsumerWidget {
   const EvacueesScreen({super.key});
@@ -75,22 +76,18 @@ class EvacueesScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Chip(
-                            label: Text(_getAgeGroupDisplay(evacuee.ageGroup)),
-                            backgroundColor: Colors.blue[100],
-                            labelStyle: const TextStyle(fontSize: 12),
+                          AppTagChip(
+                            label: _getAgeGroupDisplay(evacuee.ageGroup),
+                            color: Colors.blue[100]!,
                           ),
                           const SizedBox(width: 8),
-                          Chip(
-                            label: Text(
-                              _getMedicalConditionDisplay(
-                                evacuee.medicalCondition,
-                              ),
+                          AppTagChip(
+                            label: _getMedicalConditionDisplay(
+                              evacuee.medicalCondition,
                             ),
-                            backgroundColor: _getMedicalConditionColor(
+                            color: _getMedicalConditionColor(
                               evacuee.medicalCondition,
                             ).withAlpha(80),
-                            labelStyle: const TextStyle(fontSize: 12),
                           ),
                         ],
                       ),

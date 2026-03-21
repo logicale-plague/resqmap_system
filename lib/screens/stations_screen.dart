@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
+import 'widgets/screen_components.dart';
 
 class StationsScreen extends ConsumerWidget {
   const StationsScreen({super.key});
@@ -91,34 +92,27 @@ class StationsScreen extends ConsumerWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            Chip(
-                              label: Text('Cap: ${station.capacity}'),
-                              backgroundColor: Colors.green[100],
-                              labelStyle: const TextStyle(fontSize: 12),
+                            AppTagChip(
+                              label: 'Cap: ${station.capacity}',
+                              color: Colors.green[100]!,
                             ),
-                            Chip(
-                              label: Text(
-                                '$occupancyCount / ${station.capacity}',
+                            AppTagChip(
+                              label: '$occupancyCount / ${station.capacity}',
+                              color: occupancyColor.withAlpha(60),
+                            ),
+                            AppTagChip(
+                              label: _ageLabel(station.allowedAgeGroup),
+                              color: Colors.blue[100]!,
+                            ),
+                            AppTagChip(
+                              label: _medicalLabel(
+                                station.allowedMedicalCondition,
                               ),
-                              backgroundColor: occupancyColor.withAlpha(60),
-                              labelStyle: const TextStyle(fontSize: 12),
+                              color: Colors.orange[100]!,
                             ),
-                            Chip(
-                              label: Text(_ageLabel(station.allowedAgeGroup)),
-                              backgroundColor: Colors.blue[100],
-                              labelStyle: const TextStyle(fontSize: 12),
-                            ),
-                            Chip(
-                              label: Text(
-                                _medicalLabel(station.allowedMedicalCondition),
-                              ),
-                              backgroundColor: Colors.orange[100],
-                              labelStyle: const TextStyle(fontSize: 12),
-                            ),
-                            Chip(
-                              label: Text('Unnamed: $unnamedCount'),
-                              backgroundColor: Colors.red[100],
-                              labelStyle: const TextStyle(fontSize: 12),
+                            AppTagChip(
+                              label: 'Unnamed: $unnamedCount',
+                              color: Colors.red[100]!,
                             ),
                           ],
                         ),

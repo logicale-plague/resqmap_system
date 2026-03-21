@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
+import 'widgets/screen_components.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -129,36 +130,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               crossAxisSpacing: 12,
               children: AgeGroup.values.map((ageGroup) {
                 final isSelected = _selectedAgeGroup == ageGroup;
-                return GestureDetector(
+                return SelectableOptionCard(
+                  isSelected: isSelected,
                   onTap: () => setState(() {
                     _selectedAgeGroup = ageGroup;
                   }),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.blue : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? Colors.blue : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _getAgeGroupIcon(ageGroup),
-                        const SizedBox(height: 8),
-                        Text(
-                          ageGroup.name.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
+                  icon: _getAgeGroupIcon(ageGroup),
+                  label: ageGroup.name.toUpperCase(),
+                  selectedColor: Colors.blue,
                 );
               }).toList(),
             ),
@@ -178,36 +157,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               crossAxisSpacing: 12,
               children: MedicalCondition.values.map((condition) {
                 final isSelected = _selectedMedicalCondition == condition;
-                return GestureDetector(
+                return SelectableOptionCard(
+                  isSelected: isSelected,
                   onTap: () => setState(() {
                     _selectedMedicalCondition = condition;
                   }),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.orange : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? Colors.orange : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _getMedicalConditionIcon(condition),
-                        const SizedBox(height: 8),
-                        Text(
-                          condition.name.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
+                  icon: _getMedicalConditionIcon(condition),
+                  label: condition.name.toUpperCase(),
+                  selectedColor: Colors.orange,
                 );
               }).toList(),
             ),
