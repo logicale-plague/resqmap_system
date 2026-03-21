@@ -5,13 +5,13 @@ A mobile, offline-first disaster management system that helps evacuation centers
 ==============================================================================================
 
 ## Developer Roles:
-### Logicale-Plague
+### Logicale-Plague (Ramos)
 - Improve app functionality and runtime, app testing
-### Maruuu
+### Maruuu (Rosialda)
 - Integration of offline maps, locators, AI
-### way2donatt / Ozanii
+### way2donatt / Ozanii (Superficial / Cari)
 - Frontend / improve UI UX for priority 1
-### banm1do
+### banm1do (Babac)
 - Pitch
 
 ==============================================================================================
@@ -38,6 +38,13 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ### Priority 4
 - Mesh networking
+
+
+==============================================================================================
+
+## Development Methodology:
+### Risk-Based Incremental Delivery with Stage-Gate Verification
+- A development methodology where features are implemented by priority, validated through continuous feature-level testing, and advanced only after successful integration and system testing at each priority gate.
 
 ==============================================================================================
 
@@ -107,15 +114,26 @@ A mobile, offline-first disaster management system that helps evacuation centers
 
 ### Evacuation Center Staff (Priority 1)
 - Dashboard Screen
-	- Total Capacity
-	- Current Occupancy
+	- Total Capacity (calculated from all rooms/stations)
+	- Current Occupancy (calculated from all rooms/stations)
 	- Status
 	- Quick buttons (add, remove, check supplies)
 - Registration Screen
-	- ID / Name (optional)
+	- ID
 	- Age group (child, adult, elderly)
 	- Medical condition (none, minor, serious)
+	- Upon evacuees' arrival, assigns them room first (adds as unnamed)
 	- Save (offline)
+- Supplies Screen
+	- View available medical supplies
+	- If online, can use smart predictions
+- Stations Screen
+	- List of stations under the evacuation center
+	- Click a station to reveal more information
+	- Evacuees can set their names 
+- Evacuees List Screen
+	- List of all evacuees and their details
+	- If unnamed, shows up as ID
 - Sync Screen
 	- Status (offline / synced)
 	- Button (upload to command center)
@@ -124,7 +142,10 @@ A mobile, offline-first disaster management system that helps evacuation centers
 - Overview Dashboard
 	- Total evacuation centers
 	- Overcrowded centers
-	- Supply shortages
+	- Supply shortages (possibly with smart predictions)
+- Visual Analytics
+	- Only functions when online
+	- Shows visual data (with the aid of AI)
 - Resource Monitoring
 	- Monitors centers' medicine supplies and capacity
 
