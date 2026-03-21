@@ -58,6 +58,7 @@ class SyncService {
       await _normalizeLegacyIds();
 
       final unsyncedCenters = await _databaseService.getUnsyncedCenters();
+      final unsyncedStations = await _databaseService.getUnsyncedStations();
       final unsyncedEvacuees = await _databaseService.getUnsyncedEvacuees();
       final unsyncedSupplies = await _databaseService.getUnsyncedSupplies();
       final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
@@ -69,6 +70,16 @@ class SyncService {
         await _supabase.from('evacuation_centers').upsert(payload);
         await _databaseService.markCentersSynced(
           unsyncedCenters.map((center) => center.id).toList(),
+        );
+      }
+
+      if (unsyncedStations.isNotEmpty) {
+        final payload = unsyncedStations
+            .map((station) => _stationToRemoteMap(station))
+            .toList();
+        await _supabase.from('stations').upsert(payload);
+        await _databaseService.markStationsSynced(
+          unsyncedStations.map((station) => station.id).toList(),
         );
       }
 
@@ -87,7 +98,7 @@ class SyncService {
         final payload = unsyncedSupplies
             .map((supply) => _supplyToRemoteMap(supply))
             .toList();
-        await _supabase.from('supplies').upsert(payload);
+        await _uploadSupplies(payload);
         await _databaseService.markSuppliesSynced(
           unsyncedSupplies.map((supply) => supply.id).toList(),
         );
@@ -129,6 +140,13 @@ class SyncService {
       }
     }
 
+    final stations = await _databaseService.getAllStations();
+    for (final station in stations) {
+      if (!_isUuid(station.id)) {
+        await _databaseService.replaceStationId(station.id, IdService.newId());
+      }
+    }
+
     final supplies = await _databaseService.getAllSupplies();
     for (final supply in supplies) {
       if (!_isUuid(supply.id)) {
@@ -150,6 +168,11 @@ class SyncService {
     final centerRows = await _supabase.from('evacuation_centers').select();
     for (final row in centerRows) {
       await _mergeCenter(_asMap(row));
+    }
+
+    final stationRows = await _supabase.from('stations').select();
+    for (final row in stationRows) {
+      await _mergeStation(_asMap(row));
     }
 
     final evacueeRows = await _supabase.from('evacuees').select();
@@ -218,6 +241,8 @@ class SyncService {
     final remote = Evacuee(
       id: _readString(row, 'id'),
       name: _readAny(row, 'name') as String?,
+      stationId:
+          _readAnyOrNull(row, 'stationid', fallback: 'stationId') as String?,
       ageGroup: AgeGroup
           .values[_readNum(row, 'agegroup', fallback: 'ageGroup').toInt()],
       medicalCondition:
@@ -244,6 +269,34 @@ class SyncService {
 
     await _databaseService.upsertEvacueeFromRemote(remote);
     return true;
+  }
+
+  Future<void> _mergeStation(Map<String, dynamic> row) async {
+    final remote = Station(
+      id: _readString(row, 'id'),
+      name: _readString(row, 'name'),
+      evacuationCenterId: _readString(
+        row,
+        'evacuationcenterid',
+        fallback: 'evacuationCenterId',
+      ),
+      capacity: _readNum(row, 'capacity').toInt(),
+      allowedAgeGroup: _enumOrNull(
+        AgeGroup.values,
+        _readAnyOrNull(row, 'allowedagegroup', fallback: 'allowedAgeGroup'),
+      ),
+      allowedMedicalCondition: _enumOrNull(
+        MedicalCondition.values,
+        _readAnyOrNull(
+          row,
+          'allowedmedicalcondition',
+          fallback: 'allowedMedicalCondition',
+        ),
+      ),
+      synced: true,
+    );
+
+    await _databaseService.upsertStationFromRemote(remote);
   }
 
   Future<void> _mergeSupply(Map<String, dynamic> row) async {
@@ -340,6 +393,7 @@ class SyncService {
     return {
       'id': evacuee.id,
       'name': evacuee.name,
+      'stationid': evacuee.stationId,
       'agegroup': evacuee.ageGroup.index,
       'medicalcondition': evacuee.medicalCondition.index,
       'registeredat': evacuee.registeredAt.toIso8601String(),
@@ -355,6 +409,18 @@ class SyncService {
       'usagerateperday': supply.usageRatePerDay,
       'lastrestocked': supply.lastRestocked.toIso8601String(),
       'synced': supply.synced ? 1 : 0,
+    };
+  }
+
+  Map<String, dynamic> _stationToRemoteMap(Station station) {
+    return {
+      'id': station.id,
+      'name': station.name,
+      'evacuationcenterid': station.evacuationCenterId,
+      'capacity': station.capacity,
+      'allowedagegroup': station.allowedAgeGroup?.index,
+      'allowedmedicalcondition': station.allowedMedicalCondition?.index,
+      'synced': station.synced ? 1 : 0,
     };
   }
 
@@ -378,6 +444,20 @@ class SyncService {
     throw StateError('Missing key "$key" in Supabase row.');
   }
 
+  dynamic _readAnyOrNull(
+    Map<String, dynamic> row,
+    String key, {
+    String? fallback,
+  }) {
+    if (row.containsKey(key)) {
+      return row[key];
+    }
+    if (fallback != null && row.containsKey(fallback)) {
+      return row[fallback];
+    }
+    return null;
+  }
+
   String _readString(Map<String, dynamic> row, String key, {String? fallback}) {
     return _readAny(row, key, fallback: fallback).toString();
   }
@@ -386,6 +466,35 @@ class SyncService {
     final value = _readAny(row, key, fallback: fallback);
     if (value is num) return value;
     return num.parse(value.toString());
+  }
+
+  T? _enumOrNull<T>(List<T> values, dynamic rawValue) {
+    if (rawValue == null) return null;
+    final index = rawValue is num
+        ? rawValue.toInt()
+        : int.parse(rawValue.toString());
+    if (index < 0 || index >= values.length) return null;
+    return values[index];
+  }
+
+  Future<void> _uploadSupplies(List<Map<String, dynamic>> payload) async {
+    try {
+      await _supabase.from('supplies').upsert(payload);
+    } catch (_) {
+      final fallbackPayload = payload
+          .map(
+            (supply) => {
+              'id': supply['id'],
+              'name': supply['name'],
+              'current_stock': supply['currentstock'],
+              'usage_rate_per_day': supply['usagerateperday'],
+              'last_restocked': supply['lastrestocked'],
+              'synced': supply['synced'],
+            },
+          )
+          .toList();
+      await _supabase.from('supplies').upsert(fallbackPayload);
+    }
   }
 
   /// Get sync status for display
@@ -397,6 +506,7 @@ class SyncService {
         'pendingUpdates': 0,
         'pendingByEntity': {
           'centers': 0,
+          'stations': 0,
           'evacuees': 0,
           'supplies': 0,
           'alerts': 0,
@@ -405,12 +515,14 @@ class SyncService {
     }
 
     final unsyncedCenters = await _databaseService.getUnsyncedCenters();
+    final unsyncedStations = await _databaseService.getUnsyncedStations();
     final unsyncedEvacuees = await _databaseService.getUnsyncedEvacuees();
     final unsyncedSupplies = await _databaseService.getUnsyncedSupplies();
     final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
 
     final pendingUpdates =
         unsyncedCenters.length +
+        unsyncedStations.length +
         unsyncedEvacuees.length +
         unsyncedSupplies.length +
         unsyncedAlerts.length;
@@ -421,6 +533,7 @@ class SyncService {
       'pendingUpdates': pendingUpdates,
       'pendingByEntity': {
         'centers': unsyncedCenters.length,
+        'stations': unsyncedStations.length,
         'evacuees': unsyncedEvacuees.length,
         'supplies': unsyncedSupplies.length,
         'alerts': unsyncedAlerts.length,

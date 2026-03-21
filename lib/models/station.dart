@@ -4,6 +4,7 @@ class Station {
   final String id;
   final String name;
   final String evacuationCenterId;
+  final int capacity;
   final AgeGroup? allowedAgeGroup;
   final MedicalCondition? allowedMedicalCondition;
   final bool synced;
@@ -12,6 +13,7 @@ class Station {
     required this.id,
     required this.name,
     required this.evacuationCenterId,
+    required this.capacity,
     this.allowedAgeGroup,
     this.allowedMedicalCondition,
     this.synced = false,
@@ -33,6 +35,7 @@ class Station {
       'id': id,
       'name': name,
       'evacuationCenterId': evacuationCenterId,
+      'capacity': capacity,
       'allowedAgeGroup': allowedAgeGroup?.index,
       'allowedMedicalCondition': allowedMedicalCondition?.index,
       'synced': synced ? 1 : 0,
@@ -47,6 +50,7 @@ class Station {
       id: map['id'] as String,
       name: map['name'] as String,
       evacuationCenterId: map['evacuationCenterId'] as String,
+      capacity: (map['capacity'] as num?)?.toInt() ?? 0,
       allowedAgeGroup: rawAge == null
           ? null
           : AgeGroup.values[(rawAge as num).toInt()],
@@ -61,6 +65,7 @@ class Station {
     String? id,
     String? name,
     String? evacuationCenterId,
+    int? capacity,
     AgeGroup? allowedAgeGroup,
     MedicalCondition? allowedMedicalCondition,
     bool? synced,
@@ -71,6 +76,7 @@ class Station {
       id: id ?? this.id,
       name: name ?? this.name,
       evacuationCenterId: evacuationCenterId ?? this.evacuationCenterId,
+      capacity: capacity ?? this.capacity,
       allowedAgeGroup: clearAllowedAgeGroup
           ? null
           : (allowedAgeGroup ?? this.allowedAgeGroup),

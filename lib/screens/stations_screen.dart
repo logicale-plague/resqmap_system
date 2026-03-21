@@ -58,9 +58,24 @@ class StationsScreen extends ConsumerWidget {
                 itemCount: stations.length,
                 itemBuilder: (context, index) {
                   final station = stations[index];
+                  final occupancyAsync = ref.watch(
+                    evacueeCountByStationProvider(station.id),
+                  );
+                  final occupancyCount = occupancyAsync.asData?.value ?? 0;
+                  final occupancyColor = _occupancyChipColor(
+                    occupancyCount,
+                    station.capacity,
+                  );
+                  final unnamedAsync = ref.watch(
+                    unnamedEvacueesByStationProvider(station.id),
+                  );
+                  final unnamedCount = unnamedAsync.asData?.value.length ?? 0;
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
+                      onTap: () =>
+                          _openStationArrivalsSheet(context, ref, station),
                       contentPadding: const EdgeInsets.all(14),
                       leading: const CircleAvatar(
                         backgroundColor: Colors.indigo,
@@ -77,6 +92,18 @@ class StationsScreen extends ConsumerWidget {
                           runSpacing: 8,
                           children: [
                             Chip(
+                              label: Text('Cap: ${station.capacity}'),
+                              backgroundColor: Colors.green[100],
+                              labelStyle: const TextStyle(fontSize: 12),
+                            ),
+                            Chip(
+                              label: Text(
+                                '$occupancyCount / ${station.capacity}',
+                              ),
+                              backgroundColor: occupancyColor.withAlpha(60),
+                              labelStyle: const TextStyle(fontSize: 12),
+                            ),
+                            Chip(
                               label: Text(_ageLabel(station.allowedAgeGroup)),
                               backgroundColor: Colors.blue[100],
                               labelStyle: const TextStyle(fontSize: 12),
@@ -86,6 +113,11 @@ class StationsScreen extends ConsumerWidget {
                                 _medicalLabel(station.allowedMedicalCondition),
                               ),
                               backgroundColor: Colors.orange[100],
+                              labelStyle: const TextStyle(fontSize: 12),
+                            ),
+                            Chip(
+                              label: Text('Unnamed: $unnamedCount'),
+                              backgroundColor: Colors.red[100],
                               labelStyle: const TextStyle(fontSize: 12),
                             ),
                           ],
@@ -156,6 +188,14 @@ class StationsScreen extends ConsumerWidget {
     }
   }
 
+  Color _occupancyChipColor(int occupancy, int capacity) {
+    if (capacity <= 0) return Colors.grey;
+    final ratio = occupancy / capacity;
+    if (ratio >= 1) return Colors.red;
+    if (ratio >= 0.8) return Colors.amber;
+    return Colors.green;
+  }
+
   Future<void> _openStationDialog(
     BuildContext context,
     WidgetRef ref,
@@ -163,6 +203,9 @@ class StationsScreen extends ConsumerWidget {
     Station? station,
   }) async {
     final nameController = TextEditingController(text: station?.name ?? '');
+    final capacityController = TextEditingController(
+      text: (station?.capacity ?? 0).toString(),
+    );
     AgeGroup? selectedAgeGroup = station?.allowedAgeGroup;
     MedicalCondition? selectedMedical = station?.allowedMedicalCondition;
 
@@ -182,6 +225,15 @@ class StationsScreen extends ConsumerWidget {
                       decoration: const InputDecoration(
                         labelText: 'Station Name',
                         prefixIcon: Icon(Icons.edit),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: capacityController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Capacity',
+                        prefixIcon: Icon(Icons.people),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -252,6 +304,21 @@ class StationsScreen extends ConsumerWidget {
                       );
                       return;
                     }
+
+                    final parsedCapacity = int.tryParse(
+                      capacityController.text.trim(),
+                    );
+                    if (parsedCapacity == null || parsedCapacity < 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Capacity must be a non-negative number',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
                     Navigator.pop(dialogContext, true);
                   },
                   child: const Text('Save'),
@@ -267,6 +334,7 @@ class StationsScreen extends ConsumerWidget {
 
     final db = ref.read(databaseServiceProvider);
     final trimmedName = nameController.text.trim();
+    final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
 
     final stationToSave =
         (station ??
@@ -274,9 +342,11 @@ class StationsScreen extends ConsumerWidget {
                   id: IdService.newId(),
                   name: trimmedName,
                   evacuationCenterId: center.id,
+                  capacity: parsedCapacity,
                 ))
             .copyWith(
               name: trimmedName,
+              capacity: parsedCapacity,
               allowedAgeGroup: selectedAgeGroup,
               allowedMedicalCondition: selectedMedical,
               clearAllowedAgeGroup: selectedAgeGroup == null,
@@ -291,6 +361,129 @@ class StationsScreen extends ConsumerWidget {
     }
 
     ref.invalidate(stationsByCenterProvider(center.id));
+  }
+
+  Future<void> _openStationArrivalsSheet(
+    BuildContext context,
+    WidgetRef ref,
+    Station station,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder: (context, controller) {
+            final unnamedAsync = ref.watch(
+              unnamedEvacueesByStationProvider(station.id),
+            );
+
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${station.name} - Unnamed Arrivals',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: unnamedAsync.when(
+                      data: (evacuees) {
+                        if (evacuees.isEmpty) {
+                          return const Center(
+                            child: Text('No unnamed evacuees in this station.'),
+                          );
+                        }
+
+                        return ListView.builder(
+                          controller: controller,
+                          itemCount: evacuees.length,
+                          itemBuilder: (context, index) {
+                            final evacuee = evacuees[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                title: Text('Arrival ${index + 1}'),
+                                subtitle: Text(
+                                  '${_ageLabel(evacuee.ageGroup)} | ${_medicalLabel(evacuee.medicalCondition)}',
+                                ),
+                                trailing: TextButton(
+                                  onPressed: () async {
+                                    final name = await _promptName(
+                                      context,
+                                      'Register Name',
+                                    );
+                                    if (name == null || name.trim().isEmpty) {
+                                      return;
+                                    }
+
+                                    final db = ref.read(
+                                      databaseServiceProvider,
+                                    );
+                                    await db.registerEvacueeName(
+                                      evacuee.id,
+                                      name,
+                                    );
+                                    ref.invalidate(
+                                      unnamedEvacueesByStationProvider(
+                                        station.id,
+                                      ),
+                                    );
+                                    ref.invalidate(allEvacueesProvider);
+                                  },
+                                  child: const Text('Register Name'),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => Center(child: Text('Error: $err')),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _promptName(BuildContext context, String title) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Enter evacuee name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    return result;
   }
 
   Future<void> _confirmDelete(

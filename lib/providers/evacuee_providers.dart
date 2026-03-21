@@ -29,3 +29,17 @@ final evacueeProvider = FutureProvider.family<Evacuee?, String>((
     return null;
   }
 });
+
+final unnamedEvacueesByStationProvider =
+    FutureProvider.family<List<Evacuee>, String>((ref, stationId) async {
+      final db = ref.watch(databaseServiceProvider);
+      return db.getUnnamedEvacueesByStation(stationId);
+    });
+
+final evacueeCountByStationProvider = FutureProvider.family<int, String>((
+  ref,
+  stationId,
+) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getEvacueeCountByStation(stationId);
+});

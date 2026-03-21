@@ -42,6 +42,15 @@ class DashboardScreen extends ConsumerWidget {
     EvacuationCenter center,
     int evacueeCount,
   ) {
+    final safeCapacity = center.totalCapacity;
+    final availableSpaces = (safeCapacity - evacueeCount).clamp(
+      0,
+      safeCapacity,
+    );
+    final occupancyRate = safeCapacity == 0
+        ? 0.0
+        : (evacueeCount / safeCapacity * 100);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -102,7 +111,7 @@ class DashboardScreen extends ConsumerWidget {
               Expanded(
                 child: _buildInfoCard(
                   title: 'Available Spaces',
-                  value: (center.totalCapacity - evacueeCount).toString(),
+                  value: availableSpaces.toString(),
                   icon: Icons.chair,
                   color: Colors.green,
                 ),
@@ -111,8 +120,7 @@ class DashboardScreen extends ConsumerWidget {
               Expanded(
                 child: _buildInfoCard(
                   title: 'Occupancy Rate',
-                  value:
-                      '${(evacueeCount / center.totalCapacity * 100).toStringAsFixed(1)}%',
+                  value: '${occupancyRate.toStringAsFixed(1)}%',
                   icon: Icons.trending_up,
                 ),
               ),

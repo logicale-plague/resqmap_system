@@ -12,11 +12,8 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 }
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
-  final _nameController = TextEditingController();
-
   AgeGroup? _selectedAgeGroup;
   MedicalCondition? _selectedMedicalCondition;
-  String? _selectedStationId;
   bool _isSubmitting = false;
 
   @override
@@ -24,12 +21,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     super.initState();
     _selectedAgeGroup = AgeGroup.adult;
     _selectedMedicalCondition = MedicalCondition.none;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
   }
 
   Future<void> _submitForm() async {
@@ -59,22 +50,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         throw Exception('No eligible station available for this evacuee');
       }
 
-      if (_selectedStationId == null) {
-        throw Exception('Please select a station');
-      }
-
-      final isEligible = eligibleStations.any(
-        (station) => station.id == _selectedStationId,
-      );
-
-      if (!isEligible) {
-        throw Exception('Selected station is not eligible anymore');
-      }
+      final assignedStation = eligibleStations.first;
 
       final evacuee = Evacuee(
         id: IdService.newId(),
-        name: _nameController.text.isEmpty ? null : _nameController.text,
-        stationId: _selectedStationId,
+        name: null,
+        stationId: assignedStation.id,
         ageGroup: _selectedAgeGroup!,
         medicalCondition: _selectedMedicalCondition!,
         registeredAt: DateTime.now(),
@@ -86,12 +67,17 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Evacuee registered successfully')),
+        SnackBar(
+          content: Text(
+            'Arrival logged. Assigned to ${assignedStation.name}. Register name in Stations screen.',
+          ),
+        ),
       );
 
       // Refresh the providers
       ref.invalidate(allEvacueesProvider);
       ref.invalidate(evacueeCountProvider);
+      ref.invalidate(unnamedEvacueesByStationProvider(assignedStation.id));
 
       Navigator.pop(context, true);
     } catch (e) {
@@ -118,20 +104,16 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Name Field
-            Text(
-              'Name (Optional)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'Enter evacuee name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                prefixIcon: const Icon(Icons.person),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                border: Border.all(color: Colors.blue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Arrival Intake: Select age group and condition. The system will auto-assign a station and create an unnamed evacuee record.',
               ),
             ),
             const SizedBox(height: 28),
@@ -150,7 +132,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 return GestureDetector(
                   onTap: () => setState(() {
                     _selectedAgeGroup = ageGroup;
-                    _selectedStationId = null;
                   }),
                   child: Container(
                     decoration: BoxDecoration(
@@ -200,7 +181,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 return GestureDetector(
                   onTap: () => setState(() {
                     _selectedMedicalCondition = condition;
-                    _selectedStationId = null;
                   }),
                   child: Container(
                     decoration: BoxDecoration(
@@ -233,8 +213,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Station Selection
-            Text('Station *', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Station Assignment',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             centerAsync.when(
               data: (center) {
@@ -242,7 +224,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                     _selectedAgeGroup == null ||
                     _selectedMedicalCondition == null) {
                   return const Text(
-                    'Select age group and medical condition first.',
+                    'Select age group and medical condition to preview auto-assigned stations.',
                   );
                 }
 
@@ -262,30 +244,32 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       );
                     }
 
-                    final stillValid = stations.any(
-                      (station) => station.id == _selectedStationId,
-                    );
-                    final value = stillValid ? _selectedStationId : null;
+                    final assignedStation = stations.first;
 
-                    return DropdownButtonFormField<String>(
-                      initialValue: value,
-                      items: [
-                        for (final station in stations)
-                          DropdownMenuItem<String>(
-                            value: station.id,
-                            child: Text(_stationLabel(station)),
-                          ),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: 'Select station',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: const Icon(Icons.meeting_room),
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        border: Border.all(color: Colors.green),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      onChanged: (value) {
-                        setState(() => _selectedStationId = value);
-                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Auto-assigned station:',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(assignedStation.name),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Rule: ${_stationLabel(assignedStation)}',
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                        ],
+                      ),
                     );
                   },
                   loading: () => const Padding(
@@ -334,7 +318,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                         ),
                       )
                     : const Text(
-                        'REGISTER',
+                        'LOG ARRIVAL',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

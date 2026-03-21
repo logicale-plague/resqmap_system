@@ -24,7 +24,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -66,6 +66,7 @@ class DatabaseService {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         evacuationCenterId TEXT NOT NULL,
+        capacity INTEGER NOT NULL DEFAULT 0,
         allowedAgeGroup INTEGER,
         allowedMedicalCondition INTEGER,
         synced INTEGER NOT NULL DEFAULT 0
@@ -110,12 +111,49 @@ class DatabaseService {
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           evacuationCenterId TEXT NOT NULL,
+          capacity INTEGER NOT NULL DEFAULT 0,
           allowedAgeGroup INTEGER,
           allowedMedicalCondition INTEGER,
           synced INTEGER NOT NULL DEFAULT 0
         )
       ''');
       await db.execute('ALTER TABLE evacuees ADD COLUMN stationId TEXT');
+    }
+
+    if (oldVersion >= 3 && oldVersion < 4) {
+      await db.execute(
+        'ALTER TABLE stations ADD COLUMN capacity INTEGER NOT NULL DEFAULT 0',
+      );
+
+      final centers = await db.query('evacuation_centers', columns: ['id']);
+      for (final row in centers) {
+        final centerId = row['id'] as String;
+        final capacityResult = await db.rawQuery(
+          'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
+          [centerId],
+        );
+        final totalCapacity =
+            (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
+        final occupancyResult = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM evacuees',
+        );
+        final currentOccupancy = int.parse(
+          occupancyResult.first['count'].toString(),
+        );
+        final status = _calculateStatus(currentOccupancy, totalCapacity);
+
+        await db.update(
+          'evacuation_centers',
+          {
+            'totalCapacity': totalCapacity,
+            'status': status.index,
+            'lastUpdated': DateTime.now().toIso8601String(),
+            'synced': 0,
+          },
+          where: 'id = ?',
+          whereArgs: [centerId],
+        );
+      }
     }
   }
 
@@ -127,6 +165,7 @@ class DatabaseService {
       station.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await _syncCenterCapacity(station.evacuationCenterId);
   }
 
   Future<void> updateStation(Station station) async {
@@ -137,11 +176,24 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [station.id],
     );
+    await _syncCenterCapacity(station.evacuationCenterId);
   }
 
   Future<void> deleteStation(String stationId) async {
     final db = await database;
+    String? centerId;
     await db.transaction((txn) async {
+      final stationRows = await txn.query(
+        'stations',
+        columns: ['evacuationCenterId'],
+        where: 'id = ?',
+        whereArgs: [stationId],
+        limit: 1,
+      );
+      if (stationRows.isNotEmpty) {
+        centerId = stationRows.first['evacuationCenterId'] as String;
+      }
+
       await txn.update(
         'evacuees',
         {'stationId': null, 'synced': 0},
@@ -150,6 +202,10 @@ class DatabaseService {
       );
       await txn.delete('stations', where: 'id = ?', whereArgs: [stationId]);
     });
+
+    if (centerId != null) {
+      await _syncCenterCapacity(centerId!);
+    }
   }
 
   Future<List<Station>> getStationsForCenter(String centerId) async {
@@ -190,6 +246,58 @@ class DatabaseService {
     return maps.isEmpty ? null : Station.fromMap(maps.first);
   }
 
+  Future<List<Station>> getAllStations() async {
+    final db = await database;
+    final maps = await db.query('stations');
+    return [for (final map in maps) Station.fromMap(map)];
+  }
+
+  Future<void> upsertStationFromRemote(Station station) async {
+    final db = await database;
+    await db.insert(
+      'stations',
+      station.copyWith(synced: true).toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await _syncCenterCapacity(station.evacuationCenterId);
+  }
+
+  Future<List<Station>> getUnsyncedStations() async {
+    final db = await database;
+    final maps = await db.query('stations', where: 'synced = 0');
+    return [for (final map in maps) Station.fromMap(map)];
+  }
+
+  Future<void> markStationsSynced(List<String> ids) async {
+    final db = await database;
+    for (final id in ids) {
+      await db.update(
+        'stations',
+        {'synced': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+  }
+
+  Future<void> replaceStationId(String oldId, String newId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'stations',
+        {'id': newId, 'synced': 0},
+        where: 'id = ?',
+        whereArgs: [oldId],
+      );
+      await txn.update(
+        'evacuees',
+        {'stationId': newId, 'synced': 0},
+        where: 'stationId = ?',
+        whereArgs: [oldId],
+      );
+    });
+  }
+
   // Evacuee operations
   Future<void> insertEvacuee(Evacuee evacuee) async {
     final db = await database;
@@ -201,6 +309,27 @@ class DatabaseService {
     await _syncCurrentCenterOccupancy();
   }
 
+  Future<List<Evacuee>> getUnnamedEvacueesByStation(String stationId) async {
+    final db = await database;
+    final maps = await db.query(
+      'evacuees',
+      where: 'stationId = ? AND (name IS NULL OR TRIM(name) = "")',
+      whereArgs: [stationId],
+      orderBy: 'registeredAt ASC',
+    );
+    return [for (final map in maps) Evacuee.fromMap(map)];
+  }
+
+  Future<void> registerEvacueeName(String evacueeId, String name) async {
+    final db = await database;
+    await db.update(
+      'evacuees',
+      {'name': name.trim(), 'synced': 0},
+      where: 'id = ?',
+      whereArgs: [evacueeId],
+    );
+  }
+
   Future<List<Evacuee>> getAllEvacuees() async {
     final db = await database;
     final maps = await db.query('evacuees');
@@ -210,6 +339,15 @@ class DatabaseService {
   Future<int> getEvacueeCount() async {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM evacuees');
+    return int.parse(result.first['count'].toString());
+  }
+
+  Future<int> getEvacueeCountByStation(String stationId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM evacuees WHERE stationId = ?',
+      [stationId],
+    );
     return int.parse(result.first['count'].toString());
   }
 
@@ -311,6 +449,17 @@ class DatabaseService {
     }
   }
 
+  Future<void> markAllDataUnsynced() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update('evacuation_centers', {'synced': 0});
+      await txn.update('stations', {'synced': 0});
+      await txn.update('evacuees', {'synced': 0});
+      await txn.update('supplies', {'synced': 0});
+      await txn.update('alerts', {'synced': 0});
+    });
+  }
+
   // Evacuation Center operations
   Future<void> insertEvacuationCenter(EvacuationCenter center) async {
     final db = await database;
@@ -400,6 +549,7 @@ class DatabaseService {
       where: 'evacuationCenterId = ?',
       whereArgs: [oldId],
     );
+    await _syncCenterCapacity(newId);
   }
 
   Future<void> _syncCurrentCenterOccupancy() async {
@@ -425,6 +575,41 @@ class DatabaseService {
       'evacuation_centers',
       {
         'currentOccupancy': evacueeCount,
+        'status': status.index,
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [centerId],
+    );
+  }
+
+  Future<void> _syncCenterCapacity(String centerId) async {
+    final db = await database;
+
+    final capacityResult = await db.rawQuery(
+      'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
+      [centerId],
+    );
+    final totalCapacity =
+        (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
+
+    final centerRows = await db.query(
+      'evacuation_centers',
+      columns: ['currentOccupancy'],
+      where: 'id = ?',
+      whereArgs: [centerId],
+      limit: 1,
+    );
+    if (centerRows.isEmpty) return;
+
+    final currentOccupancy = centerRows.first['currentOccupancy'] as int;
+    final status = _calculateStatus(currentOccupancy, totalCapacity);
+
+    await db.update(
+      'evacuation_centers',
+      {
+        'totalCapacity': totalCapacity,
         'status': status.index,
         'lastUpdated': DateTime.now().toIso8601String(),
         'synced': 0,
@@ -567,6 +752,9 @@ class DatabaseService {
   }
 
   CenterStatus _calculateStatus(int currentOccupancy, int totalCapacity) {
+    if (totalCapacity <= 0) {
+      return CenterStatus.operational;
+    }
     final percentage = (currentOccupancy / totalCapacity * 100);
     if (percentage >= 100) return CenterStatus.atCapacity;
     if (percentage >= 80) return CenterStatus.nearCapacity;
