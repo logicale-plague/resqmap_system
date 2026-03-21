@@ -24,7 +24,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -36,6 +36,7 @@ class DatabaseService {
       CREATE TABLE evacuees(
         id TEXT PRIMARY KEY,
         name TEXT,
+        stationId TEXT,
         ageGroup INTEGER NOT NULL,
         medicalCondition INTEGER NOT NULL,
         registeredAt TEXT NOT NULL,
@@ -55,6 +56,18 @@ class DatabaseService {
         status INTEGER NOT NULL,
         medicalAvailable INTEGER NOT NULL DEFAULT 0,
         lastUpdated TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // Create Stations table
+    await db.execute('''
+      CREATE TABLE stations(
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        evacuationCenterId TEXT NOT NULL,
+        allowedAgeGroup INTEGER,
+        allowedMedicalCondition INTEGER,
         synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
@@ -90,6 +103,91 @@ class DatabaseService {
         'ALTER TABLE alerts ADD COLUMN synced INTEGER NOT NULL DEFAULT 0',
       );
     }
+
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE stations(
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          evacuationCenterId TEXT NOT NULL,
+          allowedAgeGroup INTEGER,
+          allowedMedicalCondition INTEGER,
+          synced INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await db.execute('ALTER TABLE evacuees ADD COLUMN stationId TEXT');
+    }
+  }
+
+  // Station operations
+  Future<void> insertStation(Station station) async {
+    final db = await database;
+    await db.insert(
+      'stations',
+      station.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateStation(Station station) async {
+    final db = await database;
+    await db.update(
+      'stations',
+      station.copyWith(synced: false).toMap(),
+      where: 'id = ?',
+      whereArgs: [station.id],
+    );
+  }
+
+  Future<void> deleteStation(String stationId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'evacuees',
+        {'stationId': null, 'synced': 0},
+        where: 'stationId = ?',
+        whereArgs: [stationId],
+      );
+      await txn.delete('stations', where: 'id = ?', whereArgs: [stationId]);
+    });
+  }
+
+  Future<List<Station>> getStationsForCenter(String centerId) async {
+    final db = await database;
+    final maps = await db.query(
+      'stations',
+      where: 'evacuationCenterId = ?',
+      whereArgs: [centerId],
+      orderBy: 'name ASC',
+    );
+    return [for (final map in maps) Station.fromMap(map)];
+  }
+
+  Future<List<Station>> getEligibleStations({
+    required String centerId,
+    required AgeGroup ageGroup,
+    required MedicalCondition medicalCondition,
+  }) async {
+    final db = await database;
+    final maps = await db.query(
+      'stations',
+      where:
+          'evacuationCenterId = ? AND (allowedAgeGroup IS NULL OR allowedAgeGroup = ?) AND (allowedMedicalCondition IS NULL OR allowedMedicalCondition = ?)',
+      whereArgs: [centerId, ageGroup.index, medicalCondition.index],
+      orderBy: 'name ASC',
+    );
+    return [for (final map in maps) Station.fromMap(map)];
+  }
+
+  Future<Station?> getStationById(String stationId) async {
+    final db = await database;
+    final maps = await db.query(
+      'stations',
+      where: 'id = ?',
+      whereArgs: [stationId],
+      limit: 1,
+    );
+    return maps.isEmpty ? null : Station.fromMap(maps.first);
   }
 
   // Evacuee operations
@@ -294,6 +392,12 @@ class DatabaseService {
         'lastUpdated': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',
+      whereArgs: [oldId],
+    );
+    await db.update(
+      'stations',
+      {'evacuationCenterId': newId, 'synced': 0},
+      where: 'evacuationCenterId = ?',
       whereArgs: [oldId],
     );
   }

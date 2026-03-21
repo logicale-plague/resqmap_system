@@ -16,6 +16,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
   AgeGroup? _selectedAgeGroup;
   MedicalCondition? _selectedMedicalCondition;
+  String? _selectedStationId;
   bool _isSubmitting = false;
 
   @override
@@ -43,9 +44,37 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
     try {
       final db = ref.read(databaseServiceProvider);
+      final center = await db.getCurrentCenter();
+      if (center == null) {
+        throw Exception('No evacuation center assigned');
+      }
+
+      final eligibleStations = await db.getEligibleStations(
+        centerId: center.id,
+        ageGroup: _selectedAgeGroup!,
+        medicalCondition: _selectedMedicalCondition!,
+      );
+
+      if (eligibleStations.isEmpty) {
+        throw Exception('No eligible station available for this evacuee');
+      }
+
+      if (_selectedStationId == null) {
+        throw Exception('Please select a station');
+      }
+
+      final isEligible = eligibleStations.any(
+        (station) => station.id == _selectedStationId,
+      );
+
+      if (!isEligible) {
+        throw Exception('Selected station is not eligible anymore');
+      }
+
       final evacuee = Evacuee(
         id: IdService.newId(),
         name: _nameController.text.isEmpty ? null : _nameController.text,
+        stationId: _selectedStationId,
         ageGroup: _selectedAgeGroup!,
         medicalCondition: _selectedMedicalCondition!,
         registeredAt: DateTime.now(),
@@ -77,6 +106,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final centerAsync = ref.watch(currentCenterProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register Evacuee'),
@@ -117,7 +148,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               children: AgeGroup.values.map((ageGroup) {
                 final isSelected = _selectedAgeGroup == ageGroup;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedAgeGroup = ageGroup),
+                  onTap: () => setState(() {
+                    _selectedAgeGroup = ageGroup;
+                    _selectedStationId = null;
+                  }),
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.blue : Colors.grey[200],
@@ -164,8 +198,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               children: MedicalCondition.values.map((condition) {
                 final isSelected = _selectedMedicalCondition == condition;
                 return GestureDetector(
-                  onTap: () =>
-                      setState(() => _selectedMedicalCondition = condition),
+                  onTap: () => setState(() {
+                    _selectedMedicalCondition = condition;
+                    _selectedStationId = null;
+                  }),
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.orange : Colors.grey[200],
@@ -194,6 +230,82 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   ),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 28),
+
+            // Station Selection
+            Text('Station *', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            centerAsync.when(
+              data: (center) {
+                if (center == null ||
+                    _selectedAgeGroup == null ||
+                    _selectedMedicalCondition == null) {
+                  return const Text(
+                    'Select age group and medical condition first.',
+                  );
+                }
+
+                final eligibleStationsAsync = ref.watch(
+                  eligibleStationsProvider((
+                    centerId: center.id,
+                    ageGroup: _selectedAgeGroup!,
+                    medicalCondition: _selectedMedicalCondition!,
+                  )),
+                );
+
+                return eligibleStationsAsync.when(
+                  data: (stations) {
+                    if (stations.isEmpty) {
+                      return const Text(
+                        'No station can accept this age group and medical condition.',
+                      );
+                    }
+
+                    final stillValid = stations.any(
+                      (station) => station.id == _selectedStationId,
+                    );
+                    final value = stillValid ? _selectedStationId : null;
+
+                    return DropdownButtonFormField<String>(
+                      initialValue: value,
+                      items: [
+                        for (final station in stations)
+                          DropdownMenuItem<String>(
+                            value: station.id,
+                            child: Text(_stationLabel(station)),
+                          ),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: 'Select station',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.meeting_room),
+                      ),
+                      onChanged: (value) {
+                        setState(() => _selectedStationId = value);
+                      },
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(),
+                  ),
+                  error: (err, stack) => Text(
+                    'Error loading stations: $err',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              ),
+              error: (err, stack) => Text(
+                'Error loading center: $err',
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
             const SizedBox(height: 40),
 
@@ -234,6 +346,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         ),
       ),
     );
+  }
+
+  String _stationLabel(Station station) {
+    final ageLabel = station.allowedAgeGroup?.name ?? 'Any age group';
+    final medicalLabel =
+        station.allowedMedicalCondition?.name ?? 'Any condition';
+    return '${station.name} ($ageLabel / $medicalLabel)';
   }
 
   Widget _getAgeGroupIcon(AgeGroup ageGroup) {

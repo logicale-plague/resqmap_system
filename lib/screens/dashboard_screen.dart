@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 
@@ -134,10 +135,7 @@ class DashboardScreen extends ConsumerWidget {
                 icon: Icons.add_circle_outline,
                 label: 'Add Evacuee',
                 onPressed: () async {
-                  final result = await Navigator.pushNamed(
-                    context,
-                    '/register',
-                  );
+                  final result = await context.push('/register');
                   if (result == true && context.mounted) {
                     ref.invalidate(currentCenterProvider);
                     ref.invalidate(evacueeCountProvider);
@@ -155,15 +153,15 @@ class DashboardScreen extends ConsumerWidget {
                 icon: Icons.medical_services,
                 label: 'Supplies',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/supplies');
+                  context.push('/supplies');
                 },
                 color: Colors.blue,
               ),
               _buildActionButton(
-                icon: Icons.notifications,
-                label: 'Alerts',
+                icon: Icons.meeting_room,
+                label: 'Stations',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/alerts');
+                  context.push('/stations');
                 },
                 color: Colors.orange,
               ),
@@ -171,7 +169,7 @@ class DashboardScreen extends ConsumerWidget {
                 icon: Icons.people,
                 label: 'Evacuees',
                 onPressed: () async {
-                  await Navigator.pushNamed(context, '/evacuees');
+                  await context.push('/evacuees');
                   ref.invalidate(currentCenterProvider);
                   ref.invalidate(evacueeCountProvider);
                 },
@@ -181,7 +179,7 @@ class DashboardScreen extends ConsumerWidget {
                 icon: Icons.sync,
                 label: 'Sync',
                 onPressed: () {
-                  Navigator.pushNamed(context, '/sync');
+                  context.push('/sync');
                 },
                 color: Colors.teal,
               ),
