@@ -10,6 +10,11 @@ final currentCenterProvider = FutureProvider<EvacuationCenter?>((ref) async {
   return db.getCurrentCenter();
 });
 
+final currentCommandCenterIdProvider = FutureProvider<String>((ref) async {
+  final center = await ref.watch(currentCenterProvider.future);
+  return center?.commandCenterId ?? 'default-command-center';
+});
+
 final allCentersProvider = FutureProvider<List<EvacuationCenter>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
   return db.getAllCenters();
