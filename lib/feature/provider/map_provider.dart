@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/providers/evacuation_center_providers.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
@@ -133,6 +134,10 @@ class MapController extends Notifier<MapState> {
     final manager = state.pointAnnotationManager;
     if (manager == null) return;
 
+    final currentCommandCenterId = await ref.watch(
+      currentCommandCenterIdProvider.future,
+    );
+
     final ByteData bytes = await rootBundle.load(
       'assets/map_icons/shelter-icon.png',
     );
@@ -155,6 +160,7 @@ class MapController extends Notifier<MapState> {
     final newCenter = EvacuationCenter(
       id: annotation.id,
       name: centerName,
+      commandCenterId: currentCommandCenterId,
       latitude: point.coordinates.lat.toDouble(),
       longitude: point.coordinates.lng.toDouble(),
       totalCapacity: 0,
