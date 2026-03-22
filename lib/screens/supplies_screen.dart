@@ -248,8 +248,19 @@ class SuppliesScreen extends ConsumerWidget {
               }
 
               final db = ref.read(databaseServiceProvider);
+              final center = await db.getCurrentCenter();
+              if (center == null) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No evacuation center found for this device'),
+                  ),
+                );
+                return;
+              }
               final supply = Supply(
                 id: IdService.newId(),
+                evacuationCenterId: center.id,
                 name: nameController.text,
                 currentStock: int.parse(stockController.text),
                 usageRatePerDay: int.parse(usageController.text),

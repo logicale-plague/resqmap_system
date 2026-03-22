@@ -72,7 +72,7 @@ class SyncService {
         final payload = unsyncedCenters
             .map((center) => _centerToRemoteMap(center))
             .toList();
-        await _supabase.from('evacuation_centers').upsert(payload);
+        await _uploadCenters(payload);
         await _databaseService.markCentersSynced(
           unsyncedCenters.map((center) => center.id).toList(),
         );
@@ -208,31 +208,15 @@ class SyncService {
       id: _readString(row, 'id'),
       name: _readString(row, 'name'),
       commandCenterId:
-          _readAnyOrNull(
-            row,
-            'commandcenterid',
-            fallback: 'commandCenterId',
-          )?.toString() ??
+          _readAnyOrNull(row, 'command_center_id')?.toString() ??
           'default-command-center',
       latitude: _readNum(row, 'latitude').toDouble(),
       longitude: _readNum(row, 'longitude').toDouble(),
-      totalCapacity: _readNum(
-        row,
-        'totalcapacity',
-        fallback: 'totalCapacity',
-      ).toInt(),
-      currentOccupancy: _readNum(
-        row,
-        'currentoccupancy',
-        fallback: 'currentOccupancy',
-      ).toInt(),
+      totalCapacity: _readNum(row, 'total_capacity').toInt(),
+      currentOccupancy: _readNum(row, 'current_occupancy').toInt(),
       status: CenterStatus.values[_readNum(row, 'status').toInt()],
-      medicalAvailable: _asBool(
-        _readAny(row, 'medicalavailable', fallback: 'medicalAvailable'),
-      ),
-      lastUpdated: DateTime.parse(
-        _readString(row, 'lastupdated', fallback: 'lastUpdated'),
-      ),
+      medicalAvailable: _asBool(_readAny(row, 'medical_available')),
+      lastUpdated: DateTime.parse(_readString(row, 'last_updated')),
       synced: true,
     );
 
@@ -253,19 +237,11 @@ class SyncService {
     final remote = Evacuee(
       id: _readString(row, 'id'),
       name: _readAny(row, 'name') as String?,
-      stationId:
-          _readAnyOrNull(row, 'stationid', fallback: 'stationId') as String?,
-      ageGroup: AgeGroup
-          .values[_readNum(row, 'agegroup', fallback: 'ageGroup').toInt()],
+      stationId: _readAnyOrNull(row, 'station_id') as String?,
+      ageGroup: AgeGroup.values[_readNum(row, 'age_group').toInt()],
       medicalCondition:
-          MedicalCondition.values[_readNum(
-            row,
-            'medicalcondition',
-            fallback: 'medicalCondition',
-          ).toInt()],
-      registeredAt: DateTime.parse(
-        _readString(row, 'registeredat', fallback: 'registeredAt'),
-      ),
+          MedicalCondition.values[_readNum(row, 'medical_condition').toInt()],
+      registeredAt: DateTime.parse(_readString(row, 'registered_at')),
       synced: true,
     );
 
@@ -287,23 +263,15 @@ class SyncService {
     final remote = Station(
       id: _readString(row, 'id'),
       name: _readString(row, 'name'),
-      evacuationCenterId: _readString(
-        row,
-        'evacuationcenterid',
-        fallback: 'evacuationCenterId',
-      ),
+      evacuationCenterId: _readString(row, 'evacuation_center_id'),
       capacity: _readNum(row, 'capacity').toInt(),
       allowedAgeGroup: _enumOrNull(
         AgeGroup.values,
-        _readAnyOrNull(row, 'allowedagegroup', fallback: 'allowedAgeGroup'),
+        _readAnyOrNull(row, 'allowed_age_group'),
       ),
       allowedMedicalCondition: _enumOrNull(
         MedicalCondition.values,
-        _readAnyOrNull(
-          row,
-          'allowedmedicalcondition',
-          fallback: 'allowedMedicalCondition',
-        ),
+        _readAnyOrNull(row, 'allowed_medical_condition'),
       ),
       synced: true,
     );
@@ -312,22 +280,16 @@ class SyncService {
   }
 
   Future<void> _mergeSupply(Map<String, dynamic> row) async {
+    final fallbackCenterId = await _currentCenterIdOrDefault();
     final remote = Supply(
       id: _readString(row, 'id'),
+      evacuationCenterId:
+          _readAnyOrNull(row, 'evacuation_center_id')?.toString() ??
+          fallbackCenterId,
       name: _readString(row, 'name'),
-      currentStock: _readNum(
-        row,
-        'currentstock',
-        fallback: 'currentStock',
-      ).toInt(),
-      usageRatePerDay: _readNum(
-        row,
-        'usagerateperday',
-        fallback: 'usageRatePerDay',
-      ).toInt(),
-      lastRestocked: DateTime.parse(
-        _readString(row, 'lastrestocked', fallback: 'lastRestocked'),
-      ),
+      currentStock: _readNum(row, 'current_stock').toInt(),
+      usageRatePerDay: _readNum(row, 'usage_rate_per_day').toInt(),
+      lastRestocked: DateTime.parse(_readString(row, 'last_restocked')),
       synced: true,
     );
 
@@ -345,13 +307,15 @@ class SyncService {
   }
 
   Future<void> _mergeAlert(Map<String, dynamic> row) async {
+    final fallbackCenterId = await _currentCenterIdOrDefault();
     final remote = Alert(
       id: _readString(row, 'id'),
+      evacuationCenterId:
+          _readAnyOrNull(row, 'evacuation_center_id')?.toString() ??
+          fallbackCenterId,
       message: _readString(row, 'message'),
       severity: AlertSeverity.values[_readNum(row, 'severity').toInt()],
-      createdAt: DateTime.parse(
-        _readString(row, 'createdat', fallback: 'createdAt'),
-      ),
+      createdAt: DateTime.parse(_readString(row, 'created_at')),
       read: _asBool(_readAny(row, 'read')),
       synced: true,
     );
@@ -390,14 +354,14 @@ class SyncService {
     return {
       'id': center.id,
       'name': center.name,
-      'commandcenterid': center.commandCenterId,
+      'command_center_id': center.commandCenterId,
       'latitude': center.latitude,
       'longitude': center.longitude,
-      'totalcapacity': center.totalCapacity,
-      'currentoccupancy': center.currentOccupancy,
+      'total_capacity': center.totalCapacity,
+      'current_occupancy': center.currentOccupancy,
       'status': center.status.index,
-      'medicalavailable': center.medicalAvailable ? 1 : 0,
-      'lastupdated': center.lastUpdated.toIso8601String(),
+      'medical_available': center.medicalAvailable ? 1 : 0,
+      'last_updated': center.lastUpdated.toIso8601String(),
       'synced': center.synced ? 1 : 0,
     };
   }
@@ -406,10 +370,10 @@ class SyncService {
     return {
       'id': evacuee.id,
       'name': evacuee.name,
-      'stationid': evacuee.stationId,
-      'agegroup': evacuee.ageGroup.index,
-      'medicalcondition': evacuee.medicalCondition.index,
-      'registeredat': evacuee.registeredAt.toIso8601String(),
+      'station_id': evacuee.stationId,
+      'age_group': evacuee.ageGroup.index,
+      'medical_condition': evacuee.medicalCondition.index,
+      'registered_at': evacuee.registeredAt.toIso8601String(),
       'synced': evacuee.synced ? 1 : 0,
     };
   }
@@ -417,10 +381,11 @@ class SyncService {
   Map<String, dynamic> _supplyToRemoteMap(Supply supply) {
     return {
       'id': supply.id,
+      'evacuation_center_id': supply.evacuationCenterId,
       'name': supply.name,
-      'currentstock': supply.currentStock,
-      'usagerateperday': supply.usageRatePerDay,
-      'lastrestocked': supply.lastRestocked.toIso8601String(),
+      'current_stock': supply.currentStock,
+      'usage_rate_per_day': supply.usageRatePerDay,
+      'last_restocked': supply.lastRestocked.toIso8601String(),
       'synced': supply.synced ? 1 : 0,
     };
   }
@@ -429,10 +394,10 @@ class SyncService {
     return {
       'id': station.id,
       'name': station.name,
-      'evacuationcenterid': station.evacuationCenterId,
+      'evacuation_center_id': station.evacuationCenterId,
       'capacity': station.capacity,
-      'allowedagegroup': station.allowedAgeGroup?.index,
-      'allowedmedicalcondition': station.allowedMedicalCondition?.index,
+      'allowed_age_group': station.allowedAgeGroup?.index,
+      'allowed_medical_condition': station.allowedMedicalCondition?.index,
       'synced': station.synced ? 1 : 0,
     };
   }
@@ -440,9 +405,10 @@ class SyncService {
   Map<String, dynamic> _alertToRemoteMap(Alert alert) {
     return {
       'id': alert.id,
+      'evacuation_center_id': alert.evacuationCenterId,
       'message': alert.message,
       'severity': alert.severity.index,
-      'createdat': alert.createdAt.toIso8601String(),
+      'created_at': alert.createdAt.toIso8601String(),
       'read': alert.read ? 1 : 0,
     };
   }
@@ -491,23 +457,16 @@ class SyncService {
   }
 
   Future<void> _uploadSupplies(List<Map<String, dynamic>> payload) async {
-    try {
-      await _supabase.from('supplies').upsert(payload);
-    } catch (_) {
-      final fallbackPayload = payload
-          .map(
-            (supply) => {
-              'id': supply['id'],
-              'name': supply['name'],
-              'current_stock': supply['currentstock'],
-              'usage_rate_per_day': supply['usagerateperday'],
-              'last_restocked': supply['lastrestocked'],
-              'synced': supply['synced'],
-            },
-          )
-          .toList();
-      await _supabase.from('supplies').upsert(fallbackPayload);
-    }
+    await _supabase.from('supplies').upsert(payload);
+  }
+
+  Future<void> _uploadCenters(List<Map<String, dynamic>> payload) async {
+    await _supabase.from('evacuation_centers').upsert(payload);
+  }
+
+  Future<String> _currentCenterIdOrDefault() async {
+    final center = await _databaseService.getCurrentCenter();
+    return center?.id ?? 'default-center';
   }
 
   /// Get sync status for display

@@ -257,8 +257,21 @@ class AlertsScreen extends ConsumerWidget {
                 }
 
                 final db = ref.read(databaseServiceProvider);
+                final center = await db.getCurrentCenter();
+                if (center == null) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'No evacuation center found for this device',
+                      ),
+                    ),
+                  );
+                  return;
+                }
                 final alert = Alert(
                   id: IdService.newId(),
+                  evacuationCenterId: center.id,
                   message: messageController.text,
                   severity: selectedSeverity,
                   createdAt: DateTime.now(),

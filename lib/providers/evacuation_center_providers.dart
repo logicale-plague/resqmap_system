@@ -127,6 +127,18 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       where: 'evacuationCenterId = ?',
       whereArgs: [oldId],
     );
+    await db.update(
+      'supplies',
+      {'evacuationCenterId': newId, 'synced': 0},
+      where: 'evacuationCenterId = ?',
+      whereArgs: [oldId],
+    );
+    await db.update(
+      'alerts',
+      {'evacuationCenterId': newId, 'synced': 0},
+      where: 'evacuationCenterId = ?',
+      whereArgs: [oldId],
+    );
     await syncCenterCapacity(newId);
   }
 
