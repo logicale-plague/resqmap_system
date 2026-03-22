@@ -107,6 +107,7 @@ Future<void> _initializeSampleData() async {
     final supplies = [
       Supply(
         id: IdService.newId(),
+        evacuationCenterId: sampleCenter.id,
         name: 'First Aid Kits',
         currentStock: 50,
         usageRatePerDay: 2,
@@ -114,6 +115,7 @@ Future<void> _initializeSampleData() async {
       ),
       Supply(
         id: IdService.newId(),
+        evacuationCenterId: sampleCenter.id,
         name: 'Pain Relievers',
         currentStock: 200,
         usageRatePerDay: 10,
@@ -121,6 +123,7 @@ Future<void> _initializeSampleData() async {
       ),
       Supply(
         id: IdService.newId(),
+        evacuationCenterId: sampleCenter.id,
         name: 'Bandages',
         currentStock: 500,
         usageRatePerDay: 25,

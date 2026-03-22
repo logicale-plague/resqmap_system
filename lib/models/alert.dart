@@ -2,6 +2,7 @@ enum AlertSeverity { info, warning, urgent }
 
 class Alert {
   final String id;
+  final String evacuationCenterId;
   final String message;
   final AlertSeverity severity;
   final DateTime createdAt;
@@ -10,6 +11,7 @@ class Alert {
 
   const Alert({
     required this.id,
+    required this.evacuationCenterId,
     required this.message,
     required this.severity,
     required this.createdAt,
@@ -20,6 +22,7 @@ class Alert {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'evacuationCenterId': evacuationCenterId,
       'message': message,
       'severity': severity.index,
       'createdAt': createdAt.toIso8601String(),
@@ -31,6 +34,9 @@ class Alert {
   factory Alert.fromMap(Map<String, dynamic> map) {
     return Alert(
       id: map['id'] as String,
+      evacuationCenterId: map.containsKey('evacuationCenterId')
+          ? map['evacuationCenterId'] as String
+          : map['evacuationcenterid'] as String,
       message: map['message'] as String,
       severity: AlertSeverity.values[map['severity'] as int],
       createdAt: DateTime.parse(map['createdAt'] as String),
@@ -41,6 +47,7 @@ class Alert {
 
   Alert copyWith({
     String? id,
+    String? evacuationCenterId,
     String? message,
     AlertSeverity? severity,
     DateTime? createdAt,
@@ -49,6 +56,7 @@ class Alert {
   }) {
     return Alert(
       id: id ?? this.id,
+      evacuationCenterId: evacuationCenterId ?? this.evacuationCenterId,
       message: message ?? this.message,
       severity: severity ?? this.severity,
       createdAt: createdAt ?? this.createdAt,

@@ -23,7 +23,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -77,6 +77,7 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE supplies(
         id TEXT PRIMARY KEY,
+        evacuationCenterId TEXT NOT NULL,
         name TEXT NOT NULL,
         currentStock INTEGER NOT NULL,
         usageRatePerDay INTEGER NOT NULL,
@@ -84,11 +85,15 @@ class DatabaseService {
         synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
+    await db.execute(
+      'CREATE INDEX idx_supplies_evacuationCenterId ON supplies(evacuationCenterId)',
+    );
 
     // Create Alerts table
     await db.execute('''
       CREATE TABLE alerts(
         id TEXT PRIMARY KEY,
+        evacuationCenterId TEXT NOT NULL,
         message TEXT NOT NULL,
         severity INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
@@ -96,6 +101,9 @@ class DatabaseService {
         synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
+    await db.execute(
+      'CREATE INDEX idx_alerts_evacuationCenterId ON alerts(evacuationCenterId)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -162,6 +170,42 @@ class DatabaseService {
     if (oldVersion < 5) {
       await db.execute(
         "ALTER TABLE evacuation_centers ADD COLUMN commandCenterId TEXT NOT NULL DEFAULT 'default-command-center'",
+      );
+    }
+
+    if (oldVersion < 6) {
+      await db.execute(
+        'ALTER TABLE supplies ADD COLUMN evacuationCenterId TEXT',
+      );
+      await db.execute('ALTER TABLE alerts ADD COLUMN evacuationCenterId TEXT');
+
+      final centerRows = await db.query(
+        'evacuation_centers',
+        columns: ['id'],
+        limit: 1,
+      );
+      final fallbackCenterId = centerRows.isNotEmpty
+          ? centerRows.first['id'] as String
+          : 'default-center';
+
+      await db.update(
+        'supplies',
+        {'evacuationCenterId': fallbackCenterId, 'synced': 0},
+        where: 'evacuationCenterId IS NULL OR evacuationCenterId = ?',
+        whereArgs: [''],
+      );
+      await db.update(
+        'alerts',
+        {'evacuationCenterId': fallbackCenterId, 'synced': 0},
+        where: 'evacuationCenterId IS NULL OR evacuationCenterId = ?',
+        whereArgs: [''],
+      );
+
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_supplies_evacuationCenterId ON supplies(evacuationCenterId)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_alerts_evacuationCenterId ON alerts(evacuationCenterId)',
       );
     }
   }

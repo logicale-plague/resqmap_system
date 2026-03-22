@@ -4,10 +4,13 @@ import 'package:sqflite/sqflite.dart';
 import '../models/supply.dart';
 import '../services/database_service.dart';
 import 'database_provider.dart';
+import 'evacuation_center_providers.dart';
 
 final allSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
-  return db.getAllSupplies();
+  final center = await ref.watch(currentCenterProvider.future);
+  if (center == null) return [];
+  return db.getSuppliesByCenterId(center.id);
 });
 
 final unsyncedSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
@@ -17,17 +20,14 @@ final unsyncedSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
 
 final supplyProvider = FutureProvider.family<Supply?, String>((ref, id) async {
   final db = ref.watch(databaseServiceProvider);
-  final supplies = await db.getAllSupplies();
-  try {
-    return supplies.firstWhere((s) => s.id == id);
-  } catch (e) {
-    return null;
-  }
+  return db.getSupplyById(id);
 });
 
 final lowStockSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
-  final supplies = await db.getAllSupplies();
+  final center = await ref.watch(currentCenterProvider.future);
+  if (center == null) return [];
+  final supplies = await db.getSuppliesByCenterId(center.id);
   return supplies
       .where((s) => s.currentStock < (s.usageRatePerDay * 7))
       .toList();
@@ -46,6 +46,16 @@ extension SupplyDatabaseExtensions on DatabaseService {
   Future<List<Supply>> getAllSupplies() async {
     final db = await database;
     final maps = await db.query('supplies');
+    return [for (final map in maps) Supply.fromMap(map)];
+  }
+
+  Future<List<Supply>> getSuppliesByCenterId(String centerId) async {
+    final db = await database;
+    final maps = await db.query(
+      'supplies',
+      where: 'evacuationCenterId = ?',
+      whereArgs: [centerId],
+    );
     return [for (final map in maps) Supply.fromMap(map)];
   }
 

@@ -1,5 +1,6 @@
 class Supply {
   final String id;
+  final String evacuationCenterId;
   final String name;
   final int currentStock;
   final int usageRatePerDay;
@@ -8,6 +9,7 @@ class Supply {
 
   const Supply({
     required this.id,
+    required this.evacuationCenterId,
     required this.name,
     required this.currentStock,
     required this.usageRatePerDay,
@@ -23,6 +25,7 @@ class Supply {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'evacuationCenterId': evacuationCenterId,
       'name': name,
       'currentStock': currentStock,
       'usageRatePerDay': usageRatePerDay,
@@ -34,6 +37,9 @@ class Supply {
   factory Supply.fromMap(Map<String, dynamic> map) {
     return Supply(
       id: map['id'] as String,
+      evacuationCenterId: map.containsKey('evacuationCenterId')
+          ? map['evacuationCenterId'] as String
+          : map['evacuationcenterid'] as String,
       name: map['name'] as String,
       currentStock: map['currentStock'] as int,
       usageRatePerDay: map['usageRatePerDay'] as int,
@@ -44,6 +50,7 @@ class Supply {
 
   Supply copyWith({
     String? id,
+    String? evacuationCenterId,
     String? name,
     int? currentStock,
     int? usageRatePerDay,
@@ -52,6 +59,7 @@ class Supply {
   }) {
     return Supply(
       id: id ?? this.id,
+      evacuationCenterId: evacuationCenterId ?? this.evacuationCenterId,
       name: name ?? this.name,
       currentStock: currentStock ?? this.currentStock,
       usageRatePerDay: usageRatePerDay ?? this.usageRatePerDay,

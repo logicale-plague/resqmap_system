@@ -4,10 +4,13 @@ import 'package:sqflite/sqflite.dart';
 import '../models/alert.dart';
 import '../services/database_service.dart';
 import 'database_provider.dart';
+import 'evacuation_center_providers.dart';
 
 final allAlertsProvider = FutureProvider<List<Alert>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
-  return db.getAllAlerts();
+  final center = await ref.watch(currentCenterProvider.future);
+  if (center == null) return [];
+  return db.getAlertsByCenterId(center.id);
 });
 
 final unsyncedAlertsProvider = FutureProvider<List<Alert>>((ref) async {
@@ -17,23 +20,22 @@ final unsyncedAlertsProvider = FutureProvider<List<Alert>>((ref) async {
 
 final alertProvider = FutureProvider.family<Alert?, String>((ref, id) async {
   final db = ref.watch(databaseServiceProvider);
-  final alerts = await db.getAllAlerts();
-  try {
-    return alerts.firstWhere((a) => a.id == id);
-  } catch (e) {
-    return null;
-  }
+  return db.getAlertById(id);
 });
 
 final unreadAlertsProvider = FutureProvider<List<Alert>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
-  final alerts = await db.getAllAlerts();
+  final center = await ref.watch(currentCenterProvider.future);
+  if (center == null) return [];
+  final alerts = await db.getAlertsByCenterId(center.id);
   return alerts.where((a) => !a.read).toList();
 });
 
 final urgentAlertsProvider = FutureProvider<List<Alert>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
-  final alerts = await db.getAllAlerts();
+  final center = await ref.watch(currentCenterProvider.future);
+  if (center == null) return [];
+  final alerts = await db.getAlertsByCenterId(center.id);
   return alerts.where((a) => a.severity == AlertSeverity.urgent).toList();
 });
 
@@ -50,6 +52,17 @@ extension AlertDatabaseExtensions on DatabaseService {
   Future<List<Alert>> getAllAlerts() async {
     final db = await database;
     final maps = await db.query('alerts', orderBy: 'createdAt DESC');
+    return [for (final map in maps) Alert.fromMap(map)];
+  }
+
+  Future<List<Alert>> getAlertsByCenterId(String centerId) async {
+    final db = await database;
+    final maps = await db.query(
+      'alerts',
+      where: 'evacuationCenterId = ?',
+      whereArgs: [centerId],
+      orderBy: 'createdAt DESC',
+    );
     return [for (final map in maps) Alert.fromMap(map)];
   }
 
