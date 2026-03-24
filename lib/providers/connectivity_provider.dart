@@ -3,11 +3,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 final connectivityProvider = StreamProvider<bool>((ref) async* {
   final connectivity = Connectivity();
-  
+
   // Yield initial connectivity status
   final initialResult = await connectivity.checkConnectivity();
   yield initialResult != ConnectivityResult.none;
-  
+
   // Listen to connectivity changes
   await for (final result in connectivity.onConnectivityChanged) {
     yield result != ConnectivityResult.none;

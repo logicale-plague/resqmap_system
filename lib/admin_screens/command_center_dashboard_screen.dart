@@ -22,7 +22,7 @@ class CommandCenterDashboardScreen extends ConsumerWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 24),
-            
+
             // Statistics Grid
             GridView.count(
               crossAxisCount: 2,
@@ -58,7 +58,7 @@ class CommandCenterDashboardScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 32),
-            
+
             // Supply Shortages Details
             Text(
               'Supply Shortage Details',
@@ -67,7 +67,7 @@ class CommandCenterDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _SupplyShortagesList(),
             const SizedBox(height: 32),
-            
+
             // Overcrowded Centers Details
             Text(
               'Overcrowded Centers',
@@ -126,9 +126,9 @@ class _StatisticCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[700],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
               ),
             ],
           ),
