@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
+import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class AlertsScreen extends ConsumerWidget {
   const AlertsScreen({super.key});
@@ -12,9 +14,8 @@ class AlertsScreen extends ConsumerWidget {
     final alertsAsync = ref.watch(allAlertsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Alerts'),
-        backgroundColor: Colors.indigo,
+      appBar: buildScreenAppBar(
+        title: 'Alerts',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -25,18 +26,10 @@ class AlertsScreen extends ConsumerWidget {
       body: alertsAsync.when(
         data: (alerts) {
           if (alerts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle, size: 64, color: Colors.green),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No alerts',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
+            return const AppEmptyState(
+              icon: Icons.check_circle,
+              message: 'No alerts',
+              iconSize: 64,
             );
           }
 
@@ -47,86 +40,76 @@ class AlertsScreen extends ConsumerWidget {
               final alert = alerts[index];
               final color = _getSeverityColor(alert.severity);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                elevation: 2,
-                child: Container(
+              return AppListItemCard(
+                leftBorderColor: color,
+                leading: Container(
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border(left: BorderSide(color: color, width: 4)),
+                    color: color.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(child: _getSeverityIcon(alert.severity)),
-                    ),
-                    title: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            _getSeverityText(alert.severity),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            alert.message,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                    subtitle: Text(
-                      '${alert.createdAt.toLocal().toString().substring(0, 16)}${alert.read ? ' • Read' : ''}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    trailing: alert.read
-                        ? null
-                        : Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                    onTap: () async {
-                      if (!alert.read) {
-                        final db = ref.read(databaseServiceProvider);
-                        await db.markAlertAsRead(alert.id);
-                        ref.invalidate(allAlertsProvider);
-                      }
-                      if (context.mounted) {
-                        _showAlertDetails(context, alert);
-                      }
-                    },
-                  ),
+                  child: Center(child: _getSeverityIcon(alert.severity)),
                 ),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _getSeverityText(alert.severity),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        alert.message,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Text(
+                  '${alert.createdAt.toLocal().toString().substring(0, 16)}${alert.read ? ' • Read' : ''}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                trailing: alert.read
+                    ? null
+                    : Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                onTap: () async {
+                  if (!alert.read) {
+                    final db = ref.read(databaseServiceProvider);
+                    await db.markAlertAsRead(alert.id);
+                    ref.invalidate(allAlertsProvider);
+                  }
+                  if (context.mounted) {
+                    _showAlertDetails(context, alert);
+                  }
+                },
               );
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, stack) => AppErrorState(error: err),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showSendAlertDialog(context, ref),

@@ -4,6 +4,7 @@ import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
 import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -96,10 +97,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     final centerAsync = ref.watch(currentCenterProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Register Evacuee'),
-        backgroundColor: Colors.indigo,
-      ),
+      appBar: buildScreenAppBar(title: 'Register Evacuee'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

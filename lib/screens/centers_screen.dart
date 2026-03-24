@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../models/index.dart';
 import '../providers/index.dart';
+import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class CentersScreen extends ConsumerWidget {
   const CentersScreen({super.key});
@@ -13,37 +15,17 @@ class CentersScreen extends ConsumerWidget {
     final centersAsync = ref.watch(allCentersProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Evacuation Centers',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.indigo,
-      ),
+      appBar: buildScreenAppBar(title: 'Evacuation Centers'),
       body: centersAsync.when(
         data: (centers) {
           if (centers.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.home_work_outlined,
-                    size: 54,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No evacuation centers yet',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => context.push('/map'),
-                    icon: const Icon(Icons.map_outlined),
-                    label: const Text('View Map'),
-                  ),
-                ],
+            return AppEmptyState(
+              icon: Icons.home_work_outlined,
+              message: 'No evacuation centers yet',
+              action: ElevatedButton.icon(
+                onPressed: () => context.push('/map'),
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('View Map'),
               ),
             );
           }
@@ -54,50 +36,51 @@ class CentersScreen extends ConsumerWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final center = centers[index];
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(14),
-                  leading: CircleAvatar(
-                    backgroundColor: _statusColor(center.status),
-                    child: const Icon(Icons.apartment, color: Colors.white),
-                  ),
-                  title: Text(
-                    center.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _InfoChip(
-                          text:
-                              '${center.currentOccupancy} / ${center.totalCapacity} occupied',
-                          color: Colors.blue[100]!,
-                        ),
-                        _InfoChip(
-                          text: _statusText(center.status),
-                          color: _statusColor(center.status).withAlpha(55),
-                        ),
-                        _InfoChip(
-                          text: center.medicalAvailable
-                              ? 'Medical available'
-                              : 'No medical services',
-                          color: center.medicalAvailable
-                              ? Colors.green[100]!
-                              : Colors.red[100]!,
-                        ),
-                      ],
-                    ),
+              return AppListItemCard(
+                contentPadding: const EdgeInsets.all(14),
+                margin: EdgeInsets.zero,
+                elevation: 1,
+                leading: CircleAvatar(
+                  backgroundColor: _statusColor(center.status),
+                  child: const Icon(Icons.apartment, color: Colors.white),
+                ),
+                title: Text(
+                  center.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      AppTagChip(
+                        label:
+                            '${center.currentOccupancy} / ${center.totalCapacity} occupied',
+                        color: Colors.blue[100]!,
+                      ),
+                      AppTagChip(
+                        label: _statusText(center.status),
+                        color: _statusColor(center.status).withAlpha(55),
+                      ),
+                      AppTagChip(
+                        label: center.medicalAvailable
+                            ? 'Medical available'
+                            : 'No medical services',
+                        color: center.medicalAvailable
+                            ? Colors.green[100]!
+                            : Colors.red[100]!,
+                      ),
+                    ],
                   ),
                 ),
               );
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error loading centers: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, _) =>
+            AppErrorState(error: err, prefix: 'Error loading centers'),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/map'),
@@ -131,27 +114,5 @@ class CentersScreen extends ConsumerWidget {
       case CenterStatus.closed:
         return Colors.grey;
     }
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final String text;
-  final Color color;
-
-  const _InfoChip({required this.text, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-      ),
-    );
   }
 }
