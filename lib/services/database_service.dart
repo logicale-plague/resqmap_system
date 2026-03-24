@@ -162,6 +162,7 @@ class DatabaseService {
           'evacuation_centers',
           {
             'totalCapacity': totalCapacity,
+            'currentOccupancy': currentOccupancy,
             'status': statusIndex,
             'lastUpdated': DateTime.now().toIso8601String(),
             'synced': 0,

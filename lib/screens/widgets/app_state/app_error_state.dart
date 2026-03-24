@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
-class AppErrorState extends StatelessWidget {
+class AppErrorState extends StatefulWidget {
   final Object error;
   final StackTrace? stackTrace;
   final String prefix;
@@ -14,12 +14,35 @@ class AppErrorState extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    debugPrint('AppErrorState [$prefix]: $error');
-    if (stackTrace != null) {
-      debugPrintStack(stackTrace: stackTrace);
-    }
+  State<AppErrorState> createState() => _AppErrorStateState();
+}
 
-    return Center(child: Text('$prefix: Something went wrong'));
+class _AppErrorStateState extends State<AppErrorState> {
+  void _logError() {
+    debugPrint('AppErrorState [${widget.prefix}]: ${widget.error}');
+    if (widget.stackTrace != null) {
+      debugPrintStack(stackTrace: widget.stackTrace);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _logError();
+  }
+
+  @override
+  void didUpdateWidget(covariant AppErrorState oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.error != widget.error ||
+        oldWidget.stackTrace != widget.stackTrace ||
+        oldWidget.prefix != widget.prefix) {
+      _logError();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(child: Text('${widget.prefix}: Something went wrong'));
   }
 }
