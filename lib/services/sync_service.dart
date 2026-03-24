@@ -528,12 +528,8 @@ class SyncService {
       throw Exception('SyncService is shut down');
     }
 
-    try {
-      final payload = _centerToRemoteMap(center);
-      await _supabase.from('evacuation_centers').upsert([payload]);
-    } catch (e) {
-      throw Exception('Failed to create center in Supabase: $e');
-    }
+    final payload = _centerToRemoteMap(center);
+    await _supabase.from('evacuation_centers').upsert([payload]);
   }
 
   Future<void> shutdown() async {

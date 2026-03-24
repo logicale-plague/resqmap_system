@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/providers/evacuation_center_providers.dart';
@@ -134,9 +135,7 @@ class MapController extends Notifier<MapState> {
   }) async {
     // Check online status before allowing creation
     final syncService = ref.read(syncServiceProvider);
-    final syncStatus = await syncService.getSyncStatus();
-
-    if (!syncStatus['isOnline']) {
+    if (!(syncService.isOnline)) {
       throw Exception('Cannot create center: No internet connection');
     }
 
@@ -176,7 +175,7 @@ class MapController extends Notifier<MapState> {
       currentOccupancy: 0,
       status: CenterStatus.operational,
       lastUpdated: DateTime.now(),
-      synced: true, // Mark as synced since we're pushing directly to Supabase
+      synced: false, // Will be marked synced after successful push to Supabase
     );
 
     // Store center in local state for UI display
@@ -187,9 +186,23 @@ class MapController extends Notifier<MapState> {
     // Push directly to Supabase (not to local database)
     try {
       await syncService.pushCenterToSupabase(newCenter);
+
+      // Update center to mark as synced after successful push
+      final syncedCenter = newCenter.copyWith(synced: true);
+      state = state.copyWith(
+        evacDataMap: {...state.evacDataMap, annotation.id: syncedCenter},
+      );
+
       // Invalidate the provider to refresh centers list from Supabase
       ref.invalidate(allCentersProvider);
     } catch (e) {
+      // Remove the annotation from the map and local state if push fails
+      try {
+        await manager.delete(annotation);
+      } catch (mapError) {
+        debugPrint('Failed to remove annotation: $mapError');
+      }
+
       // Remove from local state if Supabase push fails
       final updatedMap = Map<String, EvacuationCenter>.from(state.evacDataMap);
       updatedMap.remove(annotation.id);
