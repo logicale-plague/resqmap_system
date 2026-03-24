@@ -517,6 +517,21 @@ class SyncService {
     };
   }
 
+  /// Push a single evacuation center directly to Supabase
+  /// Throws an exception if offline or if the push fails
+  Future<void> pushCenterToSupabase(EvacuationCenter center) async {
+    if (!_isOnline) {
+      throw Exception('Cannot push center: Device is offline');
+    }
+
+    if (_isShutDown) {
+      throw Exception('SyncService is shut down');
+    }
+
+    final payload = _centerToRemoteMap(center);
+    await _supabase.from('evacuation_centers').upsert([payload]);
+  }
+
   Future<void> shutdown() async {
     if (_isShutDown) return;
 
