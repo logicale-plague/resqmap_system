@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../models/index.dart';
 import '../providers/index.dart';
-import 'widgets/screen_components.dart';
 import 'widgets/index.dart';
 
 class CentersScreen extends ConsumerWidget {

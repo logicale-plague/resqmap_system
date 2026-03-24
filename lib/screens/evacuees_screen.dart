@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
-import 'widgets/screen_components.dart';
 import 'widgets/index.dart';
 
 class EvacueesScreen extends ConsumerWidget {

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/providers/sync_provider.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
@@ -131,6 +132,14 @@ class MapController extends Notifier<MapState> {
     required Point point,
     required String centerName,
   }) async {
+    // Check online status before allowing creation
+    final syncService = ref.read(syncServiceProvider);
+    final syncStatus = await syncService.getSyncStatus();
+
+    if (!syncStatus['isOnline']) {
+      throw Exception('Cannot create center: No internet connection');
+    }
+
     final manager = state.pointAnnotationManager;
     if (manager == null) return;
 
@@ -167,11 +176,26 @@ class MapController extends Notifier<MapState> {
       currentOccupancy: 0,
       status: CenterStatus.operational,
       lastUpdated: DateTime.now(),
+      synced: true, // Mark as synced since we're pushing directly to Supabase
     );
 
+    // Store center in local state for UI display
     state = state.copyWith(
       evacDataMap: {...state.evacDataMap, annotation.id: newCenter},
     );
+
+    // Push directly to Supabase (not to local database)
+    try {
+      await syncService.pushCenterToSupabase(newCenter);
+      // Invalidate the provider to refresh centers list from Supabase
+      ref.invalidate(allCentersProvider);
+    } catch (e) {
+      // Remove from local state if Supabase push fails
+      final updatedMap = Map<String, EvacuationCenter>.from(state.evacDataMap);
+      updatedMap.remove(annotation.id);
+      state = state.copyWith(evacDataMap: updatedMap);
+      rethrow;
+    }
   }
 
   EvacuationCenter? findCenterByAnnotationId(String annotationId) {
