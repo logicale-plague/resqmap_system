@@ -63,7 +63,8 @@ extension EvacueeDatabaseExtensions on DatabaseService {
     final db = await database;
     final maps = await db.query(
       'evacuees',
-      where: 'stationId = ? AND active = 1 AND (name IS NULL OR TRIM(name) = "")',
+      where:
+          'stationId = ? AND active = 1 AND (name IS NULL OR TRIM(name) = "")',
       whereArgs: [stationId],
       orderBy: 'registeredAt ASC',
     );
