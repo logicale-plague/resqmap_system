@@ -191,7 +191,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     final totalCapacity = centerRows.first['totalCapacity'] as int;
 
     final countResult = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM evacuees',
+      'SELECT COUNT(*) as count FROM evacuees WHERE active = 1',
     );
     final evacueeCount = int.parse(countResult.first['count'].toString());
     final status = _calculateCenterStatus(evacueeCount, totalCapacity);

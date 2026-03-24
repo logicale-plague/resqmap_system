@@ -1,4 +1,5 @@
 export 'dashboard_screen.dart';
+export 'centers_screen.dart';
 export 'registration_screen.dart';
 export 'evacuees_screen.dart';
 export 'stations_screen.dart';

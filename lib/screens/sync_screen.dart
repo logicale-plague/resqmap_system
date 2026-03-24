@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/index.dart';
+import 'widgets/screen_components.dart';
 
 class SyncScreen extends ConsumerStatefulWidget {
   const SyncScreen({super.key});
@@ -50,10 +51,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sync Status'),
-        backgroundColor: Colors.indigo,
-      ),
+      appBar: buildScreenAppBar(title: 'Sync Status'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/feature/maps_page.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
-import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -15,25 +14,41 @@ class DashboardScreen extends ConsumerWidget {
     final evacueeCountAsync = ref.watch(evacueeCountProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        backgroundColor: Colors.indigo,
+      appBar: buildScreenAppBar(
+        title: 'Dashboard',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () {
+              context.push('/centers');
+            },
+          ),
+        ],
       ),
       body: centerAsync.when(
         data: (center) {
           if (center == null) {
-            return const Center(child: Text('No evacuation center assigned'));
+            return const AppEmptyState(
+              icon: Icons.home_work_outlined,
+              message: 'No evacuation center assigned',
+            );
           }
           return evacueeCountAsync.when(
             data: (count) => _buildDashboard(context, ref, center, count),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) =>
-                Center(child: Text('Error loading evacuee count: $err')),
+            loading: () => const AppLoadingState(),
+            error: (err, stack) => AppErrorState(
+              error: err,
+              stackTrace: stack,
+              prefix: 'Error loading evacuee count',
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading center: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, stack) => AppErrorState(
+          error: err,
+          stackTrace: stack,
+          prefix: 'Error loading center',
+        ),
       ),
     );
   }
@@ -127,26 +142,6 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 32),
-
-          /// // // // // // // // TEST TEST TEST TEST
-          Text('View Map', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MapsPage()),
-            ),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(child: Text('Click Me!')),
-            ),
           ),
           const SizedBox(height: 32),
 

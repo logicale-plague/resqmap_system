@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
-import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class StationsScreen extends ConsumerWidget {
   const StationsScreen({super.key});
@@ -14,42 +14,27 @@ class StationsScreen extends ConsumerWidget {
     final centerAsync = ref.watch(currentCenterProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stations Management'),
-        backgroundColor: Colors.indigo,
-      ),
+      appBar: buildScreenAppBar(title: 'Stations Management'),
       body: centerAsync.when(
         data: (center) {
           if (center == null) {
-            return const Center(child: Text('No evacuation center assigned'));
+            return const AppEmptyState(
+              icon: Icons.home_work_outlined,
+              message: 'No evacuation center assigned',
+            );
           }
 
           final stationsAsync = ref.watch(stationsByCenterProvider(center.id));
           return stationsAsync.when(
             data: (stations) {
               if (stations.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.meeting_room,
-                        size: 52,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No stations created yet',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            _openStationDialog(context, ref, center),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add First Station'),
-                      ),
-                    ],
+                return AppEmptyState(
+                  icon: Icons.meeting_room,
+                  message: 'No stations created yet',
+                  action: ElevatedButton.icon(
+                    onPressed: () => _openStationDialog(context, ref, center),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add First Station'),
                   ),
                 );
               }
@@ -72,80 +57,79 @@ class StationsScreen extends ConsumerWidget {
                   );
                   final unnamedCount = unnamedAsync.asData?.value.length ?? 0;
 
-                  return Card(
+                  return AppListItemCard(
                     margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      onTap: () =>
-                          _openStationArrivalsSheet(context, ref, station),
-                      contentPadding: const EdgeInsets.all(14),
-                      leading: const CircleAvatar(
-                        backgroundColor: Colors.indigo,
-                        child: Icon(Icons.meeting_room, color: Colors.white),
-                      ),
-                      title: Text(
-                        station.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            AppTagChip(
-                              label: 'Cap: ${station.capacity}',
-                              color: Colors.green[100]!,
+                    contentPadding: const EdgeInsets.all(14),
+                    isThreeLine: true,
+                    onTap: () =>
+                        _openStationArrivalsSheet(context, ref, station),
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.indigo,
+                      child: Icon(Icons.meeting_room, color: Colors.white),
+                    ),
+                    title: Text(
+                      station.name,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          AppTagChip(
+                            label: 'Cap: ${station.capacity}',
+                            color: Colors.green[100]!,
+                          ),
+                          AppTagChip(
+                            label: '$occupancyCount / ${station.capacity}',
+                            color: occupancyColor.withAlpha(60),
+                          ),
+                          AppTagChip(
+                            label: _ageLabel(station.allowedAgeGroup),
+                            color: Colors.blue[100]!,
+                          ),
+                          AppTagChip(
+                            label: _medicalLabel(
+                              station.allowedMedicalCondition,
                             ),
-                            AppTagChip(
-                              label: '$occupancyCount / ${station.capacity}',
-                              color: occupancyColor.withAlpha(60),
-                            ),
-                            AppTagChip(
-                              label: _ageLabel(station.allowedAgeGroup),
-                              color: Colors.blue[100]!,
-                            ),
-                            AppTagChip(
-                              label: _medicalLabel(
-                                station.allowedMedicalCondition,
-                              ),
-                              color: Colors.orange[100]!,
-                            ),
-                            AppTagChip(
-                              label: 'Unnamed: $unnamedCount',
-                              color: Colors.red[100]!,
-                            ),
-                          ],
-                        ),
-                      ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _openStationDialog(
-                              context,
-                              ref,
-                              center,
-                              station: station,
-                            );
-                          } else if (value == 'delete') {
-                            _confirmDelete(context, ref, station);
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem(value: 'delete', child: Text('Delete')),
+                            color: Colors.orange[100]!,
+                          ),
+                          AppTagChip(
+                            label: 'Unnamed: $unnamedCount',
+                            color: Colors.red[100]!,
+                          ),
                         ],
                       ),
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openStationDialog(
+                            context,
+                            ref,
+                            center,
+                            station: station,
+                          );
+                        } else if (value == 'delete') {
+                          _confirmDelete(context, ref, station);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
                     ),
                   );
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('Error: $err')),
+            loading: () => const AppLoadingState(),
+            error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
       floatingActionButton: centerAsync.asData?.value == null
           ? null
@@ -400,47 +384,43 @@ class StationsScreen extends ConsumerWidget {
                           itemCount: evacuees.length,
                           itemBuilder: (context, index) {
                             final evacuee = evacuees[index];
-                            return Card(
+                            return AppListItemCard(
                               margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                title: Text('Arrival ${index + 1}'),
-                                subtitle: Text(
-                                  '${_ageLabel(evacuee.ageGroup)} | ${_medicalLabel(evacuee.medicalCondition)}',
-                                ),
-                                trailing: TextButton(
-                                  onPressed: () async {
-                                    final name = await _promptName(
-                                      context,
-                                      'Register Name',
-                                    );
-                                    if (name == null || name.trim().isEmpty) {
-                                      return;
-                                    }
+                              title: Text('Arrival ${index + 1}'),
+                              subtitle: Text(
+                                '${_ageLabel(evacuee.ageGroup)} | ${_medicalLabel(evacuee.medicalCondition)}',
+                              ),
+                              trailing: TextButton(
+                                onPressed: () async {
+                                  final name = await _promptName(
+                                    context,
+                                    'Register Name',
+                                  );
+                                  if (name == null || name.trim().isEmpty) {
+                                    return;
+                                  }
 
-                                    final db = ref.read(
-                                      databaseServiceProvider,
-                                    );
-                                    await db.registerEvacueeName(
-                                      evacuee.id,
-                                      name,
-                                    );
-                                    ref.invalidate(
-                                      unnamedEvacueesByStationProvider(
-                                        station.id,
-                                      ),
-                                    );
-                                    ref.invalidate(allEvacueesProvider);
-                                  },
-                                  child: const Text('Register Name'),
-                                ),
+                                  final db = ref.read(databaseServiceProvider);
+                                  await db.registerEvacueeName(
+                                    evacuee.id,
+                                    name,
+                                  );
+                                  ref.invalidate(
+                                    unnamedEvacueesByStationProvider(
+                                      station.id,
+                                    ),
+                                  );
+                                  ref.invalidate(allEvacueesProvider);
+                                },
+                                child: const Text('Register Name'),
                               ),
                             );
                           },
                         );
                       },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Center(child: Text('Error: $err')),
+                      loading: () => const AppLoadingState(),
+                      error: (err, stack) =>
+                          AppErrorState(error: err, stackTrace: stack),
                     ),
                   ),
                 ],
