@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import '../services/id_service.dart';
+import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class SuppliesScreen extends ConsumerWidget {
   const SuppliesScreen({super.key});
@@ -12,9 +14,8 @@ class SuppliesScreen extends ConsumerWidget {
     final suppliesAsync = ref.watch(allSuppliesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Medical Supplies'),
-        backgroundColor: Colors.indigo,
+      appBar: buildScreenAppBar(
+        title: 'Medical Supplies',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -25,22 +26,9 @@ class SuppliesScreen extends ConsumerWidget {
       body: suppliesAsync.when(
         data: (supplies) {
           if (supplies.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.medical_services,
-                    size: 48,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No supplies tracked',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+            return const AppEmptyState(
+              icon: Icons.medical_services,
+              message: 'No supplies tracked',
             );
           }
 
@@ -52,117 +40,110 @@ class SuppliesScreen extends ConsumerWidget {
               final statusColor = _getStockStatusColor(supply.daysRemaining);
               final statusText = _getStockStatusText(supply.daysRemaining);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                elevation: 2,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.medical_services, color: statusColor),
+              return AppListItemCard(
+                leading: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
                   ),
-                  title: Text(
-                    supply.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Stock: ${supply.currentStock} units',
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                                Text(
-                                  'Usage: ${supply.usageRatePerDay} units/day',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              statusText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                  child: Icon(Icons.medical_services, color: statusColor),
+                ),
+                title: Text(
+                  supply.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Stock: ${supply.currentStock} units',
+                                style: const TextStyle(fontSize: 14),
                               ),
+                              Text(
+                                'Usage: ${supply.usageRatePerDay} units/day',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (supply.currentStock / 100).clamp(0, 1),
+                        minHeight: 6,
+                        backgroundColor: Colors.grey[300],
+                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${supply.daysRemaining} days remaining',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                trailing: PopupMenuButton(
+                  onSelected: (value) {
+                    if (value == 'update') {
+                      _showUpdateSupplyDialog(context, ref, supply);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'update',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 20),
+                          SizedBox(width: 12),
+                          Text('Update Stock'),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (supply.currentStock / 100).clamp(0, 1),
-                          minHeight: 6,
-                          backgroundColor: Colors.grey[300],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            statusColor,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${supply.daysRemaining} days remaining',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton(
-                    onSelected: (value) {
-                      if (value == 'update') {
-                        _showUpdateSupplyDialog(context, ref, supply);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'update',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 20),
-                            SizedBox(width: 12),
-                            Text('Update Stock'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddSupplyDialog(context, ref),

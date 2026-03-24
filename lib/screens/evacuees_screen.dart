@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class EvacueesScreen extends ConsumerWidget {
   const EvacueesScreen({super.key});
@@ -17,10 +18,7 @@ class EvacueesScreen extends ConsumerWidget {
         : ref.watch(stationsByCenterProvider(currentCenter.id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Evacuees List'),
-        backgroundColor: Colors.indigo,
-      ),
+      appBar: buildScreenAppBar(title: 'Evacuees List'),
       body: evacueesAsync.when(
         data: (evacuees) {
           final stationsById = <String, Station>{
@@ -29,18 +27,9 @@ class EvacueesScreen extends ConsumerWidget {
           };
 
           if (evacuees.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.people, size: 48, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No evacuees registered',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+            return const AppEmptyState(
+              icon: Icons.people,
+              message: 'No evacuees registered',
             );
           }
 
@@ -49,80 +38,75 @@ class EvacueesScreen extends ConsumerWidget {
             itemCount: evacuees.length,
             itemBuilder: (context, index) {
               final evacuee = evacuees[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                elevation: 2,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue,
-                    child: Text(
-                      evacuee.name?.isNotEmpty == true
-                          ? evacuee.name![0].toUpperCase()
-                          : evacuee.id.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+              return AppListItemCard(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  child: Text(
+                    evacuee.name?.isNotEmpty == true
+                        ? evacuee.name![0].toUpperCase()
+                        : evacuee.id.substring(0, 1).toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  title: Text(
-                    evacuee.name ?? 'ID: ${evacuee.id.substring(0, 8)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          AppTagChip(
-                            label: _getAgeGroupDisplay(evacuee.ageGroup),
-                            color: Colors.blue[100]!,
+                ),
+                title: Text(
+                  evacuee.name ?? 'ID: ${evacuee.id.substring(0, 8)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        AppTagChip(
+                          label: _getAgeGroupDisplay(evacuee.ageGroup),
+                          color: Colors.blue[100]!,
+                        ),
+                        const SizedBox(width: 8),
+                        AppTagChip(
+                          label: _getMedicalConditionDisplay(
+                            evacuee.medicalCondition,
                           ),
-                          const SizedBox(width: 8),
-                          AppTagChip(
-                            label: _getMedicalConditionDisplay(
-                              evacuee.medicalCondition,
-                            ),
-                            color: _getMedicalConditionColor(
-                              evacuee.medicalCondition,
-                            ).withAlpha(80),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Registered: ${evacuee.registeredAt.toLocal().toString().substring(0, 16)}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      if (evacuee.stationId != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'Station: ${stationsById[evacuee.stationId!]?.name ?? 'Unknown'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: _getMedicalConditionColor(
+                            evacuee.medicalCondition,
+                          ).withAlpha(80),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Registered: ${evacuee.registeredAt.toLocal().toString().substring(0, 16)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    if (evacuee.stationId != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Station: ${stationsById[evacuee.stationId!]?.name ?? 'Unknown'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      _showDeleteDialog(context, ref, evacuee);
-                    },
-                  ),
+                      ),
+                  ],
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    _showDeleteDialog(context, ref, evacuee);
+                  },
                 ),
               );
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
     );
   }

@@ -23,7 +23,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -73,6 +73,12 @@ class DatabaseService {
         synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stations_evacuationCenterId ON stations(evacuationCenterId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
+    );
 
     // Create Supplies table
     await db.execute('''
@@ -133,39 +139,12 @@ class DatabaseService {
       await db.execute(
         'ALTER TABLE stations ADD COLUMN capacity INTEGER NOT NULL DEFAULT 0',
       );
-
-      final centers = await db.query('evacuation_centers', columns: ['id']);
-      for (final row in centers) {
-        final centerId = row['id'] as String;
-        final capacityResult = await db.rawQuery(
-          'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
-          [centerId],
-        );
-        final totalCapacity =
-            (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
-        final occupancyResult = await db.rawQuery(
-          'SELECT COUNT(*) as count FROM evacuees WHERE active = 1',
-        );
-        final currentOccupancy = int.parse(
-          occupancyResult.first['count'].toString(),
-        );
-        final statusIndex = _calculateStatusIndex(
-          currentOccupancy,
-          totalCapacity,
-        );
-
-        await db.update(
-          'evacuation_centers',
-          {
-            'totalCapacity': totalCapacity,
-            'status': statusIndex,
-            'lastUpdated': DateTime.now().toIso8601String(),
-            'synced': 0,
-          },
-          where: 'id = ?',
-          whereArgs: [centerId],
-        );
-      }
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stations_evacuationCenterId ON stations(evacuationCenterId)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
+      );
     }
 
     if (oldVersion < 5) {
@@ -215,6 +194,58 @@ class DatabaseService {
         'ALTER TABLE evacuees ADD COLUMN active INTEGER NOT NULL DEFAULT 1',
       );
     }
+
+    if (oldVersion < 8) {
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stations_evacuationCenterId ON stations(evacuationCenterId)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
+      );
+      await _backfillCenterOccupancy(db);
+    }
+  }
+
+  Future<void> _backfillCenterOccupancy(Database db) async {
+    await db.transaction((txn) async {
+      final centers = await txn.query('evacuation_centers', columns: ['id']);
+      for (final row in centers) {
+        final centerId = row['id'] as String;
+        final capacityResult = await txn.rawQuery(
+          'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
+          [centerId],
+        );
+        final totalCapacity =
+            (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
+        final occupancyResult = await txn.rawQuery(
+          'SELECT COUNT(*) as count '
+          'FROM evacuees '
+          'INNER JOIN stations ON stations.id = evacuees.stationId '
+          'WHERE stations.evacuationCenterId = ? AND evacuees.active = 1',
+          [centerId],
+        );
+        final currentOccupancy = int.parse(
+          occupancyResult.first['count'].toString(),
+        );
+        final statusIndex = _calculateStatusIndex(
+          currentOccupancy,
+          totalCapacity,
+        );
+
+        await txn.update(
+          'evacuation_centers',
+          {
+            'totalCapacity': totalCapacity,
+            'currentOccupancy': currentOccupancy,
+            'status': statusIndex,
+            'lastUpdated': DateTime.now().toIso8601String(),
+            'synced': 0,
+          },
+          where: 'id = ?',
+          whereArgs: [centerId],
+        );
+      }
+    });
   }
 
   Future<void> markAllDataUnsynced() async {

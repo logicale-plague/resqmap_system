@@ -13,8 +13,6 @@ class AddEvacSheet extends ConsumerStatefulWidget {
 
 class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
   final TextEditingController _centerNameController = TextEditingController();
-  final TextEditingController _totalCapacityController =
-      TextEditingController();
   final TextEditingController _latController = TextEditingController();
   final TextEditingController _lngController = TextEditingController();
 
@@ -65,10 +63,6 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
           _buildTextField(
             controller: _centerNameController,
             label: "Center Name",
-          ),
-          _buildTextField(
-            controller: _totalCapacityController,
-            label: "Total Capacity",
           ),
           Row(
             mainAxisSize: MainAxisSize.min,

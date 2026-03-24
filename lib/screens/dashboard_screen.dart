@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import 'widgets/screen_components.dart';
+import 'widgets/index.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -14,12 +15,11 @@ class DashboardScreen extends ConsumerWidget {
     final evacueeCountAsync = ref.watch(evacueeCountProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.indigo,
+      appBar: buildScreenAppBar(
+        title: 'Dashboard',
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white,),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
               context.push('/centers');
             },
@@ -29,18 +29,27 @@ class DashboardScreen extends ConsumerWidget {
       body: centerAsync.when(
         data: (center) {
           if (center == null) {
-            return const Center(child: Text('No evacuation center assigned'));
+            return const AppEmptyState(
+              icon: Icons.home_work_outlined,
+              message: 'No evacuation center assigned',
+            );
           }
           return evacueeCountAsync.when(
             data: (count) => _buildDashboard(context, ref, center, count),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) =>
-                Center(child: Text('Error loading evacuee count: $err')),
+            loading: () => const AppLoadingState(),
+            error: (err, stack) => AppErrorState(
+              error: err,
+              stackTrace: stack,
+              prefix: 'Error loading evacuee count',
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading center: $err')),
+        loading: () => const AppLoadingState(),
+        error: (err, stack) => AppErrorState(
+          error: err,
+          stackTrace: stack,
+          prefix: 'Error loading center',
+        ),
       ),
     );
   }
