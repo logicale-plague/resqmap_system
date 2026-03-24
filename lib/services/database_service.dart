@@ -23,7 +23,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -39,7 +39,8 @@ class DatabaseService {
         ageGroup INTEGER NOT NULL,
         medicalCondition INTEGER NOT NULL,
         registeredAt TEXT NOT NULL,
-        synced INTEGER NOT NULL DEFAULT 0
+        synced INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -143,7 +144,7 @@ class DatabaseService {
         final totalCapacity =
             (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
         final occupancyResult = await db.rawQuery(
-          'SELECT COUNT(*) as count FROM evacuees',
+          'SELECT COUNT(*) as count FROM evacuees WHERE active = 1',
         );
         final currentOccupancy = int.parse(
           occupancyResult.first['count'].toString(),
@@ -206,6 +207,12 @@ class DatabaseService {
       );
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_alerts_evacuationCenterId ON alerts(evacuationCenterId)',
+      );
+    }
+
+    if (oldVersion < 7) {
+      await db.execute(
+        'ALTER TABLE evacuees ADD COLUMN active INTEGER NOT NULL DEFAULT 1',
       );
     }
   }

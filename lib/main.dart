@@ -151,7 +151,13 @@ class MainApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(elevation: 2, centerTitle: true),
+        appBarTheme: const AppBarTheme(
+          elevation: 2,
+          centerTitle: true,
+          titleTextStyle: TextStyle(color: Colors.white),
+          actionsIconTheme: IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

@@ -87,7 +87,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 	- medical condition
 
 ### Offline Alert System
-- Alerts nearby users							(2)
+- Alerts nearby users							(4)
 
 ### Offline Data + Sync
 - Stores data locally							(1)
@@ -283,5 +283,11 @@ flowchart TB
 - Navigation Screen
 	- Map with route to center
 
+==============================================================================================
 
-
+## Future Improvements:
+- Public Users can also download the app
+- Prior to the disaster, the app should notify the following to the user:
+	- Details about the incoming disaster
+	- Optimized list of evacuation center options (with the use of AI)
+- The app with added features should also cater to other disasters like earthquakes or fires

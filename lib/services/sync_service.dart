@@ -138,7 +138,9 @@ class SyncService {
       }
     }
 
-    final evacuees = await _databaseService.getAllEvacuees();
+    final evacuees = await _databaseService.getAllEvacuees(
+      includeInactive: true,
+    );
     for (final evacuee in evacuees) {
       if (!_isUuid(evacuee.id)) {
         await _databaseService.replaceEvacueeId(evacuee.id, IdService.newId());
@@ -242,6 +244,7 @@ class SyncService {
       medicalCondition:
           MedicalCondition.values[_readNum(row, 'medical_condition').toInt()],
       registeredAt: DateTime.parse(_readString(row, 'registered_at')),
+      active: _asBool(_readAnyOrNull(row, 'active') ?? 1),
       synced: true,
     );
 
@@ -374,6 +377,7 @@ class SyncService {
       'age_group': evacuee.ageGroup.index,
       'medical_condition': evacuee.medicalCondition.index,
       'registered_at': evacuee.registeredAt.toIso8601String(),
+      'active': evacuee.active ? 1 : 0,
       'synced': evacuee.synced ? 1 : 0,
     };
   }

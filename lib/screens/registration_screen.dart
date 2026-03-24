@@ -283,6 +283,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       ),
               ),
             ),
+            SizedBox(height: 56),
           ],
         ),
       ),

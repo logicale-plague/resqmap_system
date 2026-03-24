@@ -10,6 +10,7 @@ class Evacuee {
   final MedicalCondition medicalCondition;
   final DateTime registeredAt;
   final bool synced;
+  final bool active;
 
   const Evacuee({
     required this.id,
@@ -19,6 +20,7 @@ class Evacuee {
     required this.medicalCondition,
     required this.registeredAt,
     this.synced = false,
+    this.active = true,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +32,7 @@ class Evacuee {
       'medicalCondition': medicalCondition.index,
       'registeredAt': registeredAt.toIso8601String(),
       'synced': synced ? 1 : 0,
+      'active': active ? 1 : 0,
     };
   }
 
@@ -42,6 +45,7 @@ class Evacuee {
       medicalCondition: MedicalCondition.values[map['medicalCondition'] as int],
       registeredAt: DateTime.parse(map['registeredAt'] as String),
       synced: (map['synced'] as int) == 1,
+      active: ((map['active'] as int?) ?? 1) == 1,
     );
   }
 
@@ -53,6 +57,7 @@ class Evacuee {
     MedicalCondition? medicalCondition,
     DateTime? registeredAt,
     bool? synced,
+    bool? active,
     bool clearStationId = false,
   }) {
     return Evacuee(
@@ -63,6 +68,7 @@ class Evacuee {
       medicalCondition: medicalCondition ?? this.medicalCondition,
       registeredAt: registeredAt ?? this.registeredAt,
       synced: synced ?? this.synced,
+      active: active ?? this.active,
     );
   }
 
