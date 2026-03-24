@@ -145,7 +145,6 @@ class DatabaseService {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
       );
-      await _backfillCenterOccupancy(db);
     }
 
     if (oldVersion < 5) {

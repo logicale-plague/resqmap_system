@@ -5,9 +5,9 @@ PreferredSizeWidget buildScreenAppBar({
   List<Widget>? actions,
 }) {
   return AppBar(
-    title: Text(title, style: const TextStyle(color: Colors.white)),
+    title: Text(title),
     backgroundColor: Colors.indigo,
+    foregroundColor: Colors.white,
     actions: actions,
   );
 }
-

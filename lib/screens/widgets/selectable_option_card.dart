@@ -18,6 +18,7 @@ class SelectableOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure that UI is as simple and battery-friendly as possible, especially for users in evacuation scenarios
     return GestureDetector(
       onTap: onTap,
       child: Container(
