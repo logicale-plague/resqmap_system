@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/providers/evacuation_center_providers.dart';
 import 'package:kalig_onan_evac_system/providers/sync_provider.dart';
+import 'package:kalig_onan_evac_system/services/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
@@ -166,7 +167,7 @@ class MapController extends Notifier<MapState> {
     );
 
     final newCenter = EvacuationCenter(
-      id: annotation.id,
+      id: IdService.newId(),
       name: centerName,
       commandCenterId: currentCommandCenterId,
       latitude: point.coordinates.lat.toDouble(),
