@@ -1,8 +1,9 @@
 import 'package:go_router/go_router.dart';
+import '../../admin_screens/index.dart';
 import '../../screens/index.dart';
 
 final router = GoRouter(
-  initialLocation: '/dashboard',
+  initialLocation: '/command-center',
   routes: [
     GoRoute(
       path: '/dashboard',
@@ -25,5 +26,17 @@ final router = GoRouter(
       builder: (context, state) => const SuppliesScreen(),
     ),
     GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
+    GoRoute(
+      path: '/analytics',
+      builder: (context, state) => const VisualAnalyticsScreen(),
+    ),
+    GoRoute(
+      path: '/monitoring',
+      builder: (context, state) => const ResourceMonitoringScreen(),
+    ),
+    GoRoute(
+      path: '/command-center',
+      builder: (context, state) => const CommandCenterDashboardScreen(),
+    ),
   ],
 );
