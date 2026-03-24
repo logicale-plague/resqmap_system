@@ -145,44 +145,7 @@ class DatabaseService {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
       );
-
-      final centers = await db.query('evacuation_centers', columns: ['id']);
-      for (final row in centers) {
-        final centerId = row['id'] as String;
-        final capacityResult = await db.rawQuery(
-          'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
-          [centerId],
-        );
-        final totalCapacity =
-            (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
-        final occupancyResult = await db.rawQuery(
-          'SELECT COUNT(*) as count '
-          'FROM evacuees '
-          'INNER JOIN stations ON stations.id = evacuees.stationId '
-          'WHERE stations.evacuationCenterId = ?',
-          [centerId],
-        );
-        final currentOccupancy = int.parse(
-          occupancyResult.first['count'].toString(),
-        );
-        final statusIndex = _calculateStatusIndex(
-          currentOccupancy,
-          totalCapacity,
-        );
-
-        await db.update(
-          'evacuation_centers',
-          {
-            'totalCapacity': totalCapacity,
-            'currentOccupancy': currentOccupancy,
-            'status': statusIndex,
-            'lastUpdated': DateTime.now().toIso8601String(),
-            'synced': 0,
-          },
-          where: 'id = ?',
-          whereArgs: [centerId],
-        );
-      }
+      await _backfillCenterOccupancy(db);
     }
 
     if (oldVersion < 5) {
@@ -240,21 +203,26 @@ class DatabaseService {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
       );
+      await _backfillCenterOccupancy(db);
+    }
+  }
 
-      final centers = await db.query('evacuation_centers', columns: ['id']);
+  Future<void> _backfillCenterOccupancy(Database db) async {
+    await db.transaction((txn) async {
+      final centers = await txn.query('evacuation_centers', columns: ['id']);
       for (final row in centers) {
         final centerId = row['id'] as String;
-        final capacityResult = await db.rawQuery(
+        final capacityResult = await txn.rawQuery(
           'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
           [centerId],
         );
         final totalCapacity =
             (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
-        final occupancyResult = await db.rawQuery(
+        final occupancyResult = await txn.rawQuery(
           'SELECT COUNT(*) as count '
           'FROM evacuees '
           'INNER JOIN stations ON stations.id = evacuees.stationId '
-          'WHERE stations.evacuationCenterId = ?',
+          'WHERE stations.evacuationCenterId = ? AND evacuees.active = 1',
           [centerId],
         );
         final currentOccupancy = int.parse(
@@ -265,7 +233,7 @@ class DatabaseService {
           totalCapacity,
         );
 
-        await db.update(
+        await txn.update(
           'evacuation_centers',
           {
             'totalCapacity': totalCapacity,
@@ -278,7 +246,7 @@ class DatabaseService {
           whereArgs: [centerId],
         );
       }
-    }
+    });
   }
 
   Future<void> markAllDataUnsynced() async {

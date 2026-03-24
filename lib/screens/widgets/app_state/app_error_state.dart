@@ -19,8 +19,7 @@ class AppErrorState extends StatefulWidget {
 
 class _AppErrorStateState extends State<AppErrorState> {
   void _logError() {
-    if (!kDebugMode)
-      return; // Skip logging in debug mode to avoid cluttering console
+    if (!kDebugMode) return; // Skip logging when not in debug mode
     debugPrint('AppErrorState [${widget.prefix}]: ${widget.error}');
     if (widget.stackTrace != null) {
       debugPrintStack(stackTrace: widget.stackTrace);
