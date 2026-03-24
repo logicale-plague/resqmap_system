@@ -126,8 +126,7 @@ class StationsScreen extends ConsumerWidget {
               );
             },
             loading: () => const AppLoadingState(),
-            error: (err, stack) =>
-                AppErrorState(error: err, stackTrace: stack),
+            error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
           );
         },
         loading: () => const AppLoadingState(),
