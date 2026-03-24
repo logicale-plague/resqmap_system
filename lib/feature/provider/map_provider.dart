@@ -142,7 +142,7 @@ class MapController extends Notifier<MapState> {
     final manager = state.pointAnnotationManager;
     if (manager == null) return;
 
-    final currentCommandCenterId = await ref.watch(
+    final currentCommandCenterId = await ref.read(
       currentCommandCenterIdProvider.future,
     );
 
