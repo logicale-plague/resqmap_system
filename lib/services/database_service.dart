@@ -144,7 +144,11 @@ class DatabaseService {
         final totalCapacity =
             (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
         final occupancyResult = await db.rawQuery(
-          'SELECT COUNT(*) as count FROM evacuees',
+          'SELECT COUNT(*) as count '
+          'FROM evacuees '
+          'INNER JOIN stations ON stations.id = evacuees.stationId '
+          'WHERE stations.evacuationCenterId = ?',
+          [centerId],
         );
         final currentOccupancy = int.parse(
           occupancyResult.first['count'].toString(),

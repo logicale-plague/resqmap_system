@@ -61,6 +61,7 @@ class StationsScreen extends ConsumerWidget {
                   return AppListItemCard(
                     margin: const EdgeInsets.only(bottom: 10),
                     contentPadding: const EdgeInsets.all(14),
+                    isThreeLine: true,
                     onTap: () =>
                         _openStationArrivalsSheet(context, ref, station),
                     leading: const CircleAvatar(
@@ -125,11 +126,12 @@ class StationsScreen extends ConsumerWidget {
               );
             },
             loading: () => const AppLoadingState(),
-            error: (err, stack) => AppErrorState(error: err),
+            error: (err, stack) =>
+                AppErrorState(error: err, stackTrace: stack),
           );
         },
         loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(error: err),
+        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
       floatingActionButton: centerAsync.asData?.value == null
           ? null
@@ -419,7 +421,8 @@ class StationsScreen extends ConsumerWidget {
                         );
                       },
                       loading: () => const AppLoadingState(),
-                      error: (err, stack) => AppErrorState(error: err),
+                      error: (err, stack) =>
+                          AppErrorState(error: err, stackTrace: stack),
                     ),
                   ),
                 ],

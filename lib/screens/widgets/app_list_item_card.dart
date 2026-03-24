@@ -6,6 +6,7 @@ class AppListItemCard extends StatelessWidget {
   final Widget? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool isThreeLine;
   final EdgeInsetsGeometry contentPadding;
   final EdgeInsetsGeometry margin;
   final double elevation;
@@ -19,6 +20,7 @@ class AppListItemCard extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.isThreeLine = false,
     this.contentPadding = const EdgeInsets.all(16),
     this.margin = const EdgeInsets.only(bottom: 12),
     this.elevation = 2,
@@ -33,6 +35,7 @@ class AppListItemCard extends StatelessWidget {
       leading: leading,
       title: title,
       subtitle: subtitle,
+      isThreeLine: isThreeLine,
       trailing: trailing,
       onTap: onTap,
     );

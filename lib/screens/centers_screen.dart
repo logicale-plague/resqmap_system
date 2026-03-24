@@ -40,6 +40,7 @@ class CentersScreen extends ConsumerWidget {
                 contentPadding: const EdgeInsets.all(14),
                 margin: EdgeInsets.zero,
                 elevation: 1,
+                isThreeLine: true,
                 leading: CircleAvatar(
                   backgroundColor: _statusColor(center.status),
                   child: const Icon(Icons.apartment, color: Colors.white),
@@ -79,8 +80,11 @@ class CentersScreen extends ConsumerWidget {
           );
         },
         loading: () => const AppLoadingState(),
-        error: (err, _) =>
-            AppErrorState(error: err, prefix: 'Error loading centers'),
+        error: (err, stack) => AppErrorState(
+          error: err,
+          stackTrace: stack,
+          prefix: 'Error loading centers',
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/map'),

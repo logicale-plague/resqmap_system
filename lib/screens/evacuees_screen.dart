@@ -106,7 +106,7 @@ class EvacueesScreen extends ConsumerWidget {
           );
         },
         loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(error: err),
+        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
     );
   }

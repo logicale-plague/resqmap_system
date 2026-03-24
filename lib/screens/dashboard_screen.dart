@@ -39,13 +39,17 @@ class DashboardScreen extends ConsumerWidget {
             loading: () => const AppLoadingState(),
             error: (err, stack) => AppErrorState(
               error: err,
+              stackTrace: stack,
               prefix: 'Error loading evacuee count',
             ),
           );
         },
         loading: () => const AppLoadingState(),
-        error: (err, stack) =>
-            AppErrorState(error: err, prefix: 'Error loading center'),
+        error: (err, stack) => AppErrorState(
+          error: err,
+          stackTrace: stack,
+          prefix: 'Error loading center',
+        ),
       ),
     );
   }

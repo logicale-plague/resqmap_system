@@ -97,8 +97,23 @@ class AlertsScreen extends ConsumerWidget {
                 onTap: () async {
                   if (!alert.read) {
                     final db = ref.read(databaseServiceProvider);
-                    await db.markAlertAsRead(alert.id);
-                    ref.invalidate(allAlertsProvider);
+                    try {
+                      await db.markAlertAsRead(alert.id);
+                      ref.invalidate(allAlertsProvider);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to mark alert as read: $e'),
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (context.mounted) {
+                        _showAlertDetails(context, alert);
+                      }
+                    }
+                    return;
                   }
                   if (context.mounted) {
                     _showAlertDetails(context, alert);
@@ -109,7 +124,7 @@ class AlertsScreen extends ConsumerWidget {
           );
         },
         loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(error: err),
+        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showSendAlertDialog(context, ref),
