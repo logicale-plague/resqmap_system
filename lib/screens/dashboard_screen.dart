@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/feature/maps_page.dart';
 import '../models/index.dart';
 import '../providers/index.dart';
 import 'widgets/screen_components.dart';
@@ -16,8 +15,16 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: const Text('Dashboard', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.indigo,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white,),
+            onPressed: () {
+              context.push('/centers');
+            },
+          ),
+        ],
       ),
       body: centerAsync.when(
         data: (center) {
@@ -127,26 +134,6 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 32),
-
-          /// // // // // // // // TEST TEST TEST TEST
-          Text('View Map', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MapsPage()),
-            ),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(child: Text('Click Me!')),
-            ),
           ),
           const SizedBox(height: 32),
 
