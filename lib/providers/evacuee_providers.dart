@@ -63,7 +63,7 @@ extension EvacueeDatabaseExtensions on DatabaseService {
     final db = await database;
     final maps = await db.query(
       'evacuees',
-      where: 'stationId = ? AND (name IS NULL OR TRIM(name) = "")',
+      where: 'stationId = ? AND active = 1 AND (name IS NULL OR TRIM(name) = "")',
       whereArgs: [stationId],
       orderBy: 'registeredAt ASC',
     );
@@ -80,22 +80,26 @@ extension EvacueeDatabaseExtensions on DatabaseService {
     );
   }
 
-  Future<List<Evacuee>> getAllEvacuees() async {
+  Future<List<Evacuee>> getAllEvacuees({bool includeInactive = false}) async {
     final db = await database;
-    final maps = await db.query('evacuees');
+    final maps = includeInactive
+        ? await db.query('evacuees')
+        : await db.query('evacuees', where: 'active = 1');
     return [for (final map in maps) Evacuee.fromMap(map)];
   }
 
   Future<int> getEvacueeCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM evacuees');
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM evacuees WHERE active = 1',
+    );
     return int.parse(result.first['count'].toString());
   }
 
   Future<int> getEvacueeCountByStation(String stationId) async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM evacuees WHERE stationId = ?',
+      'SELECT COUNT(*) as count FROM evacuees WHERE stationId = ? AND active = 1',
       [stationId],
     );
     return int.parse(result.first['count'].toString());
@@ -123,7 +127,12 @@ extension EvacueeDatabaseExtensions on DatabaseService {
 
   Future<void> removeEvacuee(String id) async {
     final db = await database;
-    await db.delete('evacuees', where: 'id = ?', whereArgs: [id]);
+    await db.update(
+      'evacuees',
+      {'active': 0, 'synced': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     await refreshCurrentCenterOccupancy();
   }
 
