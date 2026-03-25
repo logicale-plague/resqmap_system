@@ -2,7 +2,7 @@
 
 A mobile, offline-first disaster management system that helps evacuation centers track capacity, manage evacuees, monitor medical supplies, and coordinate with responders, while syncing data to authorities once connectivity is restored.
 
-==============================================================================================
+===
 
 ## Developer Roles:
 ### Logicale-Plague (Ramos)
@@ -14,7 +14,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 ### banm1do (Babac)
 - Pitch
 
-==============================================================================================
+===
 
 ## Development Priority Order:
 
@@ -39,14 +39,13 @@ A mobile, offline-first disaster management system that helps evacuation centers
 ### Priority 4
 - Mesh networking
 
-
-==============================================================================================
+===
 
 ## Development Methodology:
 ### Risk-Based Incremental Delivery with Stage-Gate Verification
 - A development methodology where features are implemented by priority, validated through continuous feature-level testing, and advanced only after successful integration and system testing at each priority gate.
 
-==============================================================================================
+===
 
 ## Users:
 
@@ -66,7 +65,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 - View requests
 - Deliver supplies
 
-==============================================================================================
+===
 
 ## Core Features:
 
@@ -108,7 +107,7 @@ A mobile, offline-first disaster management system that helps evacuation centers
 - Priority levels (urgent/moderate)				(3)
 - Sends when connection returns					(3)
 
-==============================================================================================
+===
 
 ## Formal Data Flow Diagram (DFD)
 
@@ -216,7 +215,7 @@ flowchart TB
 	P2 -->|Screens, counts, status| E1
 ```
 
-==============================================================================================
+===
 
 ## What the users should see
 
@@ -283,7 +282,7 @@ flowchart TB
 - Navigation Screen
 	- Map with route to center
 
-==============================================================================================
+===
 
 ## Future Improvements:
 - Public Users can also download the app
@@ -291,3 +290,164 @@ flowchart TB
 	- Details about the incoming disaster
 	- Optimized list of evacuation center options (with the use of AI)
 - The app with added features should also cater to other disasters like earthquakes or fires
+
+===
+
+# File Organization
+
+```
+lib/
+├── main.dart                                     (App entry point, bootstrapping)
+│
+├── app/
+│   ├── app.dart                                  (MaterialApp.router setup)
+│   └── providers/                                (App-level Riverpod providers: router, theme)
+│
+├── core/
+│   ├── utils/
+│   │   ├── router.dart                           (GoRouter route definitions)
+│   │   └── id_service.dart                       (UUID helpers)
+│   ├── errors/                                   (Shared failure/exception types)
+│   └── extensions/                               (Dart/Flutter utility extensions)
+│
+├── features/
+│   │
+│   ├── evacuees/
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   ├── registration_screen.dart
+│   │   │   │   └── evacuees_screen.dart
+│   │   │   ├── widgets/                          (Evacuee-specific widgets)
+│   │   │   └── providers/
+│   │   │       └── evacuee_providers.dart        (Riverpod providers / notifiers)
+│   │   ├── application/
+│   │   │   ├── register_evacuee.dart             (Use-case: register a new evacuee)
+│   │   │   ├── remove_evacuee.dart               (Use-case: soft-delete an evacuee)
+│   │   │   └── register_evacuee_name.dart        (Use-case: assign name to unnamed evacuee)
+│   │   ├── domain/
+│   │   │   ├── evacuee.dart                      (Entity)
+│   │   │   └── evacuee_repository.dart           (Abstract repository interface)
+│   │   └── data/
+│   │       ├── evacuee_repository_impl.dart      (SQLite + Supabase implementation)
+│   │       └── evacuee_dto.dart                  (DB/remote row ↔ entity mappers)
+│   │
+│   ├── stations/
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── stations_screen.dart
+│   │   │   └── providers/
+│   │   │       └── station_providers.dart
+│   │   ├── application/
+│   │   │   └── manage_station.dart
+│   │   ├── domain/
+│   │   │   ├── station.dart
+│   │   │   └── station_repository.dart
+│   │   └── data/
+│   │       ├── station_repository_impl.dart
+│   │       └── station_dto.dart
+│   │
+│   ├── centers/
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── centers_screen.dart
+│   │   │   └── providers/
+│   │   │       └── evacuation_center_providers.dart
+│   │   ├── application/
+│   │   │   └── manage_center.dart
+│   │   ├── domain/
+│   │   │   ├── evacuation_center.dart
+│   │   │   └── evacuation_center_repository.dart
+│   │   └── data/
+│   │       ├── evacuation_center_repository_impl.dart
+│   │       └── evacuation_center_dto.dart
+│   │
+│   ├── supplies/
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── supplies_screen.dart
+│   │   │   └── providers/
+│   │   │       └── supply_providers.dart
+│   │   ├── application/
+│   │   │   ├── add_supply.dart
+│   │   │   └── update_supply_stock.dart
+│   │   ├── domain/
+│   │   │   ├── supply.dart
+│   │   │   └── supply_repository.dart
+│   │   └── data/
+│   │       ├── supply_repository_impl.dart
+│   │       └── supply_dto.dart
+│   │
+│   ├── alerts/
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── alerts_screen.dart
+│   │   │   └── providers/
+│   │   │       └── alert_providers.dart
+│   │   ├── application/
+│   │   │   ├── create_alert.dart
+│   │   │   └── mark_alert_read.dart
+│   │   ├── domain/
+│   │   │   ├── alert.dart
+│   │   │   └── alert_repository.dart
+│   │   └── data/
+│   │       ├── alert_repository_impl.dart
+│   │       └── alert_dto.dart
+│   │
+│   ├── sync/
+│   │   ├── application/
+│   │   │   ├── sync_service.dart                 (Outbox upload + pull-and-merge orchestration)
+│   │   │   └── conflict_resolver.dart            (Last-write-wins / custom merge logic)
+│   │   ├── domain/
+│   │   │   └── sync_status.dart                  (SyncStatus value object, outbox entry type)
+│   │   ├── data/
+│   │   │   └── sync_repository_impl.dart         (Supabase upsert / select wrappers)
+│   │   └── presentation/
+│   │       ├── screens/
+│   │       │   └── sync_screen.dart
+│   │       └── providers/
+│   │           └── sync_provider.dart
+│   │
+│   ├── maps/
+│   │   ├── presentation/
+│   │   │   ├── maps_page.dart
+│   │   │   └── widgets/                          (Map-specific overlay widgets)
+│   │   ├── application/
+│   │   │   └── locate_centers.dart               (Use-case: GPS + offline tile lookup)
+│   │   ├── domain/
+│   │   │   └── map_location.dart                 (Coordinate / center-pin entity)
+│   │   └── data/
+│   │       └── map_provider_impl.dart            (MapBox + geolocator integration)
+│   │
+│   └── command_center/
+│       └── presentation/
+│           ├── screens/
+│           │   ├── command_center_dashboard_screen.dart
+│           │   ├── visual_analytics_screen.dart
+│           │   └── resource_monitoring_screen.dart
+│           └── providers/
+│               └── command_center_providers.dart
+│
+├── models/                                       (Shared/legacy models during migration)
+│   └── index.dart
+│
+└── services/                                     (Shared/legacy services during migration)
+    ├── database_service.dart
+    └── id_service.dart
+```
+
+### Layer responsibilities
+
+| Layer | Contains | Allowed dependencies |
+|---|---|---|
+| **Presentation** | Screens, widgets, Riverpod providers/notifiers | Application, Domain |
+| **Application** | Use-cases, orchestration logic | Domain only |
+| **Domain** | Entities, repository interfaces, value objects | Nothing (pure Dart) |
+| **Data** | Repository implementations, DTOs, DB/API adapters | Domain, external packages |
+
+### Migration approach
+1. Start with `evacuees` — move DB extension methods into `EvacueeRepositoryImpl`, introduce a use-case, wire Riverpod notifiers to call use-cases instead of `DatabaseService` directly.
+2. Repeat per feature slice (stations → centers → supplies → alerts).
+3. Refactor `SyncService` into the `sync` feature slice using an outbox pattern after at least two feature slices are migrated.
+4. Move entries out of `models/` and `services/` as each feature slice is completed; remove those directories once empty.
+5. Standardize on **Riverpod only** — gradually remove any remaining `Provider` package usage.
+

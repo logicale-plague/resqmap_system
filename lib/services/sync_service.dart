@@ -3,14 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../providers/alert_providers.dart';
-import '../providers/evacuation_center_providers.dart';
-import '../providers/evacuee_providers.dart';
-import '../providers/station_providers.dart';
-import '../providers/supply_providers.dart';
-import 'database_service.dart';
-import 'id_service.dart';
-import '../models/index.dart';
+import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
+import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();

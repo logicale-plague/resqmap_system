@@ -21,12 +21,7 @@ class DatabaseService {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'kalig_onan_evac.db');
 
-    return openDatabase(
-      path,
-      version: 8,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+    return openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -115,140 +110,49 @@ class DatabaseService {
     );
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute(
-        'ALTER TABLE alerts ADD COLUMN synced INTEGER NOT NULL DEFAULT 0',
-      );
-    }
+  // Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {}
 
-    if (oldVersion < 3) {
-      await db.execute('''
-        CREATE TABLE stations(
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          evacuationCenterId TEXT NOT NULL,
-          capacity INTEGER NOT NULL DEFAULT 0,
-          allowedAgeGroup INTEGER,
-          allowedMedicalCondition INTEGER,
-          synced INTEGER NOT NULL DEFAULT 0
-        )
-      ''');
-      await db.execute('ALTER TABLE evacuees ADD COLUMN stationId TEXT');
-    }
+  // Future<void> _backfillCenterOccupancy(Database db) async {
+  //   await db.transaction((txn) async {
+  //     final centers = await txn.query('evacuation_centers', columns: ['id']);
+  //     for (final row in centers) {
+  //       final centerId = row['id'] as String;
+  //       final capacityResult = await txn.rawQuery(
+  //         'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
+  //         [centerId],
+  //       );
+  //       final totalCapacity =
+  //           (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
+  //       final occupancyResult = await txn.rawQuery(
+  //         'SELECT COUNT(*) as count '
+  //         'FROM evacuees '
+  //         'INNER JOIN stations ON stations.id = evacuees.stationId '
+  //         'WHERE stations.evacuationCenterId = ? AND evacuees.active = 1',
+  //         [centerId],
+  //       );
+  //       final currentOccupancy = int.parse(
+  //         occupancyResult.first['count'].toString(),
+  //       );
+  //       final statusIndex = _calculateStatusIndex(
+  //         currentOccupancy,
+  //         totalCapacity,
+  //       );
 
-    if (oldVersion >= 3 && oldVersion < 4) {
-      await db.execute(
-        'ALTER TABLE stations ADD COLUMN capacity INTEGER NOT NULL DEFAULT 0',
-      );
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_stations_evacuationCenterId ON stations(evacuationCenterId)',
-      );
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
-      );
-    }
-
-    if (oldVersion < 5) {
-      await db.execute(
-        "ALTER TABLE evacuation_centers ADD COLUMN commandCenterId TEXT NOT NULL DEFAULT 'default-command-center'",
-      );
-    }
-
-    if (oldVersion < 6) {
-      await db.execute(
-        'ALTER TABLE supplies ADD COLUMN evacuationCenterId TEXT',
-      );
-      await db.execute('ALTER TABLE alerts ADD COLUMN evacuationCenterId TEXT');
-
-      final centerRows = await db.query(
-        'evacuation_centers',
-        columns: ['id'],
-        limit: 1,
-      );
-      final fallbackCenterId = centerRows.isNotEmpty
-          ? centerRows.first['id'] as String
-          : 'default-center';
-
-      await db.update(
-        'supplies',
-        {'evacuationCenterId': fallbackCenterId, 'synced': 0},
-        where: 'evacuationCenterId IS NULL OR evacuationCenterId = ?',
-        whereArgs: [''],
-      );
-      await db.update(
-        'alerts',
-        {'evacuationCenterId': fallbackCenterId, 'synced': 0},
-        where: 'evacuationCenterId IS NULL OR evacuationCenterId = ?',
-        whereArgs: [''],
-      );
-
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_supplies_evacuationCenterId ON supplies(evacuationCenterId)',
-      );
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_alerts_evacuationCenterId ON alerts(evacuationCenterId)',
-      );
-    }
-
-    if (oldVersion < 7) {
-      await db.execute(
-        'ALTER TABLE evacuees ADD COLUMN active INTEGER NOT NULL DEFAULT 1',
-      );
-    }
-
-    if (oldVersion < 8) {
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_stations_evacuationCenterId ON stations(evacuationCenterId)',
-      );
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_evacuees_stationId ON evacuees(stationId)',
-      );
-      await _backfillCenterOccupancy(db);
-    }
-  }
-
-  Future<void> _backfillCenterOccupancy(Database db) async {
-    await db.transaction((txn) async {
-      final centers = await txn.query('evacuation_centers', columns: ['id']);
-      for (final row in centers) {
-        final centerId = row['id'] as String;
-        final capacityResult = await txn.rawQuery(
-          'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
-          [centerId],
-        );
-        final totalCapacity =
-            (capacityResult.first['totalCapacity'] as num?)?.toInt() ?? 0;
-        final occupancyResult = await txn.rawQuery(
-          'SELECT COUNT(*) as count '
-          'FROM evacuees '
-          'INNER JOIN stations ON stations.id = evacuees.stationId '
-          'WHERE stations.evacuationCenterId = ? AND evacuees.active = 1',
-          [centerId],
-        );
-        final currentOccupancy = int.parse(
-          occupancyResult.first['count'].toString(),
-        );
-        final statusIndex = _calculateStatusIndex(
-          currentOccupancy,
-          totalCapacity,
-        );
-
-        await txn.update(
-          'evacuation_centers',
-          {
-            'totalCapacity': totalCapacity,
-            'currentOccupancy': currentOccupancy,
-            'status': statusIndex,
-            'lastUpdated': DateTime.now().toIso8601String(),
-            'synced': 0,
-          },
-          where: 'id = ?',
-          whereArgs: [centerId],
-        );
-      }
-    });
-  }
+  //       await txn.update(
+  //         'evacuation_centers',
+  //         {
+  //           'totalCapacity': totalCapacity,
+  //           'currentOccupancy': currentOccupancy,
+  //           'status': statusIndex,
+  //           'lastUpdated': DateTime.now().toIso8601String(),
+  //           'synced': 0,
+  //         },
+  //         where: 'id = ?',
+  //         whereArgs: [centerId],
+  //       );
+  //     }
+  //   });
+  // }
 
   Future<void> markAllDataUnsynced() async {
     final db = await database;
@@ -261,13 +165,13 @@ class DatabaseService {
     });
   }
 
-  int _calculateStatusIndex(int currentOccupancy, int totalCapacity) {
-    if (totalCapacity <= 0) {
-      return 0;
-    }
-    final percentage = (currentOccupancy / totalCapacity * 100);
-    if (percentage >= 100) return 2;
-    if (percentage >= 80) return 1;
-    return 0;
-  }
+  // int _calculateStatusIndex(int currentOccupancy, int totalCapacity) {
+  //   if (totalCapacity <= 0) {
+  //     return 0;
+  //   }
+  //   final percentage = (currentOccupancy / totalCapacity * 100);
+  //   if (percentage >= 100) return 2;
+  //   if (percentage >= 80) return 1;
+  //   return 0;
+  // }
 }

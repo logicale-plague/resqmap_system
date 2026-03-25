@@ -9,18 +9,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:kalig_onan_evac_system/core/utils/router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/database_service.dart';
-import 'services/id_service.dart';
-import 'models/index.dart';
-import 'providers/index.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('en_US', null);
-
-  await dotenv.load(fileName: 'assets/.env');
-
-  // Initialize database
   await DatabaseService().database;
+
+  await dotenv.load(fileName: "assets/.env");
+
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']?.trim() ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '',
@@ -35,7 +31,7 @@ void main() async {
   // Initialize MapBox access
   MapboxOptions.setAccessToken(dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '');
 
-  // perission handler for location
+  // permission handler for location
   await Permission.locationWhenInUse.request();
 
   SystemChrome.setSystemUIOverlayStyle(

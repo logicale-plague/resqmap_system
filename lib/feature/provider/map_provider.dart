@@ -1,13 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kalig_onan_evac_system/providers/evacuation_center_providers.dart';
-import 'package:kalig_onan_evac_system/providers/sync_provider.dart';
-import 'package:kalig_onan_evac_system/services/id_service.dart';
+import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/sync/presentation/providers/sync_provider.dart';
+import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
-import 'package:kalig_onan_evac_system/models/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center.dart';
 
 class MapState {
   final MapboxMap? mapboxMap;

@@ -1,7 +1,9 @@
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/feature/maps_page.dart';
+import 'package:kalig_onan_evac_system/core/indices/admin_screens_index.dart';
+import 'package:kalig_onan_evac_system/core/indices/staff_screens_index.dart';
 import 'package:kalig_onan_evac_system/feature/page/homePage.dart';
-import '../../screens/index.dart';
+import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
+import 'package:kalig_onan_evac_system/screens/alerts_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/homePage',
@@ -33,6 +35,19 @@ final router = GoRouter(
       builder: (context, state) => const CentersScreen(),
     ),
     GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
+    GoRoute(path: '/alerts', builder: (context, state) => const AlertsScreen()),
+    GoRoute(
+      path: '/analytics',
+      builder: (context, state) => const VisualAnalyticsScreen(),
+    ),
+    GoRoute(
+      path: '/monitoring',
+      builder: (context, state) => const ResourceMonitoringScreen(),
+    ),
+    GoRoute(
+      path: '/command-center',
+      builder: (context, state) => const CommandCenterDashboardScreen(),
+    ),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
   ],
 );
