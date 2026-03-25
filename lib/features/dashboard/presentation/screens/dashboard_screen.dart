@@ -269,6 +269,7 @@ class DashboardScreen extends ConsumerWidget {
               await db.removeEvacuee(evacuee.id);
               if (!context.mounted) return;
               Navigator.pop(context);
+              ref.invalidate(allEvacueesProvider);
               ref.invalidate(currentCenterProvider);
               ref.invalidate(evacueeCountProvider);
             },

@@ -458,7 +458,8 @@ class SyncService {
     }
     final index = rawValue is num
         ? rawValue.toInt()
-        : int.parse(rawValue.toString());
+        : int.tryParse(rawValue.toString());
+    if (index == null) return null;
     if (index < 0 || index >= values.length) return null;
     return values[index];
   }

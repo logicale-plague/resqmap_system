@@ -245,12 +245,24 @@ class SuppliesScreen extends ConsumerWidget {
                 );
                 return;
               }
+              final parsedStock = int.tryParse(stockController.text);
+              final parsedUsageRate = int.tryParse(usageController.text);
+              if (parsedStock == null || parsedUsageRate == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Stock and usage rate must be valid integers',
+                    ),
+                  ),
+                );
+                return;
+              }
               final supply = Supply(
                 id: IdService.newId(),
                 evacuationCenterId: center.id,
                 name: nameController.text,
-                currentStock: int.parse(stockController.text),
-                usageRatePerDay: int.parse(usageController.text),
+                currentStock: parsedStock,
+                usageRatePerDay: parsedUsageRate,
                 lastRestocked: DateTime.now(),
               );
 
@@ -307,10 +319,16 @@ class SuppliesScreen extends ConsumerWidget {
               }
 
               final db = ref.read(databaseServiceProvider);
-              await db.updateSupplyStock(
-                supply.id,
-                int.parse(stockController.text),
-              );
+              final parsedStock = int.tryParse(stockController.text);
+              if (parsedStock == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Stock quantity must be a valid integer'),
+                  ),
+                );
+                return;
+              }
+              await db.updateSupplyStock(supply.id, parsedStock);
               if (!context.mounted) return;
               Navigator.pop(context);
 

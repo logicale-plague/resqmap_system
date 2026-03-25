@@ -12,11 +12,17 @@ extension RegisterEvacueeNameUseCase on DatabaseService {
     }
 
     final db = await database;
-    await db.update(
+    final affectedRows = await db.update(
       'evacuees',
       {'name': finalName, 'synced': 0},
       where: 'id = ?',
       whereArgs: [evacueeId],
     );
+
+    if (affectedRows == 0) {
+      throw StateError(
+        'registerEvacueeName could not find evacueeId=$evacueeId.',
+      );
+    }
   }
 }

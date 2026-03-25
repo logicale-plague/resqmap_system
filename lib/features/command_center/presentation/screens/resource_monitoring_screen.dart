@@ -146,7 +146,10 @@ class _ResourceMonitoringScreenState
         .toList(growable: false);
 
     if (knownDaysRemaining.isEmpty) {
-      return _MedicineMetrics(status: 'High', level: averageLevel);
+      return _MedicineMetrics(
+        status: 'Unknown',
+        level: _medicineLevelForDaysRemaining(null),
+      );
     }
 
     final minimumDaysRemaining = knownDaysRemaining.reduce(

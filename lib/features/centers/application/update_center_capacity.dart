@@ -3,6 +3,14 @@ import 'package:kalig_onan_evac_system/services/database_service.dart';
 
 extension UpdateCenterCapacityUseCase on DatabaseService {
   Future<void> updateCenterOccupancy(String centerId, int newOccupancy) async {
+    if (newOccupancy < 0) {
+      throw ArgumentError.value(
+        newOccupancy,
+        'newOccupancy',
+        'updateCenterOccupancy requires a non-negative occupancy.',
+      );
+    }
+
     final db = await database;
     final centerRows = await db.query(
       'evacuation_centers',
@@ -13,7 +21,8 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
     );
     if (centerRows.isEmpty) return;
 
-    final totalCapacity = centerRows.first['totalCapacity'] as int;
+    final totalCapacity =
+        (centerRows.first['totalCapacity'] as num?)?.toInt() ?? 0;
     final status = _calculateUpdatedCenterStatus(newOccupancy, totalCapacity);
 
     await db.update(

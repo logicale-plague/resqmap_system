@@ -42,4 +42,13 @@ class Alert {
   @override
   String toString() =>
       'Alert(id: $id, severity: $severity, message: <redacted>)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Alert && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

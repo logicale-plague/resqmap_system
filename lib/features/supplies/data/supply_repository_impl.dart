@@ -42,12 +42,17 @@ extension SupplyDatabaseExtensions on DatabaseService {
 
   Future<void> replaceSupplyId(String oldId, String newId) async {
     final db = await database;
-    await db.update(
-      'supplies',
-      {'id': newId, 'synced': 0},
-      where: 'id = ?',
-      whereArgs: [oldId],
-    );
+    await db.transaction((txn) async {
+      if (oldId != newId) {
+        await txn.delete('supplies', where: 'id = ?', whereArgs: [newId]);
+      }
+      await txn.update(
+        'supplies',
+        {'id': newId, 'synced': 0},
+        where: 'id = ?',
+        whereArgs: [oldId],
+      );
+    });
   }
 
   Future<List<Supply>> getUnsyncedSupplies() async {

@@ -38,39 +38,44 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
 
   Future<void> replaceCenterId(String oldId, String newId) async {
     final db = await database;
-    await db.update(
-      'evacuation_centers',
-      {
-        'id': newId,
-        'synced': 0,
-        'lastUpdated': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [oldId],
-    );
-    await db.update(
-      'stations',
-      {'evacuationCenterId': newId, 'synced': 0},
-      where: 'evacuationCenterId = ?',
-      whereArgs: [oldId],
-    );
-    await db.update(
-      'supplies',
-      {'evacuationCenterId': newId, 'synced': 0},
-      where: 'evacuationCenterId = ?',
-      whereArgs: [oldId],
-    );
-    await db.update(
-      'alerts',
-      {'evacuationCenterId': newId, 'synced': 0},
-      where: 'evacuationCenterId = ?',
-      whereArgs: [oldId],
-    );
-    await syncCenterCapacity(newId);
+    await db.transaction((txn) async {
+      await txn.update(
+        'evacuation_centers',
+        {
+          'id': newId,
+          'synced': 0,
+          'lastUpdated': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [oldId],
+      );
+      await txn.update(
+        'stations',
+        {'evacuationCenterId': newId, 'synced': 0},
+        where: 'evacuationCenterId = ?',
+        whereArgs: [oldId],
+      );
+      await txn.update(
+        'supplies',
+        {'evacuationCenterId': newId, 'synced': 0},
+        where: 'evacuationCenterId = ?',
+        whereArgs: [oldId],
+      );
+      await txn.update(
+        'alerts',
+        {'evacuationCenterId': newId, 'synced': 0},
+        where: 'evacuationCenterId = ?',
+        whereArgs: [oldId],
+      );
+      await syncCenterCapacity(newId, executor: txn);
+    });
   }
 
-  Future<void> syncCenterCapacity(String centerId) async {
-    final db = await database;
+  Future<void> syncCenterCapacity(
+    String centerId, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
 
     final capacityResult = await db.rawQuery(
       'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
@@ -88,7 +93,8 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     );
     if (centerRows.isEmpty) return;
 
-    final currentOccupancy = centerRows.first['currentOccupancy'] as int;
+    final currentOccupancy =
+        (centerRows.first['currentOccupancy'] as num?)?.toInt() ?? 0;
     final status = _calculateCenterStatus(currentOccupancy, totalCapacity);
 
     await db.update(
@@ -117,7 +123,8 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     if (centerRows.isEmpty) return;
 
     final centerId = centerRows.first['id'] as String;
-    final totalCapacity = centerRows.first['totalCapacity'] as int;
+    final totalCapacity =
+        (centerRows.first['totalCapacity'] as num?)?.toInt() ?? 0;
 
     final countResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM evacuees WHERE active = 1',
@@ -145,15 +152,14 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
   }
 
   Future<void> markCentersSynced(List<String> ids) async {
+    if (ids.isEmpty) return;
+
     final db = await database;
-    for (final id in ids) {
-      await db.update(
-        'evacuation_centers',
-        {'synced': 1},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    await db.rawUpdate(
+      'UPDATE evacuation_centers SET synced = 1 WHERE id IN ($placeholders)',
+      ids,
+    );
   }
 }
 

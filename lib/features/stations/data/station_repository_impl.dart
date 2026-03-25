@@ -58,11 +58,26 @@ extension StationDatabaseExtensions on DatabaseService {
 
   Future<void> upsertStationFromRemote(Station station) async {
     final db = await database;
+    final existingRows = await db.query(
+      'stations',
+      columns: ['evacuationCenterId'],
+      where: 'id = ?',
+      whereArgs: [station.id],
+      limit: 1,
+    );
+    final previousCenterId = existingRows.isEmpty
+        ? null
+        : existingRows.first['evacuationCenterId'] as String?;
+
     await db.insert(
       'stations',
       stationToMap(station.copyWith(synced: true)),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    if (previousCenterId != null &&
+        previousCenterId != station.evacuationCenterId) {
+      await syncCenterCapacity(previousCenterId);
+    }
     await syncCenterCapacity(station.evacuationCenterId);
   }
 
