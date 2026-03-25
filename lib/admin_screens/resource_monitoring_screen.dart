@@ -1,141 +1,222 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ResourceMonitoringScreen extends StatefulWidget {
+import '../models/index.dart';
+import '../providers/index.dart';
+
+class ResourceMonitoringScreen extends ConsumerStatefulWidget {
   const ResourceMonitoringScreen({super.key});
 
   @override
-  State<ResourceMonitoringScreen> createState() =>
+  ConsumerState<ResourceMonitoringScreen> createState() =>
       _ResourceMonitoringScreenState();
 }
 
-class _ResourceMonitoringScreenState extends State<ResourceMonitoringScreen> {
+class _ResourceMonitoringScreenState
+    extends ConsumerState<ResourceMonitoringScreen> {
   String _selectedFilter = 'All';
 
   @override
   Widget build(BuildContext context) {
+    final centersAsync = ref.watch(allCentersProvider);
+    final suppliesAsync = ref.watch(allCenterSuppliesProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Resource Monitoring'), elevation: 0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Text(
-              'Resource Monitoring',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Monitor medicine supplies and capacity across all centers',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
+      body: centersAsync.when(
+        data: (centers) {
+          return suppliesAsync.when(
+            data: (supplies) {
+              final resources = _buildCenterResources(centers, supplies);
+              final filteredResources = resources
+                  .where(_matchesFilter)
+                  .toList(growable: false);
 
-            // Filter/Sort Options
-            _FilterBar(
-              selectedFilter: _selectedFilter,
-              onFilterChanged: (filter) =>
-                  setState(() => _selectedFilter = filter),
-            ),
-            const SizedBox(height: 16),
-
-            // Resource List
-            Column(
-              children: [
-                for (int index = 0; index < 8; index++)
-                  if (_matchesFilter(index))
-                    _ResourceMonitoringCard(
-                      centerName: 'Evacuation Center ${index + 1}',
-                      centerLocation:
-                          'Zone ${String.fromCharCode(65 + (index % 4))}',
-                      totalCapacity: 200 + (index * 50),
-                      currentOccupancy: 120 + (index * 30),
-                      medicineStatus: _getMedicineStatus(index),
-                      medicineLevel: _getMedicineLevel(index),
-                      onDetailsPressed: () => _openResourceDetails(
-                        context,
-                        centerName: 'Evacuation Center ${index + 1}',
-                        centerLocation:
-                            'Zone ${String.fromCharCode(65 + (index % 4))}',
-                        totalCapacity: 200 + (index * 50),
-                        currentOccupancy: 120 + (index * 30),
-                        medicineStatus: _getMedicineStatus(index),
-                        medicineLevel: _getMedicineLevel(index),
-                      ),
-                      onTransferPressed: () => _openTransferDialog(
-                        context,
-                        centerName: 'Evacuation Center ${index + 1}',
-                        medicineStatus: _getMedicineStatus(index),
-                      ),
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Resource Monitoring',
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
-              ],
-            ),
-          ],
-        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Monitor medicine supplies and capacity across all centers',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    _FilterBar(
+                      selectedFilter: _selectedFilter,
+                      onFilterChanged: (filter) =>
+                          setState(() => _selectedFilter = filter),
+                    ),
+                    const SizedBox(height: 16),
+                    if (filteredResources.isEmpty)
+                      Text(
+                        'No evacuation centers match the selected filter.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      )
+                    else
+                      Column(
+                        children: [
+                          for (final resource in filteredResources)
+                            _ResourceMonitoringCard(
+                              resource: resource,
+                              onDetailsPressed: () =>
+                                  _openResourceDetails(context, resource),
+                              onTransferPressed: () =>
+                                  _openTransferDialog(context, resource),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) =>
+                Center(child: Text('Failed to load supplies: $error')),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) =>
+            Center(child: Text('Failed to load evacuation centers: $error')),
       ),
     );
   }
 
-  String _getMedicineStatus(int index) {
-    final statuses = [
-      'Low',
-      'Medium',
-      'Low',
-      'High',
-      'Critical',
-      'Medium',
-      'Low',
-      'High',
-    ];
-    return statuses[index];
+  List<_CenterResourceViewModel> _buildCenterResources(
+    List<EvacuationCenter> centers,
+    List<Supply> supplies,
+  ) {
+    final suppliesByCenter = <String, List<Supply>>{};
+
+    for (final supply in supplies) {
+      suppliesByCenter
+          .putIfAbsent(supply.evacuationCenterId, () => <Supply>[])
+          .add(supply);
+    }
+
+    return centers
+        .map((center) {
+          final centerSupplies =
+              suppliesByCenter[center.id] ?? const <Supply>[];
+          final lowStockSupplies = centerSupplies
+              .where(
+                (supply) => supply.currentStock < (supply.usageRatePerDay * 7),
+              )
+              .toList(growable: false);
+          final medicineMetrics = _buildMedicineMetrics(center, centerSupplies);
+
+          return _CenterResourceViewModel(
+            center: center,
+            centerSubtitle: 'Status: ${_statusLabel(center.status)}',
+            supplies: centerSupplies,
+            lowStockSupplies: lowStockSupplies,
+            medicineStatus: medicineMetrics.status,
+            medicineLevel: medicineMetrics.level,
+          );
+        })
+        .toList(growable: false);
   }
 
-  double _getMedicineLevel(int index) {
-    final levels = [0.25, 0.60, 0.30, 0.95, 0.10, 0.70, 0.35, 0.85];
-    return levels[index];
+  _MedicineMetrics _buildMedicineMetrics(
+    EvacuationCenter center,
+    List<Supply> supplies,
+  ) {
+    if (supplies.isEmpty) {
+      return _MedicineMetrics(
+        status: center.medicalAvailable ? 'High' : 'Critical',
+        level: center.medicalAvailable ? 1.0 : 0.0,
+      );
+    }
+
+    final levels = supplies
+        .map((supply) => _medicineLevelForDaysRemaining(supply.daysRemaining))
+        .toList(growable: false);
+    final averageLevel =
+        levels.reduce((left, right) => left + right) / levels.length;
+    final minimumDaysRemaining = supplies
+        .map((supply) => supply.daysRemaining)
+        .reduce((left, right) => left < right ? left : right);
+
+    if (minimumDaysRemaining <= 2) {
+      return _MedicineMetrics(status: 'Critical', level: averageLevel);
+    }
+    if (minimumDaysRemaining <= 7) {
+      return _MedicineMetrics(status: 'Low', level: averageLevel);
+    }
+    if (minimumDaysRemaining <= 14) {
+      return _MedicineMetrics(status: 'Medium', level: averageLevel);
+    }
+    return _MedicineMetrics(status: 'High', level: averageLevel);
   }
 
-  bool _matchesFilter(int index) {
+  double _medicineLevelForDaysRemaining(int daysRemaining) {
+    if (daysRemaining <= 2) return 0.1;
+    if (daysRemaining <= 7) return 0.35;
+    if (daysRemaining <= 14) return 0.65;
+    return 0.9;
+  }
+
+  bool _matchesFilter(_CenterResourceViewModel resource) {
     switch (_selectedFilter) {
       case 'Critical':
-        return _getMedicineStatus(index) == 'Critical';
+        return resource.medicineStatus == 'Critical';
       case 'Low Stock':
-        return _getMedicineStatus(index) == 'Low';
+        return resource.lowStockSupplies.isNotEmpty;
       case 'Overcrowded':
-        final totalCapacity = 200 + (index * 50);
-        final currentOccupancy = 120 + (index * 30);
-        return totalCapacity > 0 && (currentOccupancy / totalCapacity) > 0.80;
+        return resource.isOvercrowded;
       default:
         return true;
     }
   }
 
+  String _statusLabel(CenterStatus status) {
+    switch (status) {
+      case CenterStatus.operational:
+        return 'Operational';
+      case CenterStatus.nearCapacity:
+        return 'Near Capacity';
+      case CenterStatus.atCapacity:
+        return 'At Capacity';
+      case CenterStatus.closed:
+        return 'Closed';
+    }
+  }
+
   void _openResourceDetails(
-    BuildContext context, {
-    required String centerName,
-    required String centerLocation,
-    required int totalCapacity,
-    required int currentOccupancy,
-    required String medicineStatus,
-    required double medicineLevel,
-  }) {
+    BuildContext context,
+    _CenterResourceViewModel resource,
+  ) {
+    final center = resource.center;
+    final lowStockNames = resource.lowStockSupplies
+        .map((supply) => supply.name)
+        .toSet()
+        .join(', ');
+
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('$centerName Details'),
+        title: Text('${center.name} Details'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Location: $centerLocation'),
-            Text('Occupancy: $currentOccupancy / $totalCapacity evacuees'),
+            Text(resource.centerSubtitle),
             Text(
-              'Medicine Supply: $medicineStatus '
-              '(${(medicineLevel * 100).toStringAsFixed(0)}%)',
+              'Occupancy: ${center.currentOccupancy} / ${center.totalCapacity} evacuees',
             ),
+            Text(
+              'Medicine Supply: ${resource.medicineStatus} '
+              '(${(resource.medicineLevel * 100).toStringAsFixed(0)}%)',
+            ),
+            if (lowStockNames.isNotEmpty)
+              Text('Low stock items: $lowStockNames'),
           ],
         ),
         actions: [
@@ -148,35 +229,38 @@ class _ResourceMonitoringScreenState extends State<ResourceMonitoringScreen> {
     );
   }
 
-  void _openTransferDialog(
-    BuildContext context, {
-    required String centerName,
-    required String medicineStatus,
-  }) {
-    showDialog<void>(
+  Future<void> _openTransferDialog(
+    BuildContext context,
+    _CenterResourceViewModel resource,
+  ) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Transfer Supplies'),
         content: Text(
-          'Initiate a supply transfer to $centerName?\n'
-          'Current medicine status: $medicineStatus.',
+          'Initiate a supply transfer to ${resource.center.name}?\n'
+          'Current medicine status: ${resource.medicineStatus}.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Confirm'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && mounted) {
+      setState(() {});
+    }
   }
 }
 
-class _FilterBar extends StatefulWidget {
+class _FilterBar extends StatelessWidget {
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
 
@@ -184,27 +268,6 @@ class _FilterBar extends StatefulWidget {
     required this.selectedFilter,
     required this.onFilterChanged,
   });
-
-  @override
-  State<_FilterBar> createState() => _FilterBarState();
-}
-
-class _FilterBarState extends State<_FilterBar> {
-  late String _selectedFilter;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedFilter = widget.selectedFilter;
-  }
-
-  @override
-  void didUpdateWidget(_FilterBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedFilter != widget.selectedFilter) {
-      _selectedFilter = widget.selectedFilter;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -217,38 +280,26 @@ class _FilterBarState extends State<_FilterBar> {
               children: [
                 _FilterChip(
                   label: 'All',
-                  isSelected: _selectedFilter == 'All',
-                  onSelected: () {
-                    setState(() => _selectedFilter = 'All');
-                    widget.onFilterChanged('All');
-                  },
+                  isSelected: selectedFilter == 'All',
+                  onSelected: () => onFilterChanged('All'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
                   label: 'Critical',
-                  isSelected: _selectedFilter == 'Critical',
-                  onSelected: () {
-                    setState(() => _selectedFilter = 'Critical');
-                    widget.onFilterChanged('Critical');
-                  },
+                  isSelected: selectedFilter == 'Critical',
+                  onSelected: () => onFilterChanged('Critical'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
                   label: 'Low Stock',
-                  isSelected: _selectedFilter == 'Low Stock',
-                  onSelected: () {
-                    setState(() => _selectedFilter = 'Low Stock');
-                    widget.onFilterChanged('Low Stock');
-                  },
+                  isSelected: selectedFilter == 'Low Stock',
+                  onSelected: () => onFilterChanged('Low Stock'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
                   label: 'Overcrowded',
-                  isSelected: _selectedFilter == 'Overcrowded',
-                  onSelected: () {
-                    setState(() => _selectedFilter = 'Overcrowded');
-                    widget.onFilterChanged('Overcrowded');
-                  },
+                  isSelected: selectedFilter == 'Overcrowded',
+                  onSelected: () => onFilterChanged('Overcrowded'),
                 ),
               ],
             ),
@@ -277,7 +328,7 @@ class _FilterChip extends StatelessWidget {
       selected: isSelected,
       onSelected: (_) => onSelected(),
       backgroundColor: Colors.grey[100],
-      selectedColor: Colors.blue.withOpacity(0.5),
+      selectedColor: Colors.blue.withValues(alpha: 0.5),
       labelStyle: TextStyle(
         color: isSelected ? Colors.blue : Colors.grey[700],
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -287,28 +338,18 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _ResourceMonitoringCard extends StatelessWidget {
-  final String centerName;
-  final String centerLocation;
-  final int totalCapacity;
-  final int currentOccupancy;
-  final String medicineStatus;
-  final double medicineLevel;
+  final _CenterResourceViewModel resource;
   final VoidCallback? onDetailsPressed;
   final VoidCallback? onTransferPressed;
 
   const _ResourceMonitoringCard({
-    required this.centerName,
-    required this.centerLocation,
-    required this.totalCapacity,
-    required this.currentOccupancy,
-    required this.medicineStatus,
-    required this.medicineLevel,
+    required this.resource,
     this.onDetailsPressed,
     this.onTransferPressed,
   });
 
   Color _getStatusColor() {
-    switch (medicineStatus) {
+    switch (resource.medicineStatus) {
       case 'Critical':
         return Colors.red;
       case 'Low':
@@ -323,13 +364,14 @@ class _ResourceMonitoringCard extends StatelessWidget {
   }
 
   bool _isOvercrowded() {
-    return totalCapacity > 0 && (currentOccupancy / totalCapacity) > 0.80;
+    return resource.isOvercrowded;
   }
 
   @override
   Widget build(BuildContext context) {
-    final capacityPercentage = totalCapacity > 0
-        ? (currentOccupancy / totalCapacity).clamp(0.0, 1.0)
+    final center = resource.center;
+    final capacityPercentage = center.totalCapacity > 0
+        ? (center.currentOccupancy / center.totalCapacity).clamp(0.0, 1.0)
         : 0.0;
     final capacityColor = capacityPercentage > 0.80
         ? Colors.red
@@ -354,12 +396,12 @@ class _ResourceMonitoringCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        centerName,
+                        center.name,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        centerLocation,
+                        resource.centerSubtitle,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
                         ),
@@ -407,7 +449,7 @@ class _ResourceMonitoringCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '$currentOccupancy / $totalCapacity evacuees',
+              '${center.currentOccupancy} / ${center.totalCapacity} evacuees',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
@@ -428,7 +470,7 @@ class _ResourceMonitoringCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: medicineLevel,
+                      value: resource.medicineLevel,
                       minHeight: 8,
                       backgroundColor: Colors.grey[200],
                       valueColor: AlwaysStoppedAnimation<Color>(
@@ -448,7 +490,7 @@ class _ResourceMonitoringCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    medicineStatus,
+                    resource.medicineStatus,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: _getStatusColor(),
                       fontWeight: FontWeight.bold,
@@ -484,4 +526,34 @@ class _ResourceMonitoringCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CenterResourceViewModel {
+  final EvacuationCenter center;
+  final String centerSubtitle;
+  final List<Supply> supplies;
+  final List<Supply> lowStockSupplies;
+  final String medicineStatus;
+  final double medicineLevel;
+
+  const _CenterResourceViewModel({
+    required this.center,
+    required this.centerSubtitle,
+    required this.supplies,
+    required this.lowStockSupplies,
+    required this.medicineStatus,
+    required this.medicineLevel,
+  });
+
+  bool get isOvercrowded {
+    return center.totalCapacity > 0 &&
+        (center.currentOccupancy / center.totalCapacity) > 0.80;
+  }
+}
+
+class _MedicineMetrics {
+  final String status;
+  final double level;
+
+  const _MedicineMetrics({required this.status, required this.level});
 }

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/index.dart';
+import '../providers/index.dart';
 
 class CommandCenterDashboardScreen extends StatelessWidget {
   const CommandCenterDashboardScreen({super.key});
@@ -23,39 +27,7 @@ class CommandCenterDashboardScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Statistics Grid
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _StatisticCard(
-                  title: 'Total Evacuation Centers',
-                  count: '12',
-                  color: Colors.blue,
-                  icon: Icons.location_city,
-                ),
-                _StatisticCard(
-                  title: 'Overcrowded Centers',
-                  count: '3',
-                  color: Colors.orange,
-                  icon: Icons.warning,
-                ),
-                _StatisticCard(
-                  title: 'Supply Shortages',
-                  count: '5',
-                  color: Colors.red,
-                  icon: Icons.error,
-                ),
-                _StatisticCard(
-                  title: 'Normal Status',
-                  count: '4',
-                  color: Colors.green,
-                  icon: Icons.check_circle,
-                ),
-              ],
-            ),
+            const _OverviewStatisticsGrid(),
             const SizedBox(height: 32),
 
             // Supply Shortages Details
@@ -64,7 +36,7 @@ class CommandCenterDashboardScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
-            _SupplyShortagesList(),
+            const _SupplyShortagesList(),
             const SizedBox(height: 32),
 
             // Overcrowded Centers Details
@@ -73,10 +45,72 @@ class CommandCenterDashboardScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
-            _OvercrowdedCentersList(),
+            const _OvercrowdedCentersSection(),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OverviewStatisticsGrid extends ConsumerWidget {
+  const _OverviewStatisticsGrid();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final centersAsync = ref.watch(allCentersProvider);
+    final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
+
+    return centersAsync.when(
+      data: (centers) {
+        final overcrowdedCenters = centers.where(_isOvercrowdedCenter).length;
+        final normalCenters = (centers.length - overcrowdedCenters).clamp(
+          0,
+          centers.length,
+        );
+
+        return shortagesAsync.when(
+          data: (shortagesByCenter) {
+            return GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _StatisticCard(
+                  title: 'Total Evacuation Centers',
+                  count: centers.length.toString(),
+                  color: Colors.blue,
+                  icon: Icons.location_city,
+                ),
+                _StatisticCard(
+                  title: 'Overcrowded Centers',
+                  count: overcrowdedCenters.toString(),
+                  color: Colors.orange,
+                  icon: Icons.warning,
+                ),
+                _StatisticCard(
+                  title: 'Supply Shortages',
+                  count: shortagesByCenter.length.toString(),
+                  color: Colors.red,
+                  icon: Icons.error,
+                ),
+                _StatisticCard(
+                  title: 'Normal Status',
+                  count: normalCenters.toString(),
+                  color: Colors.green,
+                  icon: Icons.check_circle,
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Text('Failed to load statistics: $error'),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Text('Failed to load centers: $error'),
     );
   }
 }
@@ -137,20 +171,105 @@ class _StatisticCard extends StatelessWidget {
   }
 }
 
-class _SupplyShortagesList extends StatelessWidget {
+class _SupplyShortagesList extends ConsumerWidget {
+  const _SupplyShortagesList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final centersAsync = ref.watch(allCentersProvider);
+    final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
+
+    return centersAsync.when(
+      data: (centers) {
+        final centersById = <String, EvacuationCenter>{
+          for (final center in centers) center.id: center,
+        };
+
+        return shortagesAsync.when(
+          data: (shortagesByCenter) {
+            final entries = shortagesByCenter.entries.toList();
+            if (entries.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: entries.length,
+              itemBuilder: (context, index) {
+                final entry = entries[index];
+                final center = centersById[entry.key];
+                final missingSupplies = entry.value
+                    .map((supply) => supply.name)
+                    .toSet()
+                    .join(', ');
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8.0),
+                  child: ListTile(
+                    title: Text(center?.name ?? 'Unknown Center'),
+                    subtitle: Text('Missing: $missingSupplies'),
+                    trailing: const Icon(Icons.error, color: Colors.red),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Text('Failed to load shortages: $error'),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Text('Failed to load centers: $error'),
+    );
+  }
+}
+
+class _OvercrowdedCentersSection extends ConsumerWidget {
+  const _OvercrowdedCentersSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final centersAsync = ref.watch(allCentersProvider);
+
+    return centersAsync.when(
+      data: (centers) {
+        final overcrowdedCenters = centers
+            .where(_isOvercrowdedCenter)
+            .toList(growable: false);
+        return _OvercrowdedCentersList(overcrowdedCenters: overcrowdedCenters);
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Text('Failed to load centers: $error'),
+    );
+  }
+}
+
+class _OvercrowdedCentersList extends StatelessWidget {
+  final List<EvacuationCenter> overcrowdedCenters;
+
+  const _OvercrowdedCentersList({required this.overcrowdedCenters});
+
   @override
   Widget build(BuildContext context) {
+    if (overcrowdedCenters.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: 5,
+      itemCount: overcrowdedCenters.length,
       itemBuilder: (context, index) {
+        final center = overcrowdedCenters[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 8.0),
           child: ListTile(
-            title: Text('Evacuation Center ${index + 1}'),
-            subtitle: Text('Missing: Medicine, Water'),
-            trailing: const Icon(Icons.error, color: Colors.red),
+            title: Text(center.name),
+            subtitle: Text(
+              'Capacity: ${center.occupancyPercentage.toStringAsFixed(0)}%',
+            ),
+            trailing: const Icon(Icons.warning, color: Colors.orange),
           ),
         );
       },
@@ -158,23 +277,7 @@ class _SupplyShortagesList extends StatelessWidget {
   }
 }
 
-class _OvercrowdedCentersList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8.0),
-          child: ListTile(
-            title: Text('Evacuation Center ${index + 4}'),
-            subtitle: Text('Capacity: ${80 + (index * 5)}%'),
-            trailing: const Icon(Icons.warning, color: Colors.orange),
-          ),
-        );
-      },
-    );
-  }
+bool _isOvercrowdedCenter(EvacuationCenter center) {
+  return center.totalCapacity > 0 &&
+      (center.currentOccupancy / center.totalCapacity) > 0.80;
 }
