@@ -1,11 +1,17 @@
-// TODO: Implement use-case. Wire RegistrationScreen to call this instead of
-// touching DatabaseService directly.
-//
-// import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee_repository.dart';
-// import 'package:kalig_onan_evac_system/models/evacuee.dart';
-//
-// class RegisterEvacuee {
-//   final EvacueeRepository _repository;
-//   RegisterEvacuee(this._repository);
-//   Future<void> call(Evacuee evacuee) => _repository.insert(evacuee);
-// }
+import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/data/evacuee_dto.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
+import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:sqflite/sqflite.dart';
+
+extension RegisterEvacueeUseCase on DatabaseService {
+  Future<void> insertEvacuee(Evacuee evacuee) async {
+    final db = await database;
+    await db.insert(
+      'evacuees',
+      evacueeToRow(evacuee),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await refreshCurrentCenterOccupancy();
+  }
+}

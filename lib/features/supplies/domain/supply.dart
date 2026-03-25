@@ -22,32 +22,6 @@ class Supply {
     return (currentStock / usageRatePerDay).ceil();
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'evacuationCenterId': evacuationCenterId,
-      'name': name,
-      'currentStock': currentStock,
-      'usageRatePerDay': usageRatePerDay,
-      'lastRestocked': lastRestocked.toIso8601String(),
-      'synced': synced ? 1 : 0,
-    };
-  }
-
-  factory Supply.fromMap(Map<String, dynamic> map) {
-    return Supply(
-      id: map['id'] as String,
-      evacuationCenterId: map.containsKey('evacuationCenterId')
-          ? map['evacuationCenterId'] as String
-          : map['evacuationcenterid'] as String,
-      name: map['name'] as String,
-      currentStock: map['currentStock'] as int,
-      usageRatePerDay: map['usageRatePerDay'] as int,
-      lastRestocked: DateTime.parse(map['lastRestocked'] as String),
-      synced: (map['synced'] as int) == 1,
-    );
-  }
-
   Supply copyWith({
     String? id,
     String? evacuationCenterId,

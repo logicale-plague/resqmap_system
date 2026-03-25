@@ -23,32 +23,6 @@ class Evacuee {
     this.active = true,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'stationId': stationId,
-      'ageGroup': ageGroup.index,
-      'medicalCondition': medicalCondition.index,
-      'registeredAt': registeredAt.toIso8601String(),
-      'synced': synced ? 1 : 0,
-      'active': active ? 1 : 0,
-    };
-  }
-
-  factory Evacuee.fromMap(Map<String, dynamic> map) {
-    return Evacuee(
-      id: map['id'] as String,
-      name: map['name'] as String?,
-      stationId: map['stationId'] as String?,
-      ageGroup: AgeGroup.values[map['ageGroup'] as int],
-      medicalCondition: MedicalCondition.values[map['medicalCondition'] as int],
-      registeredAt: DateTime.parse(map['registeredAt'] as String),
-      synced: (map['synced'] as int) == 1,
-      active: ((map['active'] as int?) ?? 1) == 1,
-    );
-  }
-
   Evacuee copyWith({
     String? id,
     String? name,

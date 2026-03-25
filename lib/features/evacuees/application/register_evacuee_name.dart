@@ -1,8 +1,13 @@
-// TODO: Implement use-case for assigning a name to an unnamed evacuee.
-//
-// class RegisterEvacueeName {
-//   final EvacueeRepository _repository;
-//   RegisterEvacueeName(this._repository);
-//   Future<void> call(String evacueeId, String name) =>
-//       _repository.registerName(evacueeId, name);
-// }
+import 'package:kalig_onan_evac_system/services/database_service.dart';
+
+extension RegisterEvacueeNameUseCase on DatabaseService {
+  Future<void> registerEvacueeName(String evacueeId, String name) async {
+    final db = await database;
+    await db.update(
+      'evacuees',
+      {'name': name.trim(), 'synced': 0},
+      where: 'id = ?',
+      whereArgs: [evacueeId],
+    );
+  }
+}

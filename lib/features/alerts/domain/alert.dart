@@ -19,32 +19,6 @@ class Alert {
     this.synced = false,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'evacuationCenterId': evacuationCenterId,
-      'message': message,
-      'severity': severity.index,
-      'createdAt': createdAt.toIso8601String(),
-      'read': read ? 1 : 0,
-      'synced': synced ? 1 : 0,
-    };
-  }
-
-  factory Alert.fromMap(Map<String, dynamic> map) {
-    return Alert(
-      id: map['id'] as String,
-      evacuationCenterId: map.containsKey('evacuationCenterId')
-          ? map['evacuationCenterId'] as String
-          : map['evacuationcenterid'] as String,
-      message: map['message'] as String,
-      severity: AlertSeverity.values[map['severity'] as int],
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      read: (map['read'] as int) == 1,
-      synced: map.containsKey('synced') ? (map['synced'] as int) == 1 : false,
-    );
-  }
-
   Alert copyWith({
     String? id,
     String? evacuationCenterId,

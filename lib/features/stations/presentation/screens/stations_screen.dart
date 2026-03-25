@@ -5,6 +5,8 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/application/register_evacuee_name.dart';
+import 'package:kalig_onan_evac_system/features/stations/application/manage_station.dart';
 
 class StationsScreen extends ConsumerWidget {
   const StationsScreen({super.key});

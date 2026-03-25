@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
 
 class EvacueesScreen extends ConsumerWidget {
   const EvacueesScreen({super.key});

@@ -1,13 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:kalig_onan_evac_system/core/indices/repository_impl_index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:kalig_onan_evac_system/features/alerts/presentation/providers/alert_providers.dart';
-import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/presentation/providers/evacuee_providers.dart';
-import 'package:kalig_onan_evac_system/features/stations/presentation/providers/station_providers.dart';
-import 'package:kalig_onan_evac_system/features/supplies/presentation/providers/supply_providers.dart';
 import 'package:kalig_onan_evac_system/services/database_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';

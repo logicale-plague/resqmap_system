@@ -4,6 +4,9 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
 
 class SuppliesScreen extends ConsumerWidget {
   const SuppliesScreen({super.key});
