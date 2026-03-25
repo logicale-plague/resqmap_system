@@ -70,12 +70,7 @@ extension AlertDatabaseExtensions on DatabaseService {
     await db.transaction((txn) async {
       final batch = txn.batch();
       for (final id in ids) {
-        batch.update(
-          'alerts',
-          {'synced': 1},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
+        batch.update('alerts', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
       }
       await batch.commit(noResult: true);
     });

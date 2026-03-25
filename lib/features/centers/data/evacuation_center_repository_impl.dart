@@ -4,7 +4,6 @@ import 'package:kalig_onan_evac_system/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension EvacuationCenterDatabaseExtensions on DatabaseService {
-
   Future<EvacuationCenter?> getCurrentCenter() async {
     final db = await database;
     final maps = await db.query('evacuation_centers', limit: 1);
@@ -105,7 +104,9 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     );
   }
 
-  Future<void> refreshCurrentCenterOccupancy({DatabaseExecutor? executor}) async {
+  Future<void> refreshCurrentCenterOccupancy({
+    DatabaseExecutor? executor,
+  }) async {
     final db = executor ?? await database;
 
     final centerRows = await db.query(

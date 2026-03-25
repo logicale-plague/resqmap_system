@@ -30,7 +30,10 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
   }
 }
 
-CenterStatus _calculateUpdatedCenterStatus(int currentOccupancy, int totalCapacity) {
+CenterStatus _calculateUpdatedCenterStatus(
+  int currentOccupancy,
+  int totalCapacity,
+) {
   if (totalCapacity <= 0) {
     return CenterStatus.operational;
   }

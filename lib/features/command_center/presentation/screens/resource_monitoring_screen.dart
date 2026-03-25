@@ -142,15 +142,16 @@ class _ResourceMonitoringScreenState
         levels.reduce((left, right) => left + right) / levels.length;
     final knownDaysRemaining = supplies
         .map((supply) => supply.daysRemaining)
-      .whereType<int>()
-      .toList(growable: false);
+        .whereType<int>()
+        .toList(growable: false);
 
     if (knownDaysRemaining.isEmpty) {
       return _MedicineMetrics(status: 'High', level: averageLevel);
     }
 
-    final minimumDaysRemaining = knownDaysRemaining
-      .reduce((left, right) => left < right ? left : right);
+    final minimumDaysRemaining = knownDaysRemaining.reduce(
+      (left, right) => left < right ? left : right,
+    );
 
     if (minimumDaysRemaining <= 2) {
       return _MedicineMetrics(status: 'Critical', level: averageLevel);

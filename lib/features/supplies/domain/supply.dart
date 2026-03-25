@@ -46,7 +46,9 @@ class Supply {
 
   @override
   String toString() {
-    final remaining = daysRemaining == null ? 'not-in-use' : '${daysRemaining}d';
+    final remaining = daysRemaining == null
+        ? 'not-in-use'
+        : '${daysRemaining}d';
     return 'Supply(id: $id, name: $name, stock: $currentStock, remaining: $remaining)';
   }
 }

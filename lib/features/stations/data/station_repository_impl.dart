@@ -6,7 +6,6 @@ import 'package:kalig_onan_evac_system/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension StationDatabaseExtensions on DatabaseService {
-  
   Future<List<Station>> getStationsForCenter(String centerId) async {
     final db = await database;
     final maps = await db.query(
