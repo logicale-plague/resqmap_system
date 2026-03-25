@@ -21,7 +21,9 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
       limit: 1,
     );
     if (centerRows.isEmpty) {
-      debugPrint('updateCenterOccupancy skipped: center not found (id=$centerId)');
+      debugPrint(
+        'updateCenterOccupancy skipped: center not found (id=$centerId)',
+      );
       return false;
     }
 

@@ -340,9 +340,7 @@ class SuppliesScreen extends ConsumerWidget {
               }
               if (parsedStock < 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Stock quantity must be >= 0'),
-                  ),
+                  const SnackBar(content: Text('Stock quantity must be >= 0')),
                 );
                 return;
               }
