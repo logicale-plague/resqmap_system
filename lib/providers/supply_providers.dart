@@ -6,6 +6,11 @@ import '../services/database_service.dart';
 import 'database_provider.dart';
 import 'evacuation_center_providers.dart';
 
+final allCenterSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getAllSupplies();
+});
+
 final allSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
   final center = await ref.watch(currentCenterProvider.future);
@@ -32,6 +37,29 @@ final lowStockSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
       .where((s) => s.currentStock < (s.usageRatePerDay * 7))
       .toList();
 });
+
+final allLowStockSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
+  final supplies = await ref.watch(allCenterSuppliesProvider.future);
+  return supplies
+      .where((s) => s.currentStock < (s.usageRatePerDay * 7))
+      .toList();
+});
+
+final lowStockSuppliesByCenterProvider =
+    FutureProvider<Map<String, List<Supply>>>((ref) async {
+      final lowStockSupplies = await ref.watch(
+        allLowStockSuppliesProvider.future,
+      );
+      final suppliesByCenter = <String, List<Supply>>{};
+
+      for (final supply in lowStockSupplies) {
+        suppliesByCenter
+            .putIfAbsent(supply.evacuationCenterId, () => <Supply>[])
+            .add(supply);
+      }
+
+      return suppliesByCenter;
+    });
 
 extension SupplyDatabaseExtensions on DatabaseService {
   Future<void> insertSupply(Supply supply) async {
