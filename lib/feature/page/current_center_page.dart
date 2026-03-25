@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kalig_onan_evac_system/models/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 
 class EvacCenterDetailsPage extends StatelessWidget {
   final EvacuationCenter center;

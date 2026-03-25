@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/feature/page/current_center_page.dart';
-import 'package:kalig_onan_evac_system/feature/widgets/evac_center_item.dart';
-import 'package:kalig_onan_evac_system/providers/index.dart';
+import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/evac_center_item.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
