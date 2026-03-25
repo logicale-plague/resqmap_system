@@ -147,26 +147,29 @@ class MainApp extends StatelessWidget {
       title: 'Kalig Onan Evacuation System',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
+          seedColor: Color.fromARGB(255, 49, 121, 124),
+          secondary: Color.fromRGBO(222, 222, 222, 1),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
         appBarTheme: const AppBarTheme(
-          elevation: 2,
+          elevation: 0,
+          titleSpacing: 0,
+          iconTheme: IconThemeData(color: Colors.white, size: 28),
           centerTitle: true,
-          titleTextStyle: TextStyle(color: Colors.white),
-          actionsIconTheme: IconThemeData(color: Colors.white),
-          iconTheme: IconThemeData(color: Colors.white),
+          backgroundColor: Color.fromARGB(255, 49, 121, 124),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 24),
         ),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.indigo,
+          secondary: Color.fromRGBO(50, 50, 50, 1),
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
       ),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       routerConfig: router,
     );
   }

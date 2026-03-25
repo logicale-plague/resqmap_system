@@ -100,58 +100,65 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     final mapState = ref.watch(mapControllerProvider);
     final mapProvider = ref.watch(mapControllerProvider.notifier);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black26,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Iloilo Crisis Map",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return SafeArea(
+      top: false,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.black26,
+          elevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Iloilo Crisis Map",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                "Scope: Brgy. San Jose",
+                style: TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.cloud_done_outlined,
+                color: Colors.greenAccent,
+              ),
+              onPressed: () {},
             ),
-            Text(
-              "Scope: Brgy. San Jose",
-              style: TextStyle(fontSize: 12, color: Colors.white70),
+            IconButton(
+              icon: const Icon(Icons.layers_outlined),
+              onPressed: () {},
             ),
+            IconButton(icon: const Icon(Icons.search), onPressed: () {}),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.cloud_done_outlined,
-              color: Colors.greenAccent,
-            ),
-            onPressed: () {},
+        extendBodyBehindAppBar: true,
+        body: MapWidget(
+          key: const ValueKey("mapWidget"),
+          onMapCreated: _onMapCreated,
+          onLongTapListener: (context) => _onMapLongPressed(context),
+          cameraOptions: CameraOptions(
+            center: Point(coordinates: Position(121.7740, 12.8797)),
+            zoom: 5.0,
+            bearing: 0,
+            pitch: 0,
           ),
-          IconButton(icon: const Icon(Icons.layers_outlined), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-        ],
-      ),
-      extendBodyBehindAppBar: true,
-      body: MapWidget(
-        key: const ValueKey("mapWidget"),
-        onMapCreated: _onMapCreated,
-        onLongTapListener: (context) => _onMapLongPressed(context),
-        cameraOptions: CameraOptions(
-          center: Point(coordinates: Position(121.7740, 12.8797)),
-          zoom: 5.0,
-          bearing: 0,
-          pitch: 0,
         ),
-      ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: mapProvider.focusOnUser,
-        backgroundColor: Colors.white,
-        child: mapState.isBusy
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.my_location, color: Colors.blueAccent),
+        floatingActionButton: FloatingActionButton(
+          onPressed: mapProvider.focusOnUser,
+          backgroundColor: Colors.white,
+          child: mapState.isBusy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.my_location, color: Colors.blueAccent),
+        ),
       ),
     );
   }
