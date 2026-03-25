@@ -15,9 +15,7 @@ Map<String, dynamic> alertToRow(Alert alert) {
 Alert alertFromRow(Map<String, dynamic> row) {
   return Alert(
     id: row['id'] as String,
-    evacuationCenterId: row.containsKey('evacuationCenterId')
-        ? row['evacuationCenterId'] as String
-        : row['evacuationcenterid'] as String,
+    evacuationCenterId: row['evacuationCenterId'] as String,
     message: row['message'] as String,
     severity: AlertSeverity.values[row['severity'] as int],
     createdAt: DateTime.parse(row['createdAt'] as String),

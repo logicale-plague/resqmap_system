@@ -23,17 +23,11 @@ final alertProvider = FutureProvider.family<Alert?, String>((ref, id) async {
 });
 
 final unreadAlertsProvider = FutureProvider<List<Alert>>((ref) async {
-  final db = ref.watch(databaseServiceProvider);
-  final center = await ref.watch(currentCenterProvider.future);
-  if (center == null) return [];
-  final alerts = await db.getAlertsByCenterId(center.id);
+  final alerts = await ref.watch(allAlertsProvider.future);
   return alerts.where((a) => !a.read).toList();
 });
 
 final urgentAlertsProvider = FutureProvider<List<Alert>>((ref) async {
-  final db = ref.watch(databaseServiceProvider);
-  final center = await ref.watch(currentCenterProvider.future);
-  if (center == null) return [];
-  final alerts = await db.getAlertsByCenterId(center.id);
+  final alerts = await ref.watch(allAlertsProvider.future);
   return alerts.where((a) => a.severity == AlertSeverity.urgent).toList();
 });

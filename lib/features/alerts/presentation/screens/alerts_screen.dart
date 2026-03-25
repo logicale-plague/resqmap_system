@@ -6,7 +6,6 @@ import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 import 'package:kalig_onan_evac_system/features/alerts/application/create_alert.dart';
 import 'package:kalig_onan_evac_system/features/alerts/application/mark_alert_read.dart';
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
 
 class AlertsScreen extends ConsumerWidget {
   const AlertsScreen({super.key});
@@ -257,7 +256,7 @@ class AlertsScreen extends ConsumerWidget {
                 }
 
                 final db = ref.read(databaseServiceProvider);
-                final center = await db.getCurrentCenter();
+                final center = await ref.read(currentCenterProvider.future);
                 if (center == null) {
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(

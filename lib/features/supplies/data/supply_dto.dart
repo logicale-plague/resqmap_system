@@ -15,9 +15,7 @@ Map<String, dynamic> supplyToRow(Supply supply) {
 Supply supplyFromRow(Map<String, dynamic> row) {
   return Supply(
     id: row['id'] as String,
-    evacuationCenterId: row.containsKey('evacuationCenterId')
-        ? row['evacuationCenterId'] as String
-        : row['evacuationcenterid'] as String,
+    evacuationCenterId: row['evacuationCenterId'] as String,
     name: row['name'] as String,
     currentStock: row['currentStock'] as int,
     usageRatePerDay: row['usageRatePerDay'] as int,

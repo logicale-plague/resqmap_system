@@ -64,14 +64,20 @@ extension AlertDatabaseExtensions on DatabaseService {
   }
 
   Future<void> markAlertsSynced(List<String> ids) async {
+    if (ids.isEmpty) return;
+
     final db = await database;
-    for (final id in ids) {
-      await db.update(
-        'alerts',
-        {'synced': 1},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final id in ids) {
+        batch.update(
+          'alerts',
+          {'synced': 1},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+      await batch.commit(noResult: true);
+    });
   }
 }

@@ -68,15 +68,21 @@ extension EvacueeDatabaseExtensions on DatabaseService {
   }
 
   Future<void> markEvacueesSynced(List<String> ids) async {
+    if (ids.isEmpty) return;
+
     final db = await database;
-    for (final id in ids) {
-      await db.update(
-        'evacuees',
-        {'synced': 1},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final id in ids) {
+        batch.update(
+          'evacuees',
+          {'synced': 1},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
   Future<void> replaceEvacueeId(String oldId, String newId) async {

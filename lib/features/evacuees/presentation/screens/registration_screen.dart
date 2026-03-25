@@ -5,8 +5,6 @@ import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 import 'package:kalig_onan_evac_system/features/evacuees/application/register_evacuee.dart';
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
-import 'package:kalig_onan_evac_system/features/stations/data/station_repository_impl.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -39,15 +37,17 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
     try {
       final db = ref.read(databaseServiceProvider);
-      final center = await db.getCurrentCenter();
+      final center = await ref.read(currentCenterProvider.future);
       if (center == null) {
         throw Exception('No evacuation center assigned');
       }
 
-      final eligibleStations = await db.getEligibleStations(
-        centerId: center.id,
-        ageGroup: _selectedAgeGroup!,
-        medicalCondition: _selectedMedicalCondition!,
+      final eligibleStations = await ref.read(
+        eligibleStationsProvider((
+          centerId: center.id,
+          ageGroup: _selectedAgeGroup!,
+          medicalCondition: _selectedMedicalCondition!,
+        )).future,
       );
 
       if (eligibleStations.isEmpty) {

@@ -24,12 +24,7 @@ final evacueeProvider = FutureProvider.family<Evacuee?, String>((
   id,
 ) async {
   final db = ref.watch(databaseServiceProvider);
-  final evacuees = await db.getAllEvacuees();
-  try {
-    return evacuees.firstWhere((e) => e.id == id);
-  } catch (e) {
-    return null;
-  }
+  return db.getEvacueeById(id);
 });
 
 final unnamedEvacueesByStationProvider =

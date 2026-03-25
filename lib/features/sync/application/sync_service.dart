@@ -396,8 +396,8 @@ class SyncService {
       'name': station.name,
       'evacuation_center_id': station.evacuationCenterId,
       'capacity': station.capacity,
-      'allowed_age_group': station.allowedAgeGroup?.index,
-      'allowed_medical_condition': station.allowedMedicalCondition?.index,
+      'allowed_age_group': station.allowedAgeGroup?.name,
+      'allowed_medical_condition': station.allowedMedicalCondition?.name,
       'synced': station.synced ? 1 : 0,
     };
   }
@@ -449,6 +449,13 @@ class SyncService {
 
   T? _enumOrNull<T>(List<T> values, dynamic rawValue) {
     if (rawValue == null) return null;
+    if (rawValue is String) {
+      for (final value in values) {
+        if (value is Enum && value.name == rawValue) {
+          return value;
+        }
+      }
+    }
     final index = rawValue is num
         ? rawValue.toInt()
         : int.parse(rawValue.toString());

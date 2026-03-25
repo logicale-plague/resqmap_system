@@ -40,5 +40,5 @@ class Alert {
   }
 
   @override
-  String toString() => 'Alert(id: $id, severity: $severity, message: $message)';
+  String toString() => 'Alert(id: $id, severity: $severity, message: <redacted>)';
 }

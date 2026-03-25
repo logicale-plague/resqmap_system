@@ -1,11 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:kalig_onan_evac_system/features/alerts/data/alert_repository_impl.dart';
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/data/evacuee_repository_impl.dart';
-import 'package:kalig_onan_evac_system/features/stations/data/station_repository_impl.dart';
-import 'package:kalig_onan_evac_system/features/supplies/data/supply_repository_impl.dart';
+import 'package:kalig_onan_evac_system/core/indices/repository_impl_index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kalig_onan_evac_system/services/database_service.dart';
@@ -400,8 +396,8 @@ class SyncService {
       'name': station.name,
       'evacuation_center_id': station.evacuationCenterId,
       'capacity': station.capacity,
-      'allowed_age_group': station.allowedAgeGroup?.index,
-      'allowed_medical_condition': station.allowedMedicalCondition?.index,
+      'allowed_age_group': station.allowedAgeGroup?.name,
+      'allowed_medical_condition': station.allowedMedicalCondition?.name,
       'synced': station.synced ? 1 : 0,
     };
   }
@@ -453,6 +449,13 @@ class SyncService {
 
   T? _enumOrNull<T>(List<T> values, dynamic rawValue) {
     if (rawValue == null) return null;
+    if (rawValue is String) {
+      for (final value in values) {
+        if (value is Enum && value.name == rawValue) {
+          return value;
+        }
+      }
+    }
     final index = rawValue is num
         ? rawValue.toInt()
         : int.parse(rawValue.toString());

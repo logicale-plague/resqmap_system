@@ -17,8 +17,10 @@ class Supply {
     this.synced = false,
   });
 
-  int get daysRemaining {
-    if (usageRatePerDay == 0) return 0;
+  int? get daysRemaining {
+    if (usageRatePerDay == 0) {
+      return currentStock > 0 ? null : 0;
+    }
     return (currentStock / usageRatePerDay).ceil();
   }
 
@@ -43,6 +45,8 @@ class Supply {
   }
 
   @override
-  String toString() =>
-      'Supply(id: $id, name: $name, stock: $currentStock, remaining: ${daysRemaining}d)';
+  String toString() {
+    final remaining = daysRemaining == null ? 'not-in-use' : '${daysRemaining}d';
+    return 'Supply(id: $id, name: $name, stock: $currentStock, remaining: $remaining)';
+  }
 }

@@ -57,14 +57,13 @@ extension SupplyDatabaseExtensions on DatabaseService {
   }
 
   Future<void> markSuppliesSynced(List<String> ids) async {
+    if (ids.isEmpty) return;
+
     final db = await database;
-    for (final id in ids) {
-      await db.update(
-        'supplies',
-        {'synced': 1},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    await db.rawUpdate(
+      'UPDATE supplies SET synced = 1 WHERE id IN ($placeholders)',
+      ids,
+    );
   }
 }

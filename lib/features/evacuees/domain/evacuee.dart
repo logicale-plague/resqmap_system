@@ -48,5 +48,5 @@ class Evacuee {
 
   @override
   String toString() =>
-      'Evacuee(id: $id, name: $name, stationId: $stationId, ageGroup: $ageGroup, medicalCondition: $medicalCondition)';
+      'Evacuee(ageGroup: $ageGroup, medicalCondition: $medicalCondition, active: $active)';
 }

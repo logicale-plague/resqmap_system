@@ -4,7 +4,6 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
 import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
 import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
 
@@ -41,6 +40,9 @@ class SuppliesScreen extends ConsumerWidget {
               final supply = supplies[index];
               final statusColor = _getStockStatusColor(supply.daysRemaining);
               final statusText = _getStockStatusText(supply.daysRemaining);
+              final daysRemainingText = supply.daysRemaining == null
+                  ? 'Not currently consumed'
+                  : '${supply.daysRemaining} days remaining';
 
               return AppListItemCard(
                 leading: Container(
@@ -112,7 +114,7 @@ class SuppliesScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${supply.daysRemaining} days remaining',
+                      daysRemainingText,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[700],
@@ -155,13 +157,15 @@ class SuppliesScreen extends ConsumerWidget {
     );
   }
 
-  Color _getStockStatusColor(int daysRemaining) {
+  Color _getStockStatusColor(int? daysRemaining) {
+    if (daysRemaining == null) return Colors.blueGrey;
     if (daysRemaining < 1) return Colors.red;
     if (daysRemaining < 7) return Colors.orange;
     return Colors.green;
   }
 
-  String _getStockStatusText(int daysRemaining) {
+  String _getStockStatusText(int? daysRemaining) {
+    if (daysRemaining == null) return 'NOT IN USE';
     if (daysRemaining < 1) return 'CRITICAL';
     if (daysRemaining < 7) return 'LOW';
     return 'ADEQUATE';
@@ -231,7 +235,7 @@ class SuppliesScreen extends ConsumerWidget {
               }
 
               final db = ref.read(databaseServiceProvider);
-              final center = await db.getCurrentCenter();
+              final center = await ref.read(currentCenterProvider.future);
               if (center == null) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(

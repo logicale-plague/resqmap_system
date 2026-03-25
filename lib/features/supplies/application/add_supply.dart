@@ -6,9 +6,11 @@ import 'package:sqflite/sqflite.dart';
 extension AddSupplyUseCase on DatabaseService {
   Future<void> insertSupply(Supply supply) async {
     final db = await database;
+    final row = supplyToRow(supply);
+    row['synced'] = 0;
     await db.insert(
       'supplies',
-      supplyToRow(supply),
+      row,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
