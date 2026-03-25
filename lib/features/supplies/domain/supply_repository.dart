@@ -1,4 +1,4 @@
-import 'package:kalig_onan_evac_system/features/supplies/data/supply.dart';
+import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
 
 abstract interface class SupplyRepository {
   Future<List<Supply>> getAll();

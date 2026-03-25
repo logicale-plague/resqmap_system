@@ -34,42 +34,6 @@ class EvacuationCenter {
   int get availableSpaces =>
       (totalCapacity - currentOccupancy).clamp(0, totalCapacity);
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'commandCenterId': commandCenterId,
-      'latitude': latitude,
-      'longitude': longitude,
-      'totalCapacity': totalCapacity,
-      'currentOccupancy': currentOccupancy,
-      'status': status.index,
-      'medicalAvailable': medicalAvailable ? 1 : 0,
-      'lastUpdated': lastUpdated.toIso8601String(),
-      'synced': synced ? 1 : 0,
-    };
-  }
-
-  factory EvacuationCenter.fromMap(Map<String, dynamic> map) {
-    return EvacuationCenter(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      commandCenterId:
-          map['commandCenterId'] as String? ??
-          map['commandcenterid'] as String? ??
-          map['command_center_id'] as String? ??
-          'default-command-center',
-      latitude: (map['latitude'] as num).toDouble(),
-      longitude: (map['longitude'] as num).toDouble(),
-      totalCapacity: map['totalCapacity'] as int,
-      currentOccupancy: map['currentOccupancy'] as int,
-      status: CenterStatus.values[map['status'] as int],
-      medicalAvailable: (map['medicalAvailable'] as int) == 1,
-      lastUpdated: DateTime.parse(map['lastUpdated'] as String),
-      synced: (map['synced'] as int) == 1,
-    );
-  }
-
   EvacuationCenter copyWith({
     String? id,
     String? name,

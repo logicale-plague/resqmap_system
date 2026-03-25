@@ -1,4 +1,4 @@
-import 'package:kalig_onan_evac_system/features/evacuees/data/evacuee.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
 
 /// Abstract contract for evacuee persistence.
 /// Implementations live in data/evacuee_repository_impl.dart.

@@ -88,15 +88,14 @@ extension StationDatabaseExtensions on DatabaseService {
   }
 
   Future<void> markStationsSynced(List<String> ids) async {
+    if (ids.isEmpty) return;
+
     final db = await database;
-    for (final id in ids) {
-      await db.update(
-        'stations',
-        {'synced': 1},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    await db.rawUpdate(
+      'UPDATE stations SET synced = 1 WHERE id IN ($placeholders)',
+      ids,
+    );
   }
 
   Future<void> replaceStationId(String oldId, String newId) async {

@@ -25,17 +25,13 @@ class AlertRepositoryImpl implements AlertRepository {
   }
 
   @override
-  Future<List<Alert>> getUnread(String centerId) async {
-    final alerts = await _databaseService.getAlertsByCenterId(centerId);
-    return alerts.where((alert) => !alert.read).toList(growable: false);
+  Future<List<Alert>> getUnread(String centerId) {
+    return _databaseService.getUnreadAlertsByCenterId(centerId);
   }
 
   @override
-  Future<List<Alert>> getUrgent(String centerId) async {
-    final alerts = await _databaseService.getAlertsByCenterId(centerId);
-    return alerts
-        .where((alert) => alert.severity == AlertSeverity.urgent)
-        .toList(growable: false);
+  Future<List<Alert>> getUrgent(String centerId) {
+    return _databaseService.getUrgentAlertsByCenterId(centerId);
   }
 
   @override
@@ -143,6 +139,28 @@ extension AlertDatabaseExtensions on DatabaseService {
     final maps = await db.query(
       'alerts',
       where: 'synced = 0',
+      orderBy: 'createdAt DESC',
+    );
+    return [for (final map in maps) alertFromRow(map)];
+  }
+
+  Future<List<Alert>> getUnreadAlertsByCenterId(String centerId) async {
+    final db = await database;
+    final maps = await db.query(
+      'alerts',
+      where: 'evacuationCenterId = ? AND read = 0',
+      whereArgs: [centerId],
+      orderBy: 'createdAt DESC',
+    );
+    return [for (final map in maps) alertFromRow(map)];
+  }
+
+  Future<List<Alert>> getUrgentAlertsByCenterId(String centerId) async {
+    final db = await database;
+    final maps = await db.query(
+      'alerts',
+      where: 'evacuationCenterId = ? AND severity = ?',
+      whereArgs: [centerId, AlertSeverity.urgent.index],
       orderBy: 'createdAt DESC',
     );
     return [for (final map in maps) alertFromRow(map)];

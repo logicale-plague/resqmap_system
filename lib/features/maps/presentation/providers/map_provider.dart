@@ -6,7 +6,7 @@ import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
 
 class MapState {
   final MapboxMap? mapboxMap;

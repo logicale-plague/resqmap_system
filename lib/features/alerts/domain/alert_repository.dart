@@ -1,4 +1,4 @@
-import 'package:kalig_onan_evac_system/features/alerts/data/alert.dart';
+import 'package:kalig_onan_evac_system/features/alerts/domain/alert.dart';
 
 abstract interface class AlertRepository {
   Future<List<Alert>> getByCenterId(String centerId);

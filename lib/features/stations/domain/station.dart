@@ -30,37 +30,6 @@ class Station {
     return ageAllowed && medicalAllowed;
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'evacuationCenterId': evacuationCenterId,
-      'capacity': capacity,
-      'allowedAgeGroup': allowedAgeGroup?.index,
-      'allowedMedicalCondition': allowedMedicalCondition?.index,
-      'synced': synced ? 1 : 0,
-    };
-  }
-
-  factory Station.fromMap(Map<String, dynamic> map) {
-    final rawAge = map['allowedAgeGroup'];
-    final rawMedical = map['allowedMedicalCondition'];
-
-    return Station(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      evacuationCenterId: map['evacuationCenterId'] as String,
-      capacity: (map['capacity'] as num?)?.toInt() ?? 0,
-      allowedAgeGroup: rawAge == null
-          ? null
-          : AgeGroup.values[(rawAge as num).toInt()],
-      allowedMedicalCondition: rawMedical == null
-          ? null
-          : MedicalCondition.values[(rawMedical as num).toInt()],
-      synced: (map['synced'] as int? ?? 0) == 1,
-    );
-  }
-
   Station copyWith({
     String? id,
     String? name,

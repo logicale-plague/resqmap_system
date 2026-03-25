@@ -257,6 +257,16 @@ class SuppliesScreen extends ConsumerWidget {
                 );
                 return;
               }
+              if (parsedStock < 0 || parsedUsageRate <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Stock must be >= 0 and usage rate must be > 0',
+                    ),
+                  ),
+                );
+                return;
+              }
               final supply = Supply(
                 id: IdService.newId(),
                 evacuationCenterId: center.id,
@@ -324,6 +334,14 @@ class SuppliesScreen extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Stock quantity must be a valid integer'),
+                  ),
+                );
+                return;
+              }
+              if (parsedStock < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Stock quantity must be >= 0'),
                   ),
                 );
                 return;

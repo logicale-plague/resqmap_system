@@ -1,8 +1,9 @@
 import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kalig_onan_evac_system/services/database_service.dart';
 
 extension UpdateCenterCapacityUseCase on DatabaseService {
-  Future<void> updateCenterOccupancy(String centerId, int newOccupancy) async {
+  Future<bool> updateCenterOccupancy(String centerId, int newOccupancy) async {
     if (newOccupancy < 0) {
       throw ArgumentError.value(
         newOccupancy,
@@ -19,7 +20,10 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
       whereArgs: [centerId],
       limit: 1,
     );
-    if (centerRows.isEmpty) return;
+    if (centerRows.isEmpty) {
+      debugPrint('updateCenterOccupancy skipped: center not found (id=$centerId)');
+      return false;
+    }
 
     final totalCapacity =
         (centerRows.first['totalCapacity'] as num?)?.toInt() ?? 0;
@@ -29,13 +33,15 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
       'evacuation_centers',
       {
         'currentOccupancy': newOccupancy,
-        'status': status.index,
+        'status': status.name,
         'synced': 0,
         'lastUpdated': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',
       whereArgs: [centerId],
     );
+
+    return true;
   }
 }
 

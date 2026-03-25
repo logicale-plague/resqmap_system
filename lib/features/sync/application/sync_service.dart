@@ -396,8 +396,8 @@ class SyncService {
       'name': station.name,
       'evacuation_center_id': station.evacuationCenterId,
       'capacity': station.capacity,
-      'allowed_age_group': station.allowedAgeGroup?.name,
-      'allowed_medical_condition': station.allowedMedicalCondition?.name,
+      'allowed_age_group': station.allowedAgeGroup?.index,
+      'allowed_medical_condition': station.allowedMedicalCondition?.index,
       'synced': station.synced ? 1 : 0,
     };
   }

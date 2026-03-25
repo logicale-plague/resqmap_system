@@ -6,7 +6,11 @@ import 'package:sqflite/sqflite.dart';
 extension EvacuationCenterDatabaseExtensions on DatabaseService {
   Future<EvacuationCenter?> getCurrentCenter() async {
     final db = await database;
-    final maps = await db.query('evacuation_centers', limit: 1);
+    final maps = await db.query(
+      'evacuation_centers',
+      orderBy: 'lastUpdated DESC',
+      limit: 1,
+    );
     return maps.isEmpty ? null : centerFromMap(maps.first);
   }
 
@@ -101,7 +105,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       'evacuation_centers',
       {
         'totalCapacity': totalCapacity,
-        'status': status.index,
+        'status': status.name,
         'lastUpdated': DateTime.now().toIso8601String(),
         'synced': 0,
       },
@@ -118,6 +122,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     final centerRows = await db.query(
       'evacuation_centers',
       columns: ['id', 'totalCapacity'],
+      orderBy: 'lastUpdated DESC',
       limit: 1,
     );
     if (centerRows.isEmpty) return;
@@ -136,7 +141,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       'evacuation_centers',
       {
         'currentOccupancy': evacueeCount,
-        'status': status.index,
+        'status': status.name,
         'lastUpdated': DateTime.now().toIso8601String(),
         'synced': 0,
       },

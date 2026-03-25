@@ -1,5 +1,5 @@
-import 'package:kalig_onan_evac_system/features/stations/data/station.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/data/evacuee.dart';
+import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
 
 abstract interface class StationRepository {
   Future<List<Station>> getByCenter(String centerId);
