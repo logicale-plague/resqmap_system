@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CommandCenterDashboardScreen extends ConsumerWidget {
-  const CommandCenterDashboardScreen({Key? key}) : super(key: key);
+class CommandCenterDashboardScreen extends StatelessWidget {
+  const CommandCenterDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Command Center Dashboard'),

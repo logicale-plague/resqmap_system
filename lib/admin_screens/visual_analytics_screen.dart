@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/connectivity_provider.dart';
 
 class VisualAnalyticsScreen extends ConsumerWidget {
-  const VisualAnalyticsScreen({Key? key}) : super(key: key);
+  const VisualAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,8 +87,7 @@ class VisualAnalyticsScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      // Refresh the connectivity check
-                      ref.refresh(connectivityProvider);
+                      ref.invalidate(connectivityProvider);
                     },
                     child: const Text('Retry Connection'),
                   ),
@@ -215,9 +214,9 @@ class _InsightItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
