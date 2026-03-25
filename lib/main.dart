@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kalig_onan_evac_system/services/sync_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kalig_onan_evac_system/core/utils/router.dart';
@@ -26,7 +27,9 @@ void main() async {
   );
 
   // Initialize sample data if needed
-  await _initializeSampleData();
+  // await _initializeSampleData();
+
+  await _startSync();
 
   /// Maruuu1101110:
   // Initialize MapBox access
@@ -47,95 +50,100 @@ void main() async {
   runApp(const ProviderScope(child: MainApp()));
 }
 
-Future<void> _initializeSampleData() async {
-  final db = DatabaseService();
-  final centerExists = await db.getCurrentCenter();
-
-  if (centerExists == null) {
-    // Create a sample evacuation center
-    final sampleCenter = EvacuationCenter(
-      id: IdService.newId(),
-      name: 'Community Center - Downtown',
-      commandCenterId: 'default-command-center',
-      latitude: 14.5995,
-      longitude: 120.9842,
-      totalCapacity: 0,
-      currentOccupancy: 0,
-      status: CenterStatus.operational,
-      medicalAvailable: true,
-      lastUpdated: DateTime.now(),
-      synced: false,
-    );
-
-    await db.insertEvacuationCenter(sampleCenter);
-
-    final stations = [
-      Station(
-        id: IdService.newId(),
-        name: 'Station A - General',
-        evacuationCenterId: sampleCenter.id,
-        capacity: 200,
-      ),
-      Station(
-        id: IdService.newId(),
-        name: 'Station B - Children',
-        evacuationCenterId: sampleCenter.id,
-        capacity: 120,
-        allowedAgeGroup: AgeGroup.child,
-      ),
-      Station(
-        id: IdService.newId(),
-        name: 'Station C - Elderly Care',
-        evacuationCenterId: sampleCenter.id,
-        capacity: 90,
-        allowedAgeGroup: AgeGroup.elderly,
-      ),
-      Station(
-        id: IdService.newId(),
-        name: 'Station D - Serious Medical',
-        evacuationCenterId: sampleCenter.id,
-        capacity: 70,
-        allowedMedicalCondition: MedicalCondition.serious,
-      ),
-    ];
-
-    for (final station in stations) {
-      await db.insertStation(station);
-    }
-
-    // Add sample supplies
-    final supplies = [
-      Supply(
-        id: IdService.newId(),
-        evacuationCenterId: sampleCenter.id,
-        name: 'First Aid Kits',
-        currentStock: 50,
-        usageRatePerDay: 2,
-        lastRestocked: DateTime.now(),
-      ),
-      Supply(
-        id: IdService.newId(),
-        evacuationCenterId: sampleCenter.id,
-        name: 'Pain Relievers',
-        currentStock: 200,
-        usageRatePerDay: 10,
-        lastRestocked: DateTime.now(),
-      ),
-      Supply(
-        id: IdService.newId(),
-        evacuationCenterId: sampleCenter.id,
-        name: 'Bandages',
-        currentStock: 500,
-        usageRatePerDay: 25,
-        lastRestocked: DateTime.now(),
-      ),
-    ];
-
-    for (final supply in supplies) {
-      await db.insertSupply(supply);
-    }
-  }
+Future<void> _startSync() async {
+  final syncService = SyncService();
+  syncService.setOnlineStatus(true);
 }
+
+// Future<void> _initializeSampleData() async {
+//   final db = DatabaseService();
+//   final centerExists = await db.getCurrentCenter();
+
+//   if (centerExists == null) {
+//     // Create a sample evacuation center
+//     final sampleCenter = EvacuationCenter(
+//       id: IdService.newId(),
+//       name: 'Community Center - Downtown',
+//       commandCenterId: 'ddd7cde1-e5e9-486f-88f8-86a40aecb508',
+//       latitude: 14.5995,
+//       longitude: 120.9842,
+//       totalCapacity: 0,
+//       currentOccupancy: 0,
+//       status: CenterStatus.operational,
+//       medicalAvailable: true,
+//       lastUpdated: DateTime.now(),
+//       synced: false,
+//     );
+
+//     await db.insertEvacuationCenter(sampleCenter);
+
+//     final stations = [
+//       Station(
+//         id: IdService.newId(),
+//         name: 'Station A - General',
+//         evacuationCenterId: sampleCenter.id,
+//         capacity: 200,
+//       ),
+//       Station(
+//         id: IdService.newId(),
+//         name: 'Station B - Children',
+//         evacuationCenterId: sampleCenter.id,
+//         capacity: 120,
+//         allowedAgeGroup: AgeGroup.child,
+//       ),
+//       Station(
+//         id: IdService.newId(),
+//         name: 'Station C - Elderly Care',
+//         evacuationCenterId: sampleCenter.id,
+//         capacity: 90,
+//         allowedAgeGroup: AgeGroup.elderly,
+//       ),
+//       Station(
+//         id: IdService.newId(),
+//         name: 'Station D - Serious Medical',
+//         evacuationCenterId: sampleCenter.id,
+//         capacity: 70,
+//         allowedMedicalCondition: MedicalCondition.serious,
+//       ),
+//     ];
+
+//     for (final station in stations) {
+//       await db.insertStation(station);
+//     }
+
+//     // Add sample supplies
+//     final supplies = [
+//       Supply(
+//         id: IdService.newId(),
+//         evacuationCenterId: sampleCenter.id,
+//         name: 'First Aid Kits',
+//         currentStock: 50,
+//         usageRatePerDay: 2,
+//         lastRestocked: DateTime.now(),
+//       ),
+//       Supply(
+//         id: IdService.newId(),
+//         evacuationCenterId: sampleCenter.id,
+//         name: 'Pain Relievers',
+//         currentStock: 200,
+//         usageRatePerDay: 10,
+//         lastRestocked: DateTime.now(),
+//       ),
+//       Supply(
+//         id: IdService.newId(),
+//         evacuationCenterId: sampleCenter.id,
+//         name: 'Bandages',
+//         currentStock: 500,
+//         usageRatePerDay: 25,
+//         lastRestocked: DateTime.now(),
+//       ),
+//     ];
+
+//     for (final supply in supplies) {
+//       await db.insertSupply(supply);
+//     }
+//   }
+// }
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});

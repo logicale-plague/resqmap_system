@@ -6,6 +6,9 @@ class EvacuationCenter {
   final String commandCenterId;
   final double latitude;
   final double longitude;
+  // // // UPDATE: NEW // // //
+  final String? fullAddress;
+  final String? postalCode;
   final int totalCapacity;
   final int currentOccupancy;
   final CenterStatus status;
@@ -19,6 +22,9 @@ class EvacuationCenter {
     required this.commandCenterId,
     required this.latitude,
     required this.longitude,
+    // // // UPDATE: NEW // // //
+    this.fullAddress,
+    this.postalCode,
     required this.totalCapacity,
     required this.currentOccupancy,
     required this.status,
@@ -41,6 +47,10 @@ class EvacuationCenter {
       'commandCenterId': commandCenterId,
       'latitude': latitude,
       'longitude': longitude,
+      // // // UPDATE: NEW // // //
+      'fullAddress': fullAddress,
+      'postalCode': postalCode,
+
       'totalCapacity': totalCapacity,
       'currentOccupancy': currentOccupancy,
       'status': status.index,
@@ -61,6 +71,10 @@ class EvacuationCenter {
           'default-command-center',
       latitude: (map['latitude'] as num).toDouble(),
       longitude: (map['longitude'] as num).toDouble(),
+      // // // UPDATE: NEW // // //
+      fullAddress: map['fullAddress'] as String?,
+      postalCode: map['postalCode'],
+
       totalCapacity: map['totalCapacity'] as int,
       currentOccupancy: map['currentOccupancy'] as int,
       status: CenterStatus.values[map['status'] as int],
@@ -76,6 +90,9 @@ class EvacuationCenter {
     String? commandCenterId,
     double? latitude,
     double? longitude,
+    // // // UPDATE: NEW // // //
+    String? fullAddress,
+    String? postalCode,
     int? totalCapacity,
     int? currentOccupancy,
     CenterStatus? status,
@@ -89,6 +106,9 @@ class EvacuationCenter {
       commandCenterId: commandCenterId ?? this.commandCenterId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      // // // UPDATE: NEW // // //
+      fullAddress: fullAddress ?? this.fullAddress,
+      postalCode: postalCode ?? this.postalCode,
       totalCapacity: totalCapacity ?? this.totalCapacity,
       currentOccupancy: currentOccupancy ?? this.currentOccupancy,
       status: status ?? this.status,

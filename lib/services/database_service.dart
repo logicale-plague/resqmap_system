@@ -52,6 +52,8 @@ class DatabaseService {
         commandCenterId TEXT NOT NULL,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
+        fullAddress TEXT,
+        postalCode TEXT,
         totalCapacity INTEGER NOT NULL,
         currentOccupancy INTEGER NOT NULL,
         status INTEGER NOT NULL,

@@ -137,6 +137,8 @@ class MapController extends Notifier<MapState> {
     }
   }
 
+  Future<void> flyToCoord() async {}
+
   Future<void> addMarkerToMap({
     required Point point,
     required String centerName,

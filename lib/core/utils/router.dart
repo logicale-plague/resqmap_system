@@ -1,10 +1,13 @@
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/feature/maps_page.dart';
+import 'package:kalig_onan_evac_system/feature/page/homePage.dart';
 import '../../screens/index.dart';
 
 final router = GoRouter(
-  initialLocation: '/dashboard',
+  initialLocation: '/homePage',
   routes: [
+    // MARU DEBUG //
+    GoRoute(path: '/homePage', builder: (context, state) => const HomePage()),
     GoRoute(
       path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
