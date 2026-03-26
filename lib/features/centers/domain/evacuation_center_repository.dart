@@ -10,6 +10,5 @@ abstract interface class EvacuationCenterRepository {
   Future<void> upsertFromRemote(EvacuationCenter center);
   Future<void> markSynced(List<String> ids);
   Future<void> replaceId(String oldId, String newId);
-
-  Future<void> update(EvacuationCenter center) async {}
+  Future<void> update(EvacuationCenter center);
 }

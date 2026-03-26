@@ -60,3 +60,7 @@ CenterStatus _calculateUpdatedCenterStatus(
   if (percentage >= 80) return CenterStatus.nearCapacity;
   return CenterStatus.operational;
 }
+
+CenterStatus calculateCenterStatus(int currentOccupancy, int totalCapacity) {
+  return _calculateUpdatedCenterStatus(currentOccupancy, totalCapacity);
+}

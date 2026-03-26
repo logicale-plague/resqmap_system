@@ -7,23 +7,27 @@ import 'package:sqflite/sqflite.dart';
 extension ManageStation on DatabaseService {
   Future<void> insertStation(Station station) async {
     final db = await database;
-    await db.insert(
-      'stations',
-      stationToMap(station),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    await syncCenterCapacity(station.evacuationCenterId);
+    await db.transaction((txn) async {
+      await txn.insert(
+        'stations',
+        stationToMap(station),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await syncCenterCapacity(station.evacuationCenterId, executor: txn);
+    });
   }
 
   Future<void> updateStation(Station station) async {
     final db = await database;
-    await db.update(
-      'stations',
-      stationToMap(station.copyWith(synced: false)),
-      where: 'id = ?',
-      whereArgs: [station.id],
-    );
-    await syncCenterCapacity(station.evacuationCenterId);
+    await db.transaction((txn) async {
+      await txn.update(
+        'stations',
+        stationToMap(station.copyWith(synced: false)),
+        where: 'id = ?',
+        whereArgs: [station.id],
+      );
+      await syncCenterCapacity(station.evacuationCenterId, executor: txn);
+    });
   }
 
   Future<void> deleteStation(String stationId) async {

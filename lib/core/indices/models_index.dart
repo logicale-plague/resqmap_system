@@ -3,4 +3,3 @@ export '../../features/command_center/domain/command_center.dart';
 export '../../features/centers/domain/evacuation_center.dart';
 export '../../features/stations/domain/station.dart';
 export '../../features/supplies/domain/supply.dart';
-export '../../features/alerts/domain/alert.dart';

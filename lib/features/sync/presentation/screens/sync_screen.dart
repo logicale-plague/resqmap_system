@@ -47,7 +47,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final unsyncedCenters = ref.watch(unsyncedCentersProvider);
     final unsyncedEvacuees = ref.watch(unsyncedEvacueesProvider);
     final unsyncedSupplies = ref.watch(unsyncedSuppliesProvider);
-    final unsyncedAlerts = ref.watch(unsyncedAlertsProvider);
+    // final unsyncedAlerts = ref.watch(unsyncedAlertsProvider);
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
@@ -112,69 +112,58 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
             unsyncedCenters.when(
               data: (centers) => unsyncedEvacuees.when(
                 data: (evacuees) => unsyncedSupplies.when(
-                  data: (supplies) => unsyncedAlerts.when(
-                    data: (alerts) {
-                      final pendingCount =
-                          centers.length +
-                          evacuees.length +
-                          supplies.length +
-                          alerts.length;
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.yellow[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.yellow[700]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.pending_actions,
-                              color: Colors.yellow[700],
+                  data: (supplies) {
+                    final pendingCount =
+                        centers.length + evacuees.length + supplies.length;
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.yellow[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.yellow[700]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.pending_actions,
+                            color: Colors.yellow[700],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pending Updates',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.yellow[900],
+                                  ),
+                                ),
+                                Text(
+                                  '$pendingCount record(s) waiting to sync',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.yellow[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Centers: ${centers.length} • '
+                                  'Evacuees: ${evacuees.length} • '
+                                  'Supplies: ${supplies.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.yellow[800],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pending Updates',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.yellow[900],
-                                    ),
-                                  ),
-                                  Text(
-                                    '$pendingCount record(s) waiting to sync',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.yellow[700],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Centers: ${centers.length} • '
-                                    'Evacuees: ${evacuees.length} • '
-                                    'Supplies: ${supplies.length} • '
-                                    'Alerts: ${alerts.length}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.yellow[800],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox(
-                      height: 80,
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (err, stack) => Center(child: Text('Error: $err')),
-                  ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   loading: () => const SizedBox(
                     height: 80,
                     child: Center(child: CircularProgressIndicator()),

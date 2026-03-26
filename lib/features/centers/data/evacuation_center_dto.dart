@@ -25,8 +25,8 @@ EvacuationCenter centerFromMap(Map<String, dynamic> map) {
     name: map['name'] as String,
     commandCenterId:
         map['commandCenterId'] as String? ??
-        map['commandcenterid'] as String? ??
-        map['command_center_id'] as String? ??
+        // map['commandcenterid'] as String? ??
+        // map['command_center_id'] as String? ??
         'default-command-center',
     latitude: (map['latitude'] as num).toDouble(),
     longitude: (map['longitude'] as num).toDouble(),
