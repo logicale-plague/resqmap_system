@@ -7,7 +7,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kalig_onan_evac_system/core/utils/router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'services/database_service.dart';
+import 'core/services/database_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

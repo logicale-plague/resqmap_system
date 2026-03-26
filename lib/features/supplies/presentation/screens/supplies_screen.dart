@@ -4,6 +4,8 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
 
 class SuppliesScreen extends ConsumerWidget {
   const SuppliesScreen({super.key});
@@ -38,6 +40,9 @@ class SuppliesScreen extends ConsumerWidget {
               final supply = supplies[index];
               final statusColor = _getStockStatusColor(supply.daysRemaining);
               final statusText = _getStockStatusText(supply.daysRemaining);
+              final daysRemainingText = supply.daysRemaining == null
+                  ? 'Not currently consumed'
+                  : '${supply.daysRemaining} days remaining';
 
               return AppListItemCard(
                 leading: Container(
@@ -109,7 +114,7 @@ class SuppliesScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${supply.daysRemaining} days remaining',
+                      daysRemainingText,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[700],
@@ -152,13 +157,15 @@ class SuppliesScreen extends ConsumerWidget {
     );
   }
 
-  Color _getStockStatusColor(int daysRemaining) {
+  Color _getStockStatusColor(int? daysRemaining) {
+    if (daysRemaining == null) return Colors.blueGrey;
     if (daysRemaining < 1) return Colors.red;
     if (daysRemaining < 7) return Colors.orange;
     return Colors.green;
   }
 
-  String _getStockStatusText(int daysRemaining) {
+  String _getStockStatusText(int? daysRemaining) {
+    if (daysRemaining == null) return 'NOT IN USE';
     if (daysRemaining < 1) return 'CRITICAL';
     if (daysRemaining < 7) return 'LOW';
     return 'ADEQUATE';
@@ -228,7 +235,7 @@ class SuppliesScreen extends ConsumerWidget {
               }
 
               final db = ref.read(databaseServiceProvider);
-              final center = await db.getCurrentCenter();
+              final center = await ref.read(currentCenterProvider.future);
               if (center == null) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -238,12 +245,34 @@ class SuppliesScreen extends ConsumerWidget {
                 );
                 return;
               }
+              final parsedStock = int.tryParse(stockController.text);
+              final parsedUsageRate = int.tryParse(usageController.text);
+              if (parsedStock == null || parsedUsageRate == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Stock and usage rate must be valid integers',
+                    ),
+                  ),
+                );
+                return;
+              }
+              if (parsedStock < 0 || parsedUsageRate < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Stock and usage rate must be >= 0',
+                    ),
+                  ),
+                );
+                return;
+              }
               final supply = Supply(
                 id: IdService.newId(),
                 evacuationCenterId: center.id,
                 name: nameController.text,
-                currentStock: int.parse(stockController.text),
-                usageRatePerDay: int.parse(usageController.text),
+                currentStock: parsedStock,
+                usageRatePerDay: parsedUsageRate,
                 lastRestocked: DateTime.now(),
               );
 
@@ -300,10 +329,22 @@ class SuppliesScreen extends ConsumerWidget {
               }
 
               final db = ref.read(databaseServiceProvider);
-              await db.updateSupplyStock(
-                supply.id,
-                int.parse(stockController.text),
-              );
+              final parsedStock = int.tryParse(stockController.text);
+              if (parsedStock == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Stock quantity must be a valid integer'),
+                  ),
+                );
+                return;
+              }
+              if (parsedStock < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Stock quantity must be >= 0')),
+                );
+                return;
+              }
+              await db.updateSupplyStock(supply.id, parsedStock);
               if (!context.mounted) return;
               Navigator.pop(context);
 
