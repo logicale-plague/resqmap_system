@@ -90,22 +90,6 @@ class DatabaseService {
     await db.execute(
       'CREATE INDEX idx_supplies_evacuationCenterId ON supplies(evacuationCenterId)',
     );
-
-    // Create Alerts table
-    await db.execute('''
-      CREATE TABLE alerts(
-        id TEXT PRIMARY KEY,
-        evacuationCenterId TEXT NOT NULL,
-        message TEXT NOT NULL,
-        severity INTEGER NOT NULL,
-        createdAt TEXT NOT NULL,
-        read INTEGER NOT NULL DEFAULT 0,
-        synced INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
-    await db.execute(
-      'CREATE INDEX idx_alerts_evacuationCenterId ON alerts(evacuationCenterId)',
-    );
   }
 
   // Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {}
@@ -159,7 +143,6 @@ class DatabaseService {
       await txn.update('stations', {'synced': 0});
       await txn.update('evacuees', {'synced': 0});
       await txn.update('supplies', {'synced': 0});
-      await txn.update('alerts', {'synced': 0});
     });
   }
 
