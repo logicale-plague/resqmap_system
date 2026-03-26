@@ -2,39 +2,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
 
 import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center_repository.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 
+final evacuationCenterRepositoryProvider = Provider<EvacuationCenterRepository>(
+  (ref) {
+    final db = ref.watch(databaseServiceProvider);
+    return EvacuationCenterRepositoryImpl(db);
+  },
+);
+
 final currentCenterProvider = FutureProvider<EvacuationCenter?>((ref) async {
-  final db = ref.watch(databaseServiceProvider);
-  return db.getCurrentCenter();
+  final repository = ref.watch(evacuationCenterRepositoryProvider);
+  return repository.getCurrent();
 });
 
 final currentCommandCenterIdProvider = FutureProvider<String>((ref) async {
-  final center = await ref.watch(currentCenterProvider.future);
-  return center?.commandCenterId ?? 'default-command-center';
+  final repository = ref.watch(evacuationCenterRepositoryProvider);
+  return repository.getCurrentCommandCenterId();
 });
 
 final allCentersProvider = FutureProvider<List<EvacuationCenter>>((ref) async {
-  final db = ref.watch(databaseServiceProvider);
-  return db.getAllCenters();
+  final repository = ref.watch(evacuationCenterRepositoryProvider);
+  return repository.getAll();
 });
 
 final unsyncedCentersProvider = FutureProvider<List<EvacuationCenter>>((
   ref,
 ) async {
-  final db = ref.watch(databaseServiceProvider);
-  return db.getUnsyncedCenters();
+  final repository = ref.watch(evacuationCenterRepositoryProvider);
+  return repository.getAll().then(
+    (centers) => centers.where((center) => !center.synced).toList(),
+  );
 });
 
 final centerProvider = FutureProvider.family<EvacuationCenter?, String>((
   ref,
   id,
 ) async {
-  final db = ref.watch(databaseServiceProvider);
-  final centers = await db.getAllCenters();
-  try {
-    return centers.firstWhere((c) => c.id == id);
-  } catch (e) {
-    return null;
-  }
+  final repository = ref.watch(evacuationCenterRepositoryProvider);
+  return repository.getById(id);
 });

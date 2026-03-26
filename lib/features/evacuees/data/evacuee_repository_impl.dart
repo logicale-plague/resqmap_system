@@ -1,6 +1,6 @@
 import 'package:kalig_onan_evac_system/features/evacuees/data/evacuee_dto.dart';
 import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension EvacueeDatabaseExtensions on DatabaseService {

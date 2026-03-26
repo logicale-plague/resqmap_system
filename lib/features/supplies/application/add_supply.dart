@@ -1,6 +1,6 @@
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_dto.dart';
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension AddSupplyUseCase on DatabaseService {

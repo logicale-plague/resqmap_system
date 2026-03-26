@@ -2,7 +2,7 @@ import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_r
 import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
 import 'package:kalig_onan_evac_system/features/stations/data/station_dto.dart';
 import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension StationDatabaseExtensions on DatabaseService {
@@ -58,27 +58,29 @@ extension StationDatabaseExtensions on DatabaseService {
 
   Future<void> upsertStationFromRemote(Station station) async {
     final db = await database;
-    final existingRows = await db.query(
-      'stations',
-      columns: ['evacuationCenterId'],
-      where: 'id = ?',
-      whereArgs: [station.id],
-      limit: 1,
+    await db.transaction((txn) async {
+      final existingRows = await txn.query(
+        'stations',
+        columns: ['evacuationCenterId'],
+        where: 'id = ?',
+        whereArgs: [station.id],
+        limit: 1,
     );
     final previousCenterId = existingRows.isEmpty
         ? null
         : existingRows.first['evacuationCenterId'] as String?;
 
-    await db.insert(
-      'stations',
-      stationToMap(station.copyWith(synced: true)),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+      await txn.insert(
+        'stations',
+        stationToMap(station.copyWith(synced: true)),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     if (previousCenterId != null &&
         previousCenterId != station.evacuationCenterId) {
       await syncCenterCapacity(previousCenterId);
     }
     await syncCenterCapacity(station.evacuationCenterId);
+    });
   }
 
   Future<List<Station>> getUnsyncedStations() async {

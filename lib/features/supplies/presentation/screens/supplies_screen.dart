@@ -257,11 +257,11 @@ class SuppliesScreen extends ConsumerWidget {
                 );
                 return;
               }
-              if (parsedStock < 0 || parsedUsageRate <= 0) {
+              if (parsedStock < 0 || parsedUsageRate < 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Stock must be >= 0 and usage rate must be > 0',
+                      'Stock and usage rate must be >= 0',
                     ),
                   ),
                 );

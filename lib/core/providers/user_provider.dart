@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/features/users/data/user.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 final currentUserProvider = FutureProvider<User?>((ref) async {

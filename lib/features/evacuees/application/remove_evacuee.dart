@@ -1,5 +1,5 @@
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 
 extension RemoveEvacueeUseCase on DatabaseService {
   Future<void> removeEvacuee(String id) async {

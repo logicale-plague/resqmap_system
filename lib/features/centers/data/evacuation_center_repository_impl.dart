@@ -1,10 +1,65 @@
+import 'package:kalig_onan_evac_system/features/centers/application/register_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/application/update_center_capacity.dart';
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_dto.dart';
 import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center_repository.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
+class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
+  final DatabaseService _databaseService;
+
+  EvacuationCenterRepositoryImpl(this._databaseService);
+
+  @override
+  Future<EvacuationCenter?> getCurrent() => _databaseService.getCurrentCenter();
+
+  @override
+  Future<List<EvacuationCenter>> getAll() => _databaseService.getAllCenters();
+
+  @override
+  Future<EvacuationCenter?> getById(String id) =>
+      _databaseService.getCenterById(id);
+
+  @override
+  Future<String> getCurrentCommandCenterId() =>
+      _databaseService.getCurrentCommandCenterId();
+
+  @override
+  Future<void> insert(EvacuationCenter center) =>
+      RegisterCenter().registerCenter(center);
+
+  @override
+  Future<void> updateOccupancy(String centerId, int occupancy) =>
+      UpdateCenterCapacity().updateCenterOccupancy(centerId, occupancy);
+
+  @override
+  Future<void> upsertFromRemote(EvacuationCenter center) =>
+      _databaseService.upsertCenterFromRemote(center);
+
+  @override
+  Future<void> markSynced(List<String> ids) =>
+      _databaseService.markCentersSynced(ids);
+
+  @override
+  Future<void> replaceId(String oldId, String newId) =>
+      _databaseService.replaceCenterId(oldId, newId);
+
+  @override
+  Future<void> update(EvacuationCenter center) =>
+      _databaseService.updateCenter(center);
+}
+
 extension EvacuationCenterDatabaseExtensions on DatabaseService {
+  // Future<void> insertCenter(EvacuationCenter center) async {
+  //   final db = await database;
+  //   await db.insert(
+  //     'evacuation_centers',
+  //     centerToMap(center.copyWith(synced: false)),
+  //     conflictAlgorithm: ConflictAlgorithm.replace,
+  //   );
+  // }
+
   Future<EvacuationCenter?> getCurrentCenter() async {
     final db = await database;
     final maps = await db.query(
@@ -30,6 +85,21 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       limit: 1,
     );
     return maps.isEmpty ? null : centerFromMap(maps.first);
+  }
+
+  Future<String> getCurrentCommandCenterId() async {
+    final center = await getCurrentCenter();
+    return center?.commandCenterId ?? 'default-command-center';
+  }
+
+  Future<void> updateCenter(EvacuationCenter center) async {
+    final db = await database;
+    await db.update(
+      'evacuation_centers',
+      centerToMap(center.copyWith(lastUpdated: DateTime.now(), synced: false)),
+      where: 'id = ?',
+      whereArgs: [center.id],
+    );
   }
 
   Future<void> upsertCenterFromRemote(EvacuationCenter center) async {

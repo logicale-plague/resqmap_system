@@ -1,4 +1,4 @@
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 
 extension UpdateSupplyStockUseCase on DatabaseService {
   Future<void> updateSupplyStock(String supplyId, int newStock) async {

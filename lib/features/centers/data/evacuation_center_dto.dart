@@ -33,9 +33,9 @@ EvacuationCenter centerFromMap(Map<String, dynamic> map) {
     totalCapacity: map['totalCapacity'] as int,
     currentOccupancy: map['currentOccupancy'] as int,
     status: parsedStatus,
-    medicalAvailable: (map['medicalAvailable'] as int) == 1,
+    medicalAvailable: (map['medicalAvailable'] as int?) == 1,
     lastUpdated: DateTime.parse(map['lastUpdated'] as String),
-    synced: (map['synced'] as int) == 1,
+    synced: (map['synced'] as int?) == 1,
   );
 }
 

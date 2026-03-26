@@ -1,7 +1,7 @@
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
 import 'package:kalig_onan_evac_system/features/stations/data/station_dto.dart';
 import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension ManageStation on DatabaseService {

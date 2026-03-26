@@ -1,8 +1,20 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 
-extension UpdateCenterCapacityUseCase on DatabaseService {
+final updateCenterCapacityProvider = Provider<UpdateCenterCapacity>((ref) {
+  final databaseService = ref.watch(databaseServiceProvider);
+  return UpdateCenterCapacity(databaseService: databaseService);
+});
+
+class UpdateCenterCapacity {
+  final DatabaseService _databaseService;
+
+  UpdateCenterCapacity({DatabaseService? databaseService})
+    : _databaseService = databaseService ?? DatabaseService();
+
   Future<bool> updateCenterOccupancy(String centerId, int newOccupancy) async {
     if (newOccupancy < 0) {
       throw ArgumentError.value(
@@ -12,7 +24,7 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
       );
     }
 
-    final db = await database;
+    final db = await _databaseService.database;
     final centerRows = await db.query(
       'evacuation_centers',
       columns: ['totalCapacity'],
@@ -46,6 +58,8 @@ extension UpdateCenterCapacityUseCase on DatabaseService {
     return true;
   }
 }
+
+extension UpdateCenterCapacityUseCas on DatabaseService {}
 
 CenterStatus _calculateUpdatedCenterStatus(
   int currentOccupancy,

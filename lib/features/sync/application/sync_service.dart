@@ -1,24 +1,31 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/repository_impl_index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final databaseService = ref.watch(databaseServiceProvider);
+  final supabase = ref.watch(supabaseProvider);
+  return SyncService(databaseService: databaseService, supabase: supabase);
+});
+
 class SyncService {
-  static final SyncService _instance = SyncService._internal();
+  SyncService({
+    required DatabaseService databaseService,
+    required SupabaseClient supabase,
+  }) : _databaseService = databaseService,
+       _supabase = supabase;
 
-  factory SyncService() {
-    return _instance;
-  }
-
-  SyncService._internal();
-
-  final _databaseService = DatabaseService();
-  final _supabase = Supabase.instance.client;
+  final DatabaseService _databaseService;
+  final SupabaseClient _supabase;
   final _syncStatusController = StreamController<bool>.broadcast();
   DateTime? _lastSyncTime;
   bool _isShutDown = false;
