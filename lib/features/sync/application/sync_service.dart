@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kalig_onan_evac_system/core/indices/repository_impl_index.dart';
+import 'package:kalig_onan_evac_system/core/indices/db_extensions_index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
@@ -14,7 +14,10 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 final syncServiceProvider = Provider<SyncService>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
   final supabase = ref.watch(supabaseProvider);
-  final service = SyncService(databaseService: databaseService, supabase: supabase);
+  final service = SyncService(
+    databaseService: databaseService,
+    supabase: supabase,
+  );
   ref.onDispose(() {
     unawaited(service.shutdown());
   });

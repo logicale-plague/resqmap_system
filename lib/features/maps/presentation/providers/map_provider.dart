@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
-import 'package:kalig_onan_evac_system/features/sync/presentation/providers/sync_provider.dart';
+import 'package:kalig_onan_evac_system/features/sync/application/sync_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
@@ -195,9 +195,10 @@ class MapController extends Notifier<MapState> {
         evacDataMap: {...state.evacDataMap, annotation.id: newCenter},
       );
 
-      // Push directly to Supabase (not to local database)
+      // Push to Supabase and pull to local database via RegisterCenter use case.
       try {
-        await syncService.pushCenterToSupabase(newCenter);
+        final centerRepository = ref.read(evacuationCenterRepositoryProvider);
+        await centerRepository.insert(newCenter);
 
         // Push succeeded: mark center as synced and clear any pending-retry flag
         final syncedCenter = newCenter.copyWith(synced: true);
@@ -206,7 +207,7 @@ class MapController extends Notifier<MapState> {
           pendingRetryIds: state.pendingRetryIds.difference({annotation.id}),
         );
 
-        // Invalidate the provider to refresh centers list from Supabase
+        // Invalidate the provider to refresh centers list from local database
         ref.invalidate(allCentersProvider);
       } catch (e) {
         // Push failed: keep the annotation and center in state so reconciliation

@@ -5,8 +5,6 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/application/register_evacuee_name.dart';
-import 'package:kalig_onan_evac_system/features/stations/application/manage_station.dart';
 
 class StationsScreen extends ConsumerWidget {
   const StationsScreen({super.key});
@@ -312,7 +310,7 @@ class StationsScreen extends ConsumerWidget {
 
     if (shouldSave != true) return;
 
-    final db = ref.read(databaseServiceProvider);
+    final stationRepository = ref.read(stationRepositoryProvider);
     final trimmedName = nameController.text.trim();
     final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
 
@@ -335,9 +333,9 @@ class StationsScreen extends ConsumerWidget {
             );
 
     if (station == null) {
-      await db.insertStation(stationToSave);
+      await stationRepository.insert(stationToSave);
     } else {
-      await db.updateStation(stationToSave);
+      await stationRepository.update(stationToSave);
     }
 
     ref.invalidate(stationsByCenterProvider(center.id));
@@ -402,10 +400,14 @@ class StationsScreen extends ConsumerWidget {
                                     return;
                                   }
 
-                                  final db = ref.read(databaseServiceProvider);
-                                  await db.registerEvacueeName(
-                                    evacuee.id,
-                                    name,
+                                  final evacueeRepository = ref.read(
+                                    evacueeRepositoryProvider,
+                                  );
+                                  final updatedEvacuee = evacuee.copyWith(
+                                    name: name.trim(),
+                                  );
+                                  await evacueeRepository.update(
+                                    updatedEvacuee,
                                   );
                                   ref.invalidate(
                                     unnamedEvacueesByStationProvider(
@@ -491,8 +493,8 @@ class StationsScreen extends ConsumerWidget {
 
     if (confirm != true) return;
 
-    final db = ref.read(databaseServiceProvider);
-    await db.deleteStation(station.id);
+    final stationRepository = ref.read(stationRepositoryProvider);
+    await stationRepository.delete(station);
 
     final center = ref.read(currentCenterProvider).asData?.value;
     if (center != null) {

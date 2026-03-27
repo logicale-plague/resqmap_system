@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/features/centers/application/register_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/application/update_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
 
 import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
@@ -8,7 +10,13 @@ import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 final evacuationCenterRepositoryProvider = Provider<EvacuationCenterRepository>(
   (ref) {
     final db = ref.watch(databaseServiceProvider);
-    return EvacuationCenterRepositoryImpl(db);
+    final registerCenter = ref.watch(registerCenterProvider);
+    final updateCenter = ref.watch(updateCenterCapacityProvider);
+    return EvacuationCenterRepositoryImpl(
+      db,
+      registerCenter: registerCenter,
+      updateCenterCapacity: updateCenter,
+    );
   },
 );
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/providers/map_provider.dart';
 
@@ -38,12 +39,27 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
       return;
     }
 
-    await ref
-        .read(mapControllerProvider.notifier)
-        .addMarkerToMap(point: widget.point, centerName: centerName);
+    try {
+      await ref
+          .read(mapControllerProvider.notifier)
+          .addMarkerToMap(point: widget.point, centerName: centerName);
 
-    if (!mounted) return;
-    Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } on OfflineException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to register center: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

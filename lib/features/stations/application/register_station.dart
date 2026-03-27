@@ -4,27 +4,26 @@ import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_db_extension.dart';
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_dto.dart';
-import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/stations/data/station_db_extension.dart';
+import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final registerCenterProvider = Provider<RegisterCenter>((ref) {
-  final dbService = ref.watch(databaseServiceProvider);
-  final supabaseService = ref.watch(supabaseProvider);
-  return RegisterCenter(
-    databaseService: dbService,
-    supabaseService: supabaseService,
+final registerStationProvider = Provider<RegisterStationService>((ref) {
+  final db = ref.watch(databaseServiceProvider);
+  final supabase = ref.watch(supabaseProvider);
+  return RegisterStationService(
+    databaseService: db,
+    supabaseService: supabase,
     ref: ref,
   );
 });
 
-class RegisterCenter {
+class RegisterStationService {
   final DatabaseService _databaseService;
   final SupabaseClient _supabaseService;
   final Ref? _ref;
 
-  RegisterCenter({
+  RegisterStationService({
     DatabaseService? databaseService,
     SupabaseClient? supabaseService,
     Ref? ref,
@@ -32,26 +31,22 @@ class RegisterCenter {
        _supabaseService = supabaseService ?? Supabase.instance.client,
        _ref = ref;
 
-  /// Registers a center to Supabase and pulls it to the local database.
-  ///
-  /// Throws [OfflineException] if the device has no internet access.
-  Future<void> registerCenter(EvacuationCenter center) async {
+  Future<void> registerStation(Station station) async {
     final isOnline = _ref != null
         ? await _ref.read(isOnlineProvider.future)
         : isOnlineProvider.future as bool;
 
     if (!isOnline) {
       throw OfflineException(
-        'An internet connection is required to register an evacuation center.',
+        'An internet connection is required to register a station.',
       );
     }
-
-    await _supabaseService
-        .from('evacuation_centers')
-        .insert(centerToMap(center));
-
-    await _databaseService.upsertCenterFromRemote(
-      center.copyWith(synced: true),
+    await _supabaseService.from('stations').insert({
+      'id': station.id,
+      'name': station.name.trim(),
+    });
+    await _databaseService.upsertStationFromRemote(
+      station.copyWith(synced: true),
     );
   }
 }

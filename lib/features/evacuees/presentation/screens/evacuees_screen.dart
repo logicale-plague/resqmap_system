@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
+// import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
 
 class EvacueesScreen extends ConsumerWidget {
   const EvacueesScreen({super.key});
@@ -96,9 +96,9 @@ class EvacueesScreen extends ConsumerWidget {
                   ],
                 ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
+                  icon: const Icon(Icons.edit, color: Colors.grey),
                   onPressed: () {
-                    _showDeleteDialog(context, ref, evacuee);
+                    // _showDeleteDialog(context, ref, evacuee);
                   },
                 ),
               );
@@ -144,35 +144,35 @@ class EvacueesScreen extends ConsumerWidget {
     }
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, Evacuee evacuee) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Evacuee'),
-        content: Text(
-          'Are you sure you want to remove ${evacuee.name ?? 'this evacuee'}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final db = ref.read(databaseServiceProvider);
-              await db.removeEvacuee(evacuee.id);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              ref.invalidate(allEvacueesProvider);
-              ref.invalidate(evacueeCountProvider);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Evacuee removed')));
-            },
-            child: const Text('Remove', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showDeleteDialog(BuildContext context, WidgetRef ref, Evacuee evacuee) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Remove Evacuee'),
+  //       content: Text(
+  //         'Are you sure you want to remove ${evacuee.name ?? 'this evacuee'}?',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             final db = ref.read(databaseServiceProvider);
+  //             await db.removeEvacuee(evacuee.id);
+  //             if (!context.mounted) return;
+  //             Navigator.pop(context);
+  //             ref.invalidate(allEvacueesProvider);
+  //             ref.invalidate(evacueeCountProvider);
+  //             ScaffoldMessenger.of(
+  //               context,
+  //             ).showSnackBar(const SnackBar(content: Text('Evacuee removed')));
+  //           },
+  //           child: const Text('Remove', style: TextStyle(color: Colors.red)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }
