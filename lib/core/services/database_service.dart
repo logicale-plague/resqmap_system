@@ -21,7 +21,12 @@ class DatabaseService {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'kalig_onan_evac.db');
 
-    return openDatabase(path, version: 1, onCreate: _onCreate);
+    return openDatabase(
+      path,
+      version: 2,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -90,9 +95,26 @@ class DatabaseService {
     await db.execute(
       'CREATE INDEX idx_supplies_evacuationCenterId ON supplies(evacuationCenterId)',
     );
+
+    // Create app settings table
+    await db.execute('''
+      CREATE TABLE app_settings(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
   }
 
-  // Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {}
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS app_settings(
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+    }
+  }
 
   // Future<void> _backfillCenterOccupancy(Database db) async {
   //   await db.transaction((txn) async {

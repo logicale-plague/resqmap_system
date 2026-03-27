@@ -14,14 +14,33 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
   //   );
   // }
 
-  Future<EvacuationCenter?> getCurrentCenter() async {
-    final db = await database;
-    final maps = await db.query(
-      'evacuation_centers',
-      orderBy: 'lastUpdated DESC',
+  Future<String?> getStoredCurrentCenterId({DatabaseExecutor? executor}) async {
+    final db = executor ?? await database;
+    final rows = await db.query(
+      'app_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: ['currentCenterId'],
       limit: 1,
     );
-    return maps.isEmpty ? null : centerFromMap(maps.first);
+    return rows.isEmpty ? null : rows.first['value'] as String?;
+  }
+
+  Future<void> setCurrentCenterId(
+    String id, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
+    await db.insert('app_settings', {
+      'key': 'currentCenterId',
+      'value': id,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<EvacuationCenter?> getCurrentCenter() async {
+    final centerId = await getStoredCurrentCenterId();
+    if (centerId == null) return null;
+    return getCenterById(centerId);
   }
 
   Future<List<EvacuationCenter>> getAllCenters() async {
@@ -53,6 +72,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       centerToMap(center.copyWith(synced: true)),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await setCurrentCenterId(center.id);
   }
 
   Future<void> replaceCenterId(String oldId, String newId) async {
@@ -68,6 +88,10 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
         where: 'id = ?',
         whereArgs: [oldId],
       );
+      final currentId = await getStoredCurrentCenterId(executor: txn);
+      if (currentId == oldId) {
+        await setCurrentCenterId(newId, executor: txn);
+      }
       await txn.update(
         'stations',
         {'evacuationCenterId': newId, 'synced': 0},
@@ -137,15 +161,18 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
   }) async {
     final db = executor ?? await database;
 
+    final centerId = await getStoredCurrentCenterId(executor: db);
+    if (centerId == null) return;
+
     final centerRows = await db.query(
       'evacuation_centers',
-      columns: ['id', 'totalCapacity'],
-      orderBy: 'lastUpdated DESC',
+      columns: ['totalCapacity'],
+      where: 'id = ?',
+      whereArgs: [centerId],
       limit: 1,
     );
     if (centerRows.isEmpty) return;
 
-    final centerId = centerRows.first['id'] as String;
     final totalCapacity =
         (centerRows.first['totalCapacity'] as num?)?.toInt() ?? 0;
 

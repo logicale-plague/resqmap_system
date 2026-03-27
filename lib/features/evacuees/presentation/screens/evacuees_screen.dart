@@ -96,10 +96,9 @@ class EvacueesScreen extends ConsumerWidget {
                   ],
                 ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.grey),
-                  onPressed: () {
-                    // _showDeleteDialog(context, ref, evacuee);
-                  },
+                  icon: const Icon(Icons.edit),
+                  tooltip: 'Edit not implemented',
+                  onPressed: null,
                 ),
               );
             },
@@ -143,36 +142,4 @@ class EvacueesScreen extends ConsumerWidget {
         return Colors.red;
     }
   }
-
-  // void _showDeleteDialog(BuildContext context, WidgetRef ref, Evacuee evacuee) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text('Remove Evacuee'),
-  //       content: Text(
-  //         'Are you sure you want to remove ${evacuee.name ?? 'this evacuee'}?',
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context),
-  //           child: const Text('Cancel'),
-  //         ),
-  //         TextButton(
-  //           onPressed: () async {
-  //             final db = ref.read(databaseServiceProvider);
-  //             await db.removeEvacuee(evacuee.id);
-  //             if (!context.mounted) return;
-  //             Navigator.pop(context);
-  //             ref.invalidate(allEvacueesProvider);
-  //             ref.invalidate(evacueeCountProvider);
-  //             ScaffoldMessenger.of(
-  //               context,
-  //             ).showSnackBar(const SnackBar(content: Text('Evacuee removed')));
-  //           },
-  //           child: const Text('Remove', style: TextStyle(color: Colors.red)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 }

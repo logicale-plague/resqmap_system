@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_db_extension.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/data/evacuee_dto.dart';
 import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
 
 final updateEvacueeProvider = Provider<UpdateEvacueeUseCase>((ref) {
@@ -30,7 +31,7 @@ class UpdateEvacueeUseCase {
         );
       }
 
-      final evacueeRow = evacueeRows.first;
+      final evacueeRow = evacueeToRow(evacuee);
       evacueeRow['synced'] = 0;
 
       await txn.update(
@@ -43,30 +44,3 @@ class UpdateEvacueeUseCase {
     await _databaseService.refreshCurrentCenterOccupancy();
   }
 }
-// extension UpdateEvacueeUseCase on DatabaseService {
-//   Future<void> updateEvacuee(String id) async {
-//     final db = await database;
-//     await db.transaction((txn) async {
-//       final evacueeRows = await txn.query(
-//         'evacuees',
-//         where: 'id = ?',
-//         whereArgs: [id],
-//       );
-
-//       if (evacueeRows.isEmpty) {
-//         throw StateError('updateEvacuee could not find evacueeId=$id.');
-//       }
-
-//       final evacueeRow = evacueeRows.first;
-//       evacueeRow['synced'] = 0;
-
-//       await txn.update(
-//         'evacuees',
-//         evacueeRow,
-//         where: 'id = ?',
-//         whereArgs: [id],
-//       );
-//     });
-//     await refreshCurrentCenterOccupancy();
-//   }
-// }

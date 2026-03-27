@@ -29,18 +29,24 @@ class UpdateCenterCapacity {
         return false;
       }
 
-      final centerRow = centerRows.first;
-      centerRow['currentOccupancy'] = center.currentOccupancy;
-      centerRow['status'] = _calculateUpdatedCenterStatus(
-        center.currentOccupancy,
-        center.totalCapacity,
-      ).index;
-      centerRow['lastUpdated'] = DateTime.now().toIso8601String();
-      centerRow['synced'] = 0;
+      final updatedRow = Map<String, dynamic>.from(centerRows.first)
+        ..['name'] = center.name
+        ..['commandCenterId'] = center.commandCenterId
+        ..['latitude'] = center.latitude
+        ..['longitude'] = center.longitude
+        ..['totalCapacity'] = center.totalCapacity
+        ..['currentOccupancy'] = center.currentOccupancy
+        ..['status'] = _calculateUpdatedCenterStatus(
+          center.currentOccupancy,
+          center.totalCapacity,
+        ).index
+        ..['medicalAvailable'] = center.medicalAvailable ? 1 : 0
+        ..['lastUpdated'] = DateTime.now().toIso8601String()
+        ..['synced'] = 0;
 
       await txn.update(
         'evacuation_centers',
-        centerRow,
+        updatedRow,
         where: 'id = ?',
         whereArgs: [center.id],
       );

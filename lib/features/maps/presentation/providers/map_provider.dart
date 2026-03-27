@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/sync/application/sync_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
@@ -143,7 +144,7 @@ class MapController extends Notifier<MapState> {
     // Check online status before allowing creation
     final syncService = ref.read(syncServiceProvider);
     if (!syncService.isOnline) {
-      throw Exception('Cannot create center: No internet connection');
+      throw OfflineException('Cannot create center: No internet connection');
     }
 
     final manager = state.pointAnnotationManager;
@@ -195,12 +196,14 @@ class MapController extends Notifier<MapState> {
         evacDataMap: {...state.evacDataMap, annotation.id: newCenter},
       );
 
-      // Push to Supabase and pull to local database via RegisterCenter use case.
+      // Persist the new center through the evacuation center repository.
+      // This delegates storage to repository.insert(newCenter) and then updates
+      // local UI state (sync flag/pending retry) based on the result.
       try {
         final centerRepository = ref.read(evacuationCenterRepositoryProvider);
         await centerRepository.insert(newCenter);
 
-        // Push succeeded: mark center as synced and clear any pending-retry flag
+        // Insert succeeded: mark center as synced and clear pending-retry state.
         final syncedCenter = newCenter.copyWith(synced: true);
         state = state.copyWith(
           evacDataMap: {...state.evacDataMap, annotation.id: syncedCenter},
@@ -210,7 +213,7 @@ class MapController extends Notifier<MapState> {
         // Invalidate the provider to refresh centers list from local database
         ref.invalidate(allCentersProvider);
       } catch (e) {
-        // Push failed: keep the annotation and center in state so reconciliation
+        // Insert failed: keep the annotation and center in state so reconciliation
         // can retry; do NOT delete the annotation or remove from evacDataMap,
         // as that would orphan a potential remote row and discard local work.
         state = state.copyWith(

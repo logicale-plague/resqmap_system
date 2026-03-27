@@ -36,7 +36,8 @@ class SyncService {
   final _syncStatusController = StreamController<bool>.broadcast();
   DateTime? _lastSyncTime;
   bool _isShutDown = false;
-  bool _isSyncInProgress = false;
+  // bool _isSyncInProgress = false;
+  Future<void>? _activeSyncFuture;
   Timer? _retryTimer;
   int _retryAttempts = 0;
 
@@ -82,12 +83,24 @@ class SyncService {
       return;
     }
 
-    if (_isSyncInProgress) {
-      debugPrint('Sync already in progress; skipping duplicate sync request.');
-      return;
+    final activeSyncFuture = _activeSyncFuture;
+    if (activeSyncFuture != null) {
+      debugPrint('Sync already in progress; joining active sync request.');
+      return activeSyncFuture;
     }
 
-    _isSyncInProgress = true;
+    late final Future<void> trackedSyncFuture;
+    trackedSyncFuture = _performSync().whenComplete(() {
+      if (identical(_activeSyncFuture, trackedSyncFuture)) {
+        _activeSyncFuture = null;
+      }
+    });
+    _activeSyncFuture = trackedSyncFuture;
+    return trackedSyncFuture;
+  }
+
+  Future<void> _performSync() async {
+    // _isSyncInProgress = true;
 
     try {
       await _normalizeLegacyIds();
@@ -139,16 +152,6 @@ class SyncService {
         );
       }
 
-      // if (unsyncedAlerts.isNotEmpty) {
-      //   final payload = unsyncedAlerts
-      //       .map((alert) => _alertToRemoteMap(alert))
-      //       .toList();
-      //   await _supabase.from('alerts').upsert(payload);
-      //   await _databaseService.markAlertsSynced(
-      //       unsyncedAlerts.map((alert) => alert.id).toList(),
-      //     );
-      // }
-
       await _pullAndMergeFromSupabase();
 
       _lastSyncTime = DateTime.now();
@@ -161,7 +164,7 @@ class SyncService {
       _scheduleRetry();
       rethrow;
     } finally {
-      _isSyncInProgress = false;
+      // _isSyncInProgress = false;
     }
   }
 
@@ -244,13 +247,6 @@ class SyncService {
         await _databaseService.replaceSupplyId(supply.id, IdService.newId());
       }
     }
-
-    // final alerts = await _databaseService.getAllAlerts();
-    // for (final alert in alerts) {
-    //   if (!_isUuid(alert.id)) {
-    //     await _databaseService.replaceAlertId(alert.id, IdService.newId());
-    //   }
-    // }
   }
 
   bool _isUuid(String value) => _uuidPattern.hasMatch(value);
