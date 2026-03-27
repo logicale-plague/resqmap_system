@@ -36,8 +36,12 @@ Color getMedicalConditionColor(MedicalCondition condition) {
 }
 
 String getStationLabel(Station station) {
-  final ageLabel = station.allowedAgeGroup?.name ?? 'Any age group';
-  final medicalLabel = station.allowedMedicalCondition?.name ?? 'Any condition';
+  final ageLabel = station.allowedAgeGroup != null
+      ? getAgeGroupDisplay(station.allowedAgeGroup!)
+      : 'Any age group';
+  final medicalLabel = station.allowedMedicalCondition != null
+      ? getMedicalConditionDisplay(station.allowedMedicalCondition!)
+      : 'Any condition';
   return '${station.name} ($ageLabel / $medicalLabel)';
 }
 

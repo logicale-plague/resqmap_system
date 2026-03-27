@@ -109,7 +109,7 @@ Future<void> openStationDialog(
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<MedicalCondition?>(
-                    initialValue: selectedMedical,
+                    value: selectedMedical,
                     decoration: const InputDecoration(
                       labelText: 'Allowed Medical Condition',
                       prefixIcon: Icon(Icons.local_hospital),
@@ -222,74 +222,82 @@ Future<void> openStationArrivalsSheet(
         minChildSize: 0.4,
         maxChildSize: 0.95,
         builder: (context, controller) {
-          final unnamedAsync = ref.watch(
-            unnamedEvacueesByStationProvider(station.id),
-          );
+          return Consumer(
+            builder: (context, sheetRef, _) {
+              final unnamedAsync = sheetRef.watch(
+                unnamedEvacueesByStationProvider(station.id),
+              );
 
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${station.name} - Unnamed Arrivals',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: unnamedAsync.when(
-                    data: (evacuees) {
-                      if (evacuees.isEmpty) {
-                        return const Center(
-                          child: Text('No unnamed evacuees in this station.'),
-                        );
-                      }
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${station.name} - Unnamed Arrivals',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: unnamedAsync.when(
+                        data: (evacuees) {
+                          if (evacuees.isEmpty) {
+                            return const Center(
+                              child: Text(
+                                'No unnamed evacuees in this station.',
+                              ),
+                            );
+                          }
 
-                      return ListView.builder(
-                        controller: controller,
-                        itemCount: evacuees.length,
-                        itemBuilder: (context, index) {
-                          final evacuee = evacuees[index];
-                          return AppListItemCard(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            title: Text('Arrival ${index + 1}'),
-                            subtitle: Text(
-                              '${ageLabel(evacuee.ageGroup)} | ${medicalLabel(evacuee.medicalCondition)}',
-                            ),
-                            trailing: TextButton(
-                              onPressed: () async {
-                                final name = await _promptName(
-                                  context,
-                                  'Register Name',
-                                );
-                                if (name == null || name.trim().isEmpty) {
-                                  return;
-                                }
+                          return ListView.builder(
+                            controller: controller,
+                            itemCount: evacuees.length,
+                            itemBuilder: (context, index) {
+                              final evacuee = evacuees[index];
+                              return AppListItemCard(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                title: Text('Arrival ${index + 1}'),
+                                subtitle: Text(
+                                  '${ageLabel(evacuee.ageGroup)} | ${medicalLabel(evacuee.medicalCondition)}',
+                                ),
+                                trailing: TextButton(
+                                  onPressed: () async {
+                                    final name = await _promptName(
+                                      context,
+                                      'Register Name',
+                                    );
+                                    if (name == null || name.trim().isEmpty) {
+                                      return;
+                                    }
 
-                                final evacueeRepository = ref.read(
-                                  evacueeRepositoryProvider,
-                                );
-                                await evacueeRepository.update(
-                                  evacuee.copyWith(name: name.trim()),
-                                );
-                                ref.invalidate(
-                                  unnamedEvacueesByStationProvider(station.id),
-                                );
-                                ref.invalidate(allEvacueesProvider);
-                              },
-                              child: const Text('Register Name'),
-                            ),
+                                    final evacueeRepository = sheetRef.read(
+                                      evacueeRepositoryProvider,
+                                    );
+                                    await evacueeRepository.update(
+                                      evacuee.copyWith(name: name.trim()),
+                                    );
+                                    sheetRef.invalidate(
+                                      unnamedEvacueesByStationProvider(
+                                        station.id,
+                                      ),
+                                    );
+                                    sheetRef.invalidate(allEvacueesProvider);
+                                  },
+                                  child: const Text('Register Name'),
+                                ),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                    loading: () => const AppLoadingState(),
-                    error: (err, stack) =>
-                        AppErrorState(error: err, stackTrace: stack),
-                  ),
+                        loading: () => const AppLoadingState(),
+                        error: (err, stack) =>
+                            AppErrorState(error: err, stackTrace: stack),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       );
@@ -299,30 +307,34 @@ Future<void> openStationArrivalsSheet(
 
 Future<String?> _promptName(BuildContext context, String title) async {
   final controller = TextEditingController();
-  final result = await showDialog<String>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Enter evacuee name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+  try {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Enter evacuee name'),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
-  );
-  return result;
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    return result;
+  } finally {
+    controller.dispose();
+  }
 }
 
 Future<void> openConfirmDelete(

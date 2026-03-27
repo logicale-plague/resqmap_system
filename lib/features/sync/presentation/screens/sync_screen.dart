@@ -104,8 +104,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Centers: ${centers.length} � '
-                                  'Evacuees: ${evacuees.length} � '
+                                  'Centers: ${centers.length} \u2022 '
+                                  'Evacuees: ${evacuees.length} \u2022 '
                                   'Supplies: ${supplies.length}',
                                   style: TextStyle(
                                     fontSize: 12,

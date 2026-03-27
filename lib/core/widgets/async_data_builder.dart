@@ -32,7 +32,7 @@ class AsyncDataBuilder<T> extends StatelessWidget {
       error: (error, stackTrace) => AppErrorState(
         error: error,
         stackTrace: stackTrace,
-        prefix: showErrorPrefix ? (errorPrefix ?? 'Error') : 'Error',
+        prefix: showErrorPrefix ? (errorPrefix ?? 'Error') : '',
       ),
     );
   }

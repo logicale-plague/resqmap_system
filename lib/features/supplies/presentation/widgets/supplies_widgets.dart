@@ -23,116 +23,150 @@ void showAddSupplyDialog(BuildContext context, WidgetRef ref) {
   final nameController = TextEditingController();
   final stockController = TextEditingController();
   final usageController = TextEditingController();
+  bool isSubmitting = false;
 
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Add Supply'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Supply Name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: const Text('Add Supply'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Supply Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: stockController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Current Stock',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 12),
+              TextField(
+                controller: stockController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Current Stock',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: usageController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Usage Rate (units/day)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 12),
+              TextField(
+                controller: usageController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Usage Rate (units/day)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: isSubmitting ? null : () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: isSubmitting
+                ? null
+                : () async {
+                    if (isSubmitting) return;
+
+                    if (nameController.text.isEmpty ||
+                        stockController.text.isEmpty ||
+                        usageController.text.isEmpty) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please fill all fields')),
+                      );
+                      return;
+                    }
+
+                    final parsedStock = int.tryParse(stockController.text);
+                    final parsedUsageRate = int.tryParse(usageController.text);
+                    if (parsedStock == null || parsedUsageRate == null) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Stock and usage rate must be valid integers',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    if (parsedStock < 0 || parsedUsageRate < 0) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Stock and usage rate must be >= 0'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    setDialogState(() => isSubmitting = true);
+
+                    final center = await ref.read(currentCenterProvider.future);
+                    if (center == null) {
+                      setDialogState(() => isSubmitting = false);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'No evacuation center found for this device',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final supplyRepository = ref.read(supplyRepositoryProvider);
+                    final supply = Supply(
+                      id: IdService.newId(),
+                      evacuationCenterId: center.id,
+                      name: nameController.text,
+                      currentStock: parsedStock,
+                      usageRatePerDay: parsedUsageRate,
+                      lastRestocked: DateTime.now(),
+                    );
+
+                    try {
+                      setDialogState(() => isSubmitting = true);
+                      await supplyRepository.insert(supply);
+                    } catch (_) {
+                      setDialogState(() => isSubmitting = false);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Failed to add supply')),
+                      );
+                      return;
+                    }
+
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    ref.invalidate(allSuppliesProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Supply added')),
+                    );
+                  },
+            child: isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Add'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            if (nameController.text.isEmpty ||
-                stockController.text.isEmpty ||
-                usageController.text.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please fill all fields')),
-              );
-              return;
-            }
-
-            final supplyRepository = ref.read(supplyRepositoryProvider);
-            final center = await ref.read(currentCenterProvider.future);
-            if (center == null) {
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No evacuation center found for this device'),
-                ),
-              );
-              return;
-            }
-            final parsedStock = int.tryParse(stockController.text);
-            final parsedUsageRate = int.tryParse(usageController.text);
-            if (parsedStock == null || parsedUsageRate == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Stock and usage rate must be valid integers'),
-                ),
-              );
-              return;
-            }
-            if (parsedStock < 0 || parsedUsageRate < 0) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Stock and usage rate must be >= 0'),
-                ),
-              );
-              return;
-            }
-            final supply = Supply(
-              id: IdService.newId(),
-              evacuationCenterId: center.id,
-              name: nameController.text,
-              currentStock: parsedStock,
-              usageRatePerDay: parsedUsageRate,
-              lastRestocked: DateTime.now(),
-            );
-
-            await supplyRepository.insert(supply);
-            if (!context.mounted) return;
-            Navigator.pop(context);
-
-            ref.invalidate(allSuppliesProvider);
-
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Supply added')));
-          },
-          child: const Text('Add'),
-        ),
-      ],
     ),
   );
 }
@@ -196,6 +230,7 @@ void showUpdateSupplyDialog(
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Supply no longer exists')),
               );
+              return;
             } catch (_) {
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(

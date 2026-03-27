@@ -6,7 +6,7 @@ Widget buildBulletPoint(String text) {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('� ', style: TextStyle(fontSize: 20)),
+        const Text('\u2022 ', style: TextStyle(fontSize: 20)),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
       ],
     ),
