@@ -99,16 +99,42 @@ extension EvacueeDatabaseExtensions on DatabaseService {
   Future<void> replaceEvacueeId(String oldId, String newId) async {
     final db = await database;
     await db.transaction((txn) async {
+      final sourceRows = await txn.query(
+        'evacuees',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [oldId],
+        limit: 1,
+      );
+      if (sourceRows.isEmpty) {
+        final targetRows = await txn.query(
+          'evacuees',
+          columns: ['id'],
+          where: 'id = ?',
+          whereArgs: [newId],
+          limit: 1,
+        );
+        if (targetRows.isNotEmpty) return;
+        throw StateError(
+          'replaceEvacueeId could not find sourceId=$oldId or targetId=$newId.',
+        );
+      }
       if (oldId != newId) {
         await txn.delete('evacuees', where: 'id = ?', whereArgs: [newId]);
       }
 
-      await txn.update(
+      final updated = await txn.update(
         'evacuees',
         {'id': newId, 'synced': 0},
         where: 'id = ?',
         whereArgs: [oldId],
       );
+
+      if (updated != 1) {
+        throw StateError(
+          'replaceEvacueeId expected to update 1 row for oldId=$oldId, but updated $updated rows.',
+        );
+      }
     });
   }
 }

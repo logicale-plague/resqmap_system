@@ -10,7 +10,7 @@ extension StationDatabaseExtensions on DatabaseService {
     final db = await database;
     final maps = await db.query(
       'stations',
-      where: 'evacuationCenterId = ?',
+      where: 'evacuationCenterId = ? AND active = 1',
       whereArgs: [centerId],
       orderBy: 'name ASC',
     );
@@ -26,7 +26,7 @@ extension StationDatabaseExtensions on DatabaseService {
     final maps = await db.query(
       'stations',
       where:
-          'evacuationCenterId = ? AND (allowedAgeGroup IS NULL OR allowedAgeGroup = ? OR allowedAgeGroup = ?) AND (allowedMedicalCondition IS NULL OR allowedMedicalCondition = ? OR allowedMedicalCondition = ?)',
+          'evacuationCenterId = ? AND (allowedAgeGroup IS NULL OR allowedAgeGroup = ? OR allowedAgeGroup = ?) AND (allowedMedicalCondition IS NULL OR allowedMedicalCondition = ? OR allowedMedicalCondition = ?) AND active = 1',
       whereArgs: [
         centerId,
         ageGroup.name,
@@ -43,7 +43,7 @@ extension StationDatabaseExtensions on DatabaseService {
     final db = await database;
     final maps = await db.query(
       'stations',
-      where: 'id = ?',
+      where: 'id = ? AND active = 1',
       whereArgs: [stationId],
       limit: 1,
     );
@@ -52,7 +52,7 @@ extension StationDatabaseExtensions on DatabaseService {
 
   Future<List<Station>> getAllStations() async {
     final db = await database;
-    final maps = await db.query('stations');
+    final maps = await db.query('stations', where: 'active = 1');
     return [for (final map in maps) stationFromMap(map)];
   }
 
