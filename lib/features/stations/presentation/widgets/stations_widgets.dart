@@ -4,7 +4,6 @@ import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_list_item_card.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_state/app_error_state.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_state/app_loading_state.dart';
-import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/evacuees/presentation/providers/evacuee_providers.dart';
 import 'package:kalig_onan_evac_system/features/stations/presentation/providers/station_providers.dart';
 
@@ -367,12 +366,11 @@ Future<void> openConfirmDelete(
   if (confirm != true) return;
 
   final stationRepository = ref.read(stationRepositoryProvider);
+  final evacueeRepository = ref.read(evacueeRepositoryProvider);
   await stationRepository.delete(station);
+  await evacueeRepository.unassignEvacueesFromStation(station.id);
 
-  final center = ref.read(currentCenterProvider).asData?.value;
-  if (center != null) {
-    ref.invalidate(stationsByCenterProvider(center.id));
-  }
+  ref.invalidate(stationsByCenterProvider(station.evacuationCenterId));
   ref.invalidate(allEvacueesProvider);
 
   if (context.mounted) {

@@ -52,6 +52,10 @@ class EvacueeRepositoryImpl implements EvacueeRepository {
       _databaseService.upsertEvacueeFromRemote(evacuee);
 
   @override
+  Future<void> unassignEvacueesFromStation(String stationId) =>
+      _databaseService.unassignEvacueesFromStation(stationId);
+
+  @override
   Future<void> markSynced(List<String> ids) =>
       _databaseService.markEvacueesSynced(ids);
 
