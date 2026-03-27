@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/presentation/widgets/evacuees_widgets.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
@@ -104,14 +105,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
+            InfoContainer.info(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                border: Border.all(color: Colors.blue),
-                borderRadius: BorderRadius.circular(8),
-              ),
               child: const Text(
                 'Arrival Intake: Select age group and condition. The system will auto-assign a station and create an unnamed evacuee record.',
               ),
@@ -134,7 +129,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   onTap: () => setState(() {
                     _selectedAgeGroup = ageGroup;
                   }),
-                  icon: _getAgeGroupIcon(ageGroup),
+                  icon: getAgeGroupIcon(ageGroup),
                   label: ageGroup.name.toUpperCase(),
                   selectedColor: Colors.blue,
                 );
@@ -202,14 +197,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
                     final assignedStation = stations.first;
 
-                    return Container(
-                      width: double.infinity,
+                    return InfoContainer.success(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green[50],
-                        border: Border.all(color: Colors.green),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -221,7 +210,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                           Text(assignedStation.name),
                           const SizedBox(height: 6),
                           Text(
-                            'Rule: ${_stationLabel(assignedStation)}',
+                            'Rule: ${getStationLabel(assignedStation)}',
                             style: TextStyle(color: Colors.grey[700]),
                           ),
                         ],
@@ -287,24 +276,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         ),
       ),
     );
-  }
-
-  String _stationLabel(Station station) {
-    final ageLabel = station.allowedAgeGroup?.name ?? 'Any age group';
-    final medicalLabel =
-        station.allowedMedicalCondition?.name ?? 'Any condition';
-    return '${station.name} ($ageLabel / $medicalLabel)';
-  }
-
-  Widget _getAgeGroupIcon(AgeGroup ageGroup) {
-    switch (ageGroup) {
-      case AgeGroup.child:
-        return const Icon(Icons.child_care, size: 36, color: Colors.blue);
-      case AgeGroup.adult:
-        return const Icon(Icons.person, size: 36, color: Colors.blue);
-      case AgeGroup.elderly:
-        return const Icon(Icons.elderly, size: 36, color: Colors.blue);
-    }
   }
 
   Widget _getMedicalConditionIcon(MedicalCondition condition) {
