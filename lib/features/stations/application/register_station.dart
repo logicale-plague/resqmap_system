@@ -46,7 +46,7 @@ class RegisterStationService {
 
     await _supabaseService.from('stations').insert(payload);
     await _databaseService.upsertStationFromRemote(
-      station.copyWith(synced: true),
+      station.copyWith(name: station.name.trim(), synced: true),
     );
   }
 }

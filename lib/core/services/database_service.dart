@@ -113,6 +113,30 @@ class DatabaseService {
           value TEXT NOT NULL
         )
       ''');
+
+      // Seed currentCenterId so getCurrentCenter() won't return null after
+      // migrating from v1. Pick the row with the most-recent lastUpdated as
+      // the sensible default; only insert when the key isn't already present.
+      final existing = await db.query(
+        'app_settings',
+        where: 'key = ?',
+        whereArgs: ['currentCenterId'],
+        limit: 1,
+      );
+      if (existing.isEmpty) {
+        final centers = await db.query(
+          'evacuation_centers',
+          columns: ['id'],
+          orderBy: 'lastUpdated DESC',
+          limit: 1,
+        );
+        if (centers.isNotEmpty) {
+          await db.insert('app_settings', {
+            'key': 'currentCenterId',
+            'value': centers.first['id'] as String,
+          });
+        }
+      }
     }
   }
 
