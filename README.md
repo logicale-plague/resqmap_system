@@ -293,5 +293,23 @@ flowchart TB
 
 ===
 
-# BUGS
-- Even if station has 0 capacity, evacuees can still be registered
+## Use Cases:
+### Evacuation Center
+- Register Center (online)
+- Update Center (offline + sync)
+### Evacuee
+- Log Arrival (offline + sync)
+- Update Evacuee (offline + sync)
+### Maps
+- Locate Center (offline)
+### Station 
+- Register Station (online)
+- Update Station (offline + sync)
+- Delete Station (soft delete, offline, requires assigning evacuees elsewhere)
+### Supply
+- Insert Supply (offline + sync)
+- Update Supply (offline + sync)
+### Sync
+- Conflict Resolve (sync when online)
+### User
+- Create Account (online)

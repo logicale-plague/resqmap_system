@@ -13,8 +13,8 @@ final updateEvacueeProvider = Provider<UpdateEvacueeUseCase>((ref) {
 class UpdateEvacueeUseCase {
   final DatabaseService _databaseService;
 
-  UpdateEvacueeUseCase({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  UpdateEvacueeUseCase({required DatabaseService databaseService})
+    : _databaseService = databaseService;
 
   Future<void> updateEvacuee(Evacuee evacuee) async {
     final db = await _databaseService.database;
@@ -40,7 +40,7 @@ class UpdateEvacueeUseCase {
         where: 'id = ?',
         whereArgs: [evacuee.id],
       );
+      await _databaseService.refreshCurrentCenterOccupancy(executor: txn);
     });
-    await _databaseService.refreshCurrentCenterOccupancy();
   }
 }

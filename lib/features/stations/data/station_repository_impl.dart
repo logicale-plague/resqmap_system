@@ -1,120 +1,66 @@
-import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_repository_impl.dart';
 import 'package:kalig_onan_evac_system/features/evacuees/domain/evacuee.dart';
-import 'package:kalig_onan_evac_system/features/stations/data/station_dto.dart';
+import 'package:kalig_onan_evac_system/features/stations/application/register_station.dart';
+import 'package:kalig_onan_evac_system/features/stations/application/update_station.dart';
+import 'package:kalig_onan_evac_system/features/stations/data/station_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:kalig_onan_evac_system/features/stations/domain/station_repository.dart';
 
-extension StationDatabaseExtensions on DatabaseService {
-  Future<List<Station>> getStationsForCenter(String centerId) async {
-    final db = await database;
-    final maps = await db.query(
-      'stations',
-      where: 'evacuationCenterId = ?',
-      whereArgs: [centerId],
-      orderBy: 'name ASC',
-    );
-    return [for (final map in maps) stationFromMap(map)];
-  }
+class StationRepositoryImpl implements StationRepository {
+  final DatabaseService _databaseService;
+  final RegisterStationUseCase _registerStationService;
+  final UpdateStationUseCase _updateStationService;
 
-  Future<List<Station>> getEligibleStations({
-    required String centerId,
-    required AgeGroup ageGroup,
-    required MedicalCondition medicalCondition,
-  }) async {
-    final db = await database;
-    final maps = await db.query(
-      'stations',
-      where:
-          'evacuationCenterId = ? AND (allowedAgeGroup IS NULL OR allowedAgeGroup = ? OR allowedAgeGroup = ?) AND (allowedMedicalCondition IS NULL OR allowedMedicalCondition = ? OR allowedMedicalCondition = ?)',
-      whereArgs: [
-        centerId,
-        ageGroup.name,
-        ageGroup.index,
-        medicalCondition.name,
-        medicalCondition.index,
-      ],
-      orderBy: 'name ASC',
-    );
-    return [for (final map in maps) stationFromMap(map)];
-  }
+  StationRepositoryImpl(
+    this._databaseService, {
+    required RegisterStationUseCase registerStationService,
+    required UpdateStationUseCase updateStationService,
+  }) : _registerStationService = registerStationService,
+       _updateStationService = updateStationService;
 
-  Future<Station?> getStationById(String stationId) async {
-    final db = await database;
-    final maps = await db.query(
-      'stations',
-      where: 'id = ?',
-      whereArgs: [stationId],
-      limit: 1,
-    );
-    return maps.isEmpty ? null : stationFromMap(maps.first);
-  }
+  @override
+  Future<List<Station>> getByCenter(String centerId) =>
+      _databaseService.getStationsForCenter(centerId);
 
-  Future<List<Station>> getAllStations() async {
-    final db = await database;
-    final maps = await db.query('stations');
-    return [for (final map in maps) stationFromMap(map)];
-  }
+  @override
+  Future<List<Station>> getEligible(
+    String centerId,
+    AgeGroup ageGroup,
+    MedicalCondition medicalCondition,
+  ) => _databaseService.getEligibleStations(
+    centerId: centerId,
+    ageGroup: ageGroup,
+    medicalCondition: medicalCondition,
+  );
 
-  Future<void> upsertStationFromRemote(Station station) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      final existingRows = await txn.query(
-        'stations',
-        columns: ['evacuationCenterId'],
-        where: 'id = ?',
-        whereArgs: [station.id],
-        limit: 1,
-    );
-    final previousCenterId = existingRows.isEmpty
-        ? null
-        : existingRows.first['evacuationCenterId'] as String?;
+  @override
+  Future<Station?> getById(String stationId) =>
+      _databaseService.getStationById(stationId);
 
-      await txn.insert(
-        'stations',
-        stationToMap(station.copyWith(synced: true)),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    if (previousCenterId != null &&
-        previousCenterId != station.evacuationCenterId) {
-      await syncCenterCapacity(previousCenterId);
-    }
-    await syncCenterCapacity(station.evacuationCenterId);
-    });
-  }
+  @override
+  Future<List<Station>> getAll() => _databaseService.getAllStations();
 
-  Future<List<Station>> getUnsyncedStations() async {
-    final db = await database;
-    final maps = await db.query('stations', where: 'synced = 0');
-    return [for (final map in maps) stationFromMap(map)];
-  }
+  @override
+  Future<void> insert(Station station) =>
+      _registerStationService.registerStation(station);
 
-  Future<void> markStationsSynced(List<String> ids) async {
-    if (ids.isEmpty) return;
+  @override
+  Future<void> update(Station station) =>
+      _updateStationService.updateStation(station);
 
-    final db = await database;
-    final placeholders = List.filled(ids.length, '?').join(', ');
-    await db.rawUpdate(
-      'UPDATE stations SET synced = 1 WHERE id IN ($placeholders)',
-      ids,
-    );
-  }
+  @override
+  Future<void> delete(Station station) =>
+      _updateStationService.updateStation(station.copyWith(active: false));
 
-  Future<void> replaceStationId(String oldId, String newId) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.update(
-        'stations',
-        {'id': newId, 'synced': 0},
-        where: 'id = ?',
-        whereArgs: [oldId],
-      );
-      await txn.update(
-        'evacuees',
-        {'stationId': newId, 'synced': 0},
-        where: 'stationId = ?',
-        whereArgs: [oldId],
-      );
-    });
-  }
+  @override
+  Future<void> upsertFromRemote(Station station) =>
+      _databaseService.upsertStationFromRemote(station);
+
+  @override
+  Future<void> markSynced(List<String> ids) =>
+      _databaseService.markStationsSynced(ids);
+
+  @override
+  Future<void> replaceId(String oldId, String newId) =>
+      _databaseService.replaceStationId(oldId, newId);
 }

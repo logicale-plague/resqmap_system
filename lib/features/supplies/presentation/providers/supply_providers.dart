@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
-import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/update_supply.dart';
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_repository_impl.dart';
 
@@ -12,12 +12,12 @@ import 'package:kalig_onan_evac_system/features/centers/presentation/providers/e
 final supplyRepositoryProvider = Provider<SupplyRepository>((ref) {
   final db = ref.watch(databaseServiceProvider);
   final addSupply = ref.watch(addSupplyProvider);
-  final updateSupplyStock = ref.watch(updateSupplyStockProvider);
+  final updateSupply = ref.watch(updateSupplyProvider);
 
   return SupplyRepositoryImpl(
     db,
     addSupply: addSupply,
-    updateSupplyStock: updateSupplyStock,
+    updateSupply: updateSupply,
   );
 });
 
