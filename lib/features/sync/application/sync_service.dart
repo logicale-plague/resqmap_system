@@ -14,7 +14,11 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 final syncServiceProvider = Provider<SyncService>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
   final supabase = ref.watch(supabaseProvider);
-  return SyncService(databaseService: databaseService, supabase: supabase);
+  final service = SyncService(databaseService: databaseService, supabase: supabase);
+  ref.onDispose(() {
+    unawaited(service.shutdown());
+  });
+  return service;
 });
 
 class SyncService {
@@ -29,6 +33,13 @@ class SyncService {
   final _syncStatusController = StreamController<bool>.broadcast();
   DateTime? _lastSyncTime;
   bool _isShutDown = false;
+  bool _isSyncInProgress = false;
+  Timer? _retryTimer;
+  int _retryAttempts = 0;
+
+  static const int _maxRetryAttempts = 5;
+  static const Duration _baseRetryDelay = Duration(seconds: 3);
+  static const Duration _maxRetryDelay = Duration(minutes: 2);
 
   Stream<bool> get syncStatusStream => _syncStatusController.stream;
 
@@ -47,9 +58,15 @@ class SyncService {
       return;
     }
 
+    final wasOnline = _isOnline;
     _isOnline = online;
-    if (online) {
-      unawaited(syncNow());
+    if (!online) {
+      _cancelRetryTimer();
+      _retryAttempts = 0;
+    }
+    if (online && !wasOnline) {
+      _retryAttempts = 0;
+      _runSyncInBackground();
     }
     if (!_syncStatusController.isClosed) {
       _syncStatusController.add(online);
@@ -61,6 +78,13 @@ class SyncService {
       debugPrint('SyncService is shut down; skipping sync.');
       return;
     }
+
+    if (_isSyncInProgress) {
+      debugPrint('Sync already in progress; skipping duplicate sync request.');
+      return;
+    }
+
+    _isSyncInProgress = true;
 
     try {
       await _normalizeLegacyIds();
@@ -125,12 +149,66 @@ class SyncService {
       await _pullAndMergeFromSupabase();
 
       _lastSyncTime = DateTime.now();
+      _retryAttempts = 0;
+      _cancelRetryTimer();
 
       debugPrint('Sync completed successfully with Supabase upload');
     } catch (e) {
       debugPrint('Sync failed: $e');
+      _scheduleRetry();
       rethrow;
+    } finally {
+      _isSyncInProgress = false;
     }
+  }
+
+  void _runSyncInBackground() {
+    unawaited(
+      syncNow().catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Background sync attempt failed: $error');
+      }),
+    );
+  }
+
+  void _scheduleRetry() {
+    if (_isShutDown || !_isOnline) {
+      return;
+    }
+    if (_retryTimer?.isActive ?? false) {
+      return;
+    }
+    if (_retryAttempts >= _maxRetryAttempts) {
+      debugPrint('Sync retry limit reached ($_maxRetryAttempts attempts).');
+      return;
+    }
+
+    _retryAttempts += 1;
+    final delay = _retryDelayForAttempt(_retryAttempts);
+    debugPrint(
+      'Scheduling sync retry $_retryAttempts/$_maxRetryAttempts in ${delay.inSeconds}s.',
+    );
+
+    _retryTimer = Timer(delay, () {
+      _retryTimer = null;
+      if (_isShutDown || !_isOnline) {
+        return;
+      }
+      _runSyncInBackground();
+    });
+  }
+
+  Duration _retryDelayForAttempt(int attempt) {
+    final multiplier = 1 << (attempt - 1);
+    final seconds = _baseRetryDelay.inSeconds * multiplier;
+    final clampedSeconds = seconds > _maxRetryDelay.inSeconds
+        ? _maxRetryDelay.inSeconds
+        : seconds;
+    return Duration(seconds: clampedSeconds);
+  }
+
+  void _cancelRetryTimer() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
   }
 
   Future<void> _normalizeLegacyIds() async {
@@ -548,6 +626,7 @@ class SyncService {
 
     _isShutDown = true;
     _isOnline = false;
+    _cancelRetryTimer();
 
     if (!_syncStatusController.isClosed) {
       await _syncStatusController.close();
