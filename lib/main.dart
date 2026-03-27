@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kalig_onan_evac_system/core/utils/router.dart';
+import 'package:kalig_onan_evac_system/features/sync/presentation/providers/auto_sync_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/services/database_service.dart';
 
@@ -40,11 +41,13 @@ void main() async {
   runApp(const ProviderScope(child: MainApp()));
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends ConsumerWidget {
   const MainApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(autoSyncBootstrapProvider);
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Kalig Onan Evacuation System',

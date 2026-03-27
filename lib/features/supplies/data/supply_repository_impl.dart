@@ -1,74 +1,61 @@
-import 'package:kalig_onan_evac_system/features/supplies/data/supply_dto.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
+import 'package:kalig_onan_evac_system/features/supplies/data/supply_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:kalig_onan_evac_system/features/supplies/domain/supply_repository.dart';
 
-extension SupplyDatabaseExtensions on DatabaseService {
-  Future<List<Supply>> getAllSupplies() async {
-    final db = await database;
-    final maps = await db.query('supplies');
-    return [for (final map in maps) supplyFromRow(map)];
+class SupplyRepositoryImpl implements SupplyRepository {
+  final DatabaseService _databaseService;
+  final AddSupply _addSupply;
+  final UpdateSupplyStock _updateSupplyStock;
+
+  SupplyRepositoryImpl(
+    this._databaseService, {
+    AddSupply? addSupply,
+    UpdateSupplyStock? updateSupplyStock,
+  }) : _addSupply = addSupply ?? AddSupply(databaseService: _databaseService),
+       _updateSupplyStock =
+           updateSupplyStock ??
+           UpdateSupplyStock(databaseService: _databaseService);
+
+  @override
+  Future<List<Supply>> getAll() => _databaseService.getAllSupplies();
+
+  @override
+  Future<List<Supply>> getByCenterId(String centerId) =>
+      _databaseService.getSuppliesByCenterId(centerId);
+
+  @override
+  Future<Supply?> getById(String id) => _databaseService.getSupplyById(id);
+
+  @override
+  Future<List<Supply>> getLowStock(String centerId) async {
+    final supplies = await _databaseService.getSuppliesByCenterId(centerId);
+    return supplies
+        .where((supply) => supply.currentStock < (supply.usageRatePerDay * 7))
+        .toList();
   }
 
-  Future<List<Supply>> getSuppliesByCenterId(String centerId) async {
-    final db = await database;
-    final maps = await db.query(
-      'supplies',
-      where: 'evacuationCenterId = ?',
-      whereArgs: [centerId],
-    );
-    return [for (final map in maps) supplyFromRow(map)];
-  }
+  @override
+  Future<List<Supply>> getUnsynced() => _databaseService.getUnsyncedSupplies();
 
-  Future<Supply?> getSupplyById(String id) async {
-    final db = await database;
-    final maps = await db.query(
-      'supplies',
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
-    return maps.isEmpty ? null : supplyFromRow(maps.first);
-  }
+  @override
+  Future<void> insert(Supply supply) => _addSupply.insertSupply(supply);
 
-  Future<void> upsertSupplyFromRemote(Supply supply) async {
-    final db = await database;
-    await db.insert(
-      'supplies',
-      supplyToRow(supply.copyWith(synced: true)),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
+  @override
+  Future<void> updateStock(String id, int newStock) =>
+      _updateSupplyStock.updateSupplyStock(id, newStock);
 
-  Future<void> replaceSupplyId(String oldId, String newId) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      if (oldId != newId) {
-        await txn.delete('supplies', where: 'id = ?', whereArgs: [newId]);
-      }
-      await txn.update(
-        'supplies',
-        {'id': newId, 'synced': 0},
-        where: 'id = ?',
-        whereArgs: [oldId],
-      );
-    });
-  }
+  @override
+  Future<void> upsertFromRemote(Supply supply) =>
+      _databaseService.upsertSupplyFromRemote(supply);
 
-  Future<List<Supply>> getUnsyncedSupplies() async {
-    final db = await database;
-    final maps = await db.query('supplies', where: 'synced = 0');
-    return [for (final map in maps) supplyFromRow(map)];
-  }
+  @override
+  Future<void> markSynced(List<String> ids) =>
+      _databaseService.markSuppliesSynced(ids);
 
-  Future<void> markSuppliesSynced(List<String> ids) async {
-    if (ids.isEmpty) return;
-
-    final db = await database;
-    final placeholders = List.filled(ids.length, '?').join(', ');
-    await db.rawUpdate(
-      'UPDATE supplies SET synced = 1 WHERE id IN ($placeholders)',
-      ids,
-    );
-  }
+  @override
+  Future<void> replaceId(String oldId, String newId) =>
+      _databaseService.replaceSupplyId(oldId, newId);
 }

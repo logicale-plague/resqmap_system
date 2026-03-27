@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
+// import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -245,7 +245,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Future<void> _removeEvacuee(BuildContext context, WidgetRef ref) async {
-    final db = ref.read(databaseServiceProvider);
+    // final db = ref.read(databaseServiceProvider);
     final evacuees = await ref.read(allEvacueesProvider.future);
 
     if (evacuees.isEmpty) {
@@ -266,7 +266,7 @@ class DashboardScreen extends ConsumerWidget {
             subtitle: Text('Age: ${evacuee.ageGroup.name}'),
             trailing: const Icon(Icons.delete, color: Colors.red),
             onTap: () async {
-              await db.removeEvacuee(evacuee.id);
+              // await db.removeEvacuee(evacuee.id);
               if (!context.mounted) return;
               Navigator.pop(context);
               ref.invalidate(allEvacueesProvider);

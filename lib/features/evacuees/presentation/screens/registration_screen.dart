@@ -4,7 +4,6 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/application/register_evacuee.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -36,7 +35,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final db = ref.read(databaseServiceProvider);
+      final evacueeRepository = ref.read(evacueeRepositoryProvider);
       final center = await ref.read(currentCenterProvider.future);
       if (center == null) {
         throw Exception('No evacuation center assigned');
@@ -66,7 +65,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         synced: false,
       );
 
-      await db.insertEvacuee(evacuee);
+      await evacueeRepository.insert(evacuee);
 
       if (!mounted) return;
 

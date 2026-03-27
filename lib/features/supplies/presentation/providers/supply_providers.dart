@@ -1,9 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
+import 'package:kalig_onan_evac_system/features/supplies/data/supply_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_repository_impl.dart';
 
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
+import 'package:kalig_onan_evac_system/features/supplies/domain/supply_repository.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
+
+final supplyRepositoryProvider = Provider<SupplyRepository>((ref) {
+  final db = ref.watch(databaseServiceProvider);
+  final addSupply = ref.watch(addSupplyProvider);
+  final updateSupplyStock = ref.watch(updateSupplyStockProvider);
+
+  return SupplyRepositoryImpl(
+    db,
+    addSupply: addSupply,
+    updateSupplyStock: updateSupplyStock,
+  );
+});
 
 final allCenterSuppliesProvider = FutureProvider<List<Supply>>((ref) async {
   final db = ref.watch(databaseServiceProvider);

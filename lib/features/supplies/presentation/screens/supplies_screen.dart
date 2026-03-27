@@ -4,8 +4,6 @@ import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
-import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
 
 class SuppliesScreen extends ConsumerWidget {
   const SuppliesScreen({super.key});
@@ -234,7 +232,7 @@ class SuppliesScreen extends ConsumerWidget {
                 return;
               }
 
-              final db = ref.read(databaseServiceProvider);
+              final supplyRepository = ref.read(supplyRepositoryProvider);
               final center = await ref.read(currentCenterProvider.future);
               if (center == null) {
                 if (!context.mounted) return;
@@ -260,9 +258,7 @@ class SuppliesScreen extends ConsumerWidget {
               if (parsedStock < 0 || parsedUsageRate < 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      'Stock and usage rate must be >= 0',
-                    ),
+                    content: Text('Stock and usage rate must be >= 0'),
                   ),
                 );
                 return;
@@ -276,7 +272,7 @@ class SuppliesScreen extends ConsumerWidget {
                 lastRestocked: DateTime.now(),
               );
 
-              await db.insertSupply(supply);
+              await supplyRepository.insert(supply);
               if (!context.mounted) return;
               Navigator.pop(context);
 
@@ -328,7 +324,7 @@ class SuppliesScreen extends ConsumerWidget {
                 return;
               }
 
-              final db = ref.read(databaseServiceProvider);
+              final supplyRepository = ref.read(supplyRepositoryProvider);
               final parsedStock = int.tryParse(stockController.text);
               if (parsedStock == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -344,7 +340,7 @@ class SuppliesScreen extends ConsumerWidget {
                 );
                 return;
               }
-              await db.updateSupplyStock(supply.id, parsedStock);
+              await supplyRepository.updateStock(supply.id, parsedStock);
               if (!context.mounted) return;
               Navigator.pop(context);
 
