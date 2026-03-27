@@ -403,11 +403,8 @@ class StationsScreen extends ConsumerWidget {
                                   final evacueeRepository = ref.read(
                                     evacueeRepositoryProvider,
                                   );
-                                  final updatedEvacuee = evacuee.copyWith(
-                                    name: name.trim(),
-                                  );
                                   await evacueeRepository.update(
-                                    updatedEvacuee,
+                                    evacuee.copyWith(name: name.trim()),
                                   );
                                   ref.invalidate(
                                     unnamedEvacueesByStationProvider(

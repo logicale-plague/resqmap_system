@@ -40,7 +40,7 @@ class UpdateEvacueeUseCase {
         where: 'id = ?',
         whereArgs: [evacuee.id],
       );
+      await _databaseService.refreshCurrentCenterOccupancy(executor: txn);
     });
-    await _databaseService.refreshCurrentCenterOccupancy();
   }
 }

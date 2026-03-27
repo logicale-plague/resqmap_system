@@ -77,9 +77,9 @@ extension StationDatabaseExtensions on DatabaseService {
       );
       if (previousCenterId != null &&
           previousCenterId != station.evacuationCenterId) {
-        await syncCenterCapacity(previousCenterId);
+        await syncCenterCapacity(previousCenterId, executor: txn);
       }
-      await syncCenterCapacity(station.evacuationCenterId);
+      await syncCenterCapacity(station.evacuationCenterId, executor: txn);
     });
   }
 

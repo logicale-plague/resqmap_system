@@ -1,11 +1,23 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_dto.dart';
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
-import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
 
-extension AddSupplyUseCase on DatabaseService {
+final addSupplyProvider = Provider((ref) {
+  final databaseService = ref.watch(databaseServiceProvider);
+  return AddSupply(databaseService: databaseService);
+});
+
+class AddSupply {
+  final DatabaseService _databaseService;
+
+  AddSupply({DatabaseService? databaseService})
+    : _databaseService = databaseService ?? DatabaseService();
+
   Future<void> insertSupply(Supply supply) async {
-    final db = await database;
+    final db = await _databaseService.database;
     final row = supplyToRow(supply);
     row['synced'] = 0;
     await db.insert(

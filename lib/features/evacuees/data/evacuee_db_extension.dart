@@ -98,11 +98,21 @@ extension EvacueeDatabaseExtensions on DatabaseService {
 
   Future<void> replaceEvacueeId(String oldId, String newId) async {
     final db = await database;
-    await db.update(
-      'evacuees',
-      {'id': newId, 'synced': 0},
-      where: 'id = ?',
-      whereArgs: [oldId],
-    );
+    await db.transaction((txn) async {
+      if (oldId != newId) {
+        await txn.delete('evacuees', where: 'id = ?', whereArgs: [newId]);
+      }
+
+      await txn.update(
+        'evacuees',
+        {
+          'id': newId,
+          'synced': 0,
+          'lastUpdated': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [oldId],
+      );
+    });
   }
 }

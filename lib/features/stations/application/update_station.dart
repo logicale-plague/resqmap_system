@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
+import 'package:kalig_onan_evac_system/features/stations/data/station_dto.dart';
 import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
 
 final updateStationProvider = Provider<UpdateStation>((ref) {
@@ -29,7 +30,7 @@ class UpdateStation {
         );
       }
 
-      final stationRow = stationRows.first;
+      final stationRow = stationToMap(station);
       stationRow['synced'] = 0;
 
       await txn.update(

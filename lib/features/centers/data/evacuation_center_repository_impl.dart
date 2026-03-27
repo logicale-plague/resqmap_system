@@ -12,10 +12,10 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
 
   EvacuationCenterRepositoryImpl(
     this._databaseService, {
-    RegisterCenter? registerCenter,
-    UpdateCenterCapacity? updateCenterCapacity,
-  }) : _registerCenter = registerCenter ?? RegisterCenter(),
-       _updateCenterCapacity = updateCenterCapacity ?? UpdateCenterCapacity();
+    required RegisterCenter registerCenter,
+    required UpdateCenterCapacity updateCenterCapacity,
+  }) : _registerCenter = registerCenter,
+       _updateCenterCapacity = updateCenterCapacity;
 
   @override
   Future<EvacuationCenter?> getCurrent() => _databaseService.getCurrentCenter();

@@ -104,12 +104,6 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
         where: 'evacuationCenterId = ?',
         whereArgs: [oldId],
       );
-      await txn.update(
-        'alerts',
-        {'evacuationCenterId': newId, 'synced': 0},
-        where: 'evacuationCenterId = ?',
-        whereArgs: [oldId],
-      );
       await syncCenterCapacity(newId, executor: txn);
     });
   }

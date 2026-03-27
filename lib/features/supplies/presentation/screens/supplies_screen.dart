@@ -340,7 +340,8 @@ class SuppliesScreen extends ConsumerWidget {
                 );
                 return;
               }
-              await supplyRepository.updateStock(supply.id, parsedStock);
+              final updatedSupply = supply.copyWith(currentStock: parsedStock);
+              await supplyRepository.update(updatedSupply);
               if (!context.mounted) return;
               Navigator.pop(context);
 

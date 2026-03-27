@@ -1,5 +1,5 @@
 import 'package:kalig_onan_evac_system/features/supplies/application/add_supply.dart';
-import 'package:kalig_onan_evac_system/features/supplies/application/update_supply_stock.dart';
+import 'package:kalig_onan_evac_system/features/supplies/application/update_supply.dart';
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
@@ -8,16 +8,14 @@ import 'package:kalig_onan_evac_system/features/supplies/domain/supply_repositor
 class SupplyRepositoryImpl implements SupplyRepository {
   final DatabaseService _databaseService;
   final AddSupply _addSupply;
-  final UpdateSupplyStock _updateSupplyStock;
+  final UpdateSupply _updateSupply;
 
   SupplyRepositoryImpl(
     this._databaseService, {
-    AddSupply? addSupply,
-    UpdateSupplyStock? updateSupplyStock,
-  }) : _addSupply = addSupply ?? AddSupply(databaseService: _databaseService),
-       _updateSupplyStock =
-           updateSupplyStock ??
-           UpdateSupplyStock(databaseService: _databaseService);
+    required AddSupply addSupply,
+    required UpdateSupply updateSupply,
+  }) : _addSupply = addSupply,
+       _updateSupply = updateSupply;
 
   @override
   Future<List<Supply>> getAll() => _databaseService.getAllSupplies();
@@ -44,8 +42,8 @@ class SupplyRepositoryImpl implements SupplyRepository {
   Future<void> insert(Supply supply) => _addSupply.insertSupply(supply);
 
   @override
-  Future<void> updateStock(String id, int newStock) =>
-      _updateSupplyStock.updateSupplyStock(id, newStock);
+  Future<void> update(Supply supply) =>
+      _updateSupply.updateSupply(supply);
 
   @override
   Future<void> upsertFromRemote(Supply supply) =>

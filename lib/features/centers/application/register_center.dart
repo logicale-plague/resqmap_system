@@ -22,12 +22,12 @@ final registerCenterProvider = Provider<RegisterCenter>((ref) {
 class RegisterCenter {
   final DatabaseService _databaseService;
   final SupabaseClient _supabaseService;
-  final Ref? _ref;
+  final Ref _ref;
 
   RegisterCenter({
     DatabaseService? databaseService,
     SupabaseClient? supabaseService,
-    Ref? ref,
+    required Ref ref,
   }) : _databaseService = databaseService ?? DatabaseService(),
        _supabaseService = supabaseService ?? Supabase.instance.client,
        _ref = ref;
@@ -36,9 +36,7 @@ class RegisterCenter {
   ///
   /// Throws [OfflineException] if the device has no internet access.
   Future<void> registerCenter(EvacuationCenter center) async {
-    final isOnline = _ref != null
-        ? await _ref.read(isOnlineProvider.future)
-        : isOnlineProvider.future as bool;
+    final isOnline = await _ref.read(isOnlineProvider.future);
 
     if (!isOnline) {
       throw OfflineException(
