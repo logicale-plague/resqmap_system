@@ -1,5 +1,4 @@
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
-import 'package:kalig_onan_evac_system/features/centers/application/update_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/data/evacuation_center_dto.dart';
 import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
 import 'package:sqflite/sqflite.dart';
@@ -104,12 +103,6 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
         where: 'evacuationCenterId = ?',
         whereArgs: [oldId],
       );
-      await txn.update(
-        'alerts',
-        {'evacuationCenterId': newId, 'synced': 0},
-        where: 'evacuationCenterId = ?',
-        whereArgs: [oldId],
-      );
       await syncCenterCapacity(newId, executor: txn);
     });
   }
@@ -138,7 +131,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
 
     final currentOccupancy =
         (centerRows.first['currentOccupancy'] as num?)?.toInt() ?? 0;
-    final status = UpdateCenterCapacity().calculateUpdatedCenterStatus(
+    final status = calculateUpdatedCenterStatus(
       currentOccupancy,
       totalCapacity,
     );
@@ -186,10 +179,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       [centerId],
     );
     final evacueeCount = int.parse(countResult.first['count'].toString());
-    final status = UpdateCenterCapacity().calculateUpdatedCenterStatus(
-      evacueeCount,
-      totalCapacity,
-    );
+    final status = calculateUpdatedCenterStatus(evacueeCount, totalCapacity);
 
     await db.update(
       'evacuation_centers',
@@ -219,6 +209,27 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       'UPDATE evacuation_centers SET synced = 1 WHERE id IN ($placeholders)',
       ids,
     );
+  }
+
+  CenterStatus _calculateUpdatedCenterStatus(
+    int currentOccupancy,
+    int totalCapacity,
+  ) {
+    if (totalCapacity <= 0) {
+      return CenterStatus.operational;
+    }
+
+    final percentage = currentOccupancy / totalCapacity * 100;
+    if (percentage >= 100) return CenterStatus.atCapacity;
+    if (percentage >= 80) return CenterStatus.nearCapacity;
+    return CenterStatus.operational;
+  }
+
+  CenterStatus calculateUpdatedCenterStatus(
+    int currentOccupancy,
+    int totalCapacity,
+  ) {
+    return _calculateUpdatedCenterStatus(currentOccupancy, totalCapacity);
   }
 }
 

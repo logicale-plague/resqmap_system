@@ -9,27 +9,27 @@ import 'package:kalig_onan_evac_system/features/stations/data/station_dto.dart';
 import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final registerStationProvider = Provider<RegisterStationService>((ref) {
+final registerStationProvider = Provider<RegisterStationUseCase>((ref) {
   final db = ref.watch(databaseServiceProvider);
   final supabase = ref.watch(supabaseProvider);
-  return RegisterStationService(
+  return RegisterStationUseCase(
     databaseService: db,
     supabaseService: supabase,
     ref: ref,
   );
 });
 
-class RegisterStationService {
+class RegisterStationUseCase {
   final DatabaseService _databaseService;
   final SupabaseClient _supabaseService;
   final Ref _ref;
 
-  RegisterStationService({
-    DatabaseService? databaseService,
-    SupabaseClient? supabaseService,
+  RegisterStationUseCase({
+    required DatabaseService databaseService,
+    required SupabaseClient supabaseService,
     required Ref ref,
-  }) : _databaseService = databaseService ?? DatabaseService(),
-       _supabaseService = supabaseService ?? Supabase.instance.client,
+  }) : _databaseService = databaseService,
+       _supabaseService = supabaseService,
        _ref = ref;
 
   Future<void> registerStation(Station station) async {

@@ -9,6 +9,7 @@ Map<String, dynamic> stationToMap(Station station) {
     'allowedAgeGroup': station.allowedAgeGroup?.name,
     'allowedMedicalCondition': station.allowedMedicalCondition?.name,
     'synced': station.synced ? 1 : 0,
+    'active': station.active ? 1 : 0,
   };
 }
 
@@ -24,6 +25,7 @@ Station stationFromMap(Map<String, dynamic> map) {
     allowedAgeGroup: _parseAgeGroup(rawAge),
     allowedMedicalCondition: _parseMedicalCondition(rawMedical),
     synced: (map['synced'] as int? ?? 0) == 1,
+    active: (map['active'] as int? ?? 1) == 1,
   );
 }
 

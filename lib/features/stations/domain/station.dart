@@ -8,6 +8,7 @@ class Station {
   final AgeGroup? allowedAgeGroup;
   final MedicalCondition? allowedMedicalCondition;
   final bool synced;
+  final bool active;
 
   const Station({
     required this.id,
@@ -17,6 +18,7 @@ class Station {
     this.allowedAgeGroup,
     this.allowedMedicalCondition,
     this.synced = false,
+    this.active = true,
   });
 
   bool allows({
@@ -40,6 +42,7 @@ class Station {
     bool? synced,
     bool clearAllowedAgeGroup = false,
     bool clearAllowedMedicalCondition = false,
+    bool? active,
   }) {
     return Station(
       id: id ?? this.id,
@@ -53,6 +56,7 @@ class Station {
           ? null
           : (allowedMedicalCondition ?? this.allowedMedicalCondition),
       synced: synced ?? this.synced,
+      active: active ?? this.active,
     );
   }
 }
