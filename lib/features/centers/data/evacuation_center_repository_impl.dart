@@ -7,13 +7,13 @@ import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 
 class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
   final DatabaseService _databaseService;
-  final RegisterCenter _registerCenter;
-  final UpdateCenterCapacity _updateCenterCapacity;
+  final RegisterCenterUseCase _registerCenter;
+  final UpdateCenterUseCase _updateCenterCapacity;
 
   EvacuationCenterRepositoryImpl(
     this._databaseService, {
-    required RegisterCenter registerCenter,
-    required UpdateCenterCapacity updateCenterCapacity,
+    required RegisterCenterUseCase registerCenter,
+    required UpdateCenterUseCase updateCenterCapacity,
   }) : _registerCenter = registerCenter,
        _updateCenterCapacity = updateCenterCapacity;
 

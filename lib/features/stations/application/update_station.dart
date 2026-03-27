@@ -4,16 +4,16 @@ import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/stations/data/station_dto.dart';
 import 'package:kalig_onan_evac_system/features/stations/domain/station.dart';
 
-final updateStationProvider = Provider<UpdateStation>((ref) {
+final updateStationProvider = Provider<UpdateStationUseCase>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
-  return UpdateStation(databaseService: databaseService);
+  return UpdateStationUseCase(databaseService: databaseService);
 });
 
-class UpdateStation {
+class UpdateStationUseCase {
   final DatabaseService _databaseService;
 
-  UpdateStation({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  UpdateStationUseCase({required DatabaseService databaseService})
+    : _databaseService = databaseService;
 
   Future<void> updateStation(Station station) async {
     final db = await _databaseService.database;
@@ -31,6 +31,7 @@ class UpdateStation {
       }
 
       final stationRow = stationToMap(station);
+      stationRow['active'] = station.active ? 1 : 0;
       stationRow['synced'] = 0;
 
       await txn.update(

@@ -5,16 +5,16 @@ import 'package:kalig_onan_evac_system/features/supplies/data/supply_dto.dart';
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
 import 'package:sqflite/sqflite.dart';
 
-final addSupplyProvider = Provider((ref) {
+final addSupplyProvider = Provider<AddSupplyUseCase>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
-  return AddSupply(databaseService: databaseService);
+  return AddSupplyUseCase(databaseService: databaseService);
 });
 
-class AddSupply {
+class AddSupplyUseCase {
   final DatabaseService _databaseService;
 
-  AddSupply({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  AddSupplyUseCase({required DatabaseService databaseService})
+    : _databaseService = databaseService;
 
   Future<void> insertSupply(Supply supply) async {
     final db = await _databaseService.database;

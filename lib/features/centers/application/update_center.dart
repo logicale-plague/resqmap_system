@@ -4,16 +4,16 @@ import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center
 import 'package:flutter/foundation.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 
-final updateCenterCapacityProvider = Provider<UpdateCenterCapacity>((ref) {
+final updateCenterCapacityProvider = Provider<UpdateCenterUseCase>((ref) {
   final dbService = ref.watch(databaseServiceProvider);
-  return UpdateCenterCapacity(databaseService: dbService);
+  return UpdateCenterUseCase(databaseService: dbService);
 });
 
-class UpdateCenterCapacity {
+class UpdateCenterUseCase {
   final DatabaseService _databaseService;
 
-  UpdateCenterCapacity({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  UpdateCenterUseCase({required DatabaseService databaseService})
+    : _databaseService = databaseService;
 
   Future<bool> updateCenter(EvacuationCenter center) async {
     final db = await _databaseService.database;
@@ -36,7 +36,7 @@ class UpdateCenterCapacity {
         ..['longitude'] = center.longitude
         ..['totalCapacity'] = center.totalCapacity
         ..['currentOccupancy'] = center.currentOccupancy
-        ..['status'] = _calculateUpdatedCenterStatus(
+        ..['status'] = calculateUpdatedCenterStatus(
           center.currentOccupancy,
           center.totalCapacity,
         ).index
@@ -54,7 +54,7 @@ class UpdateCenterCapacity {
     });
   }
 
-  CenterStatus _calculateUpdatedCenterStatus(
+  CenterStatus calculateUpdatedCenterStatus(
     int currentOccupancy,
     int totalCapacity,
   ) {
@@ -66,12 +66,5 @@ class UpdateCenterCapacity {
     if (percentage >= 100) return CenterStatus.atCapacity;
     if (percentage >= 80) return CenterStatus.nearCapacity;
     return CenterStatus.operational;
-  }
-
-  CenterStatus calculateUpdatedCenterStatus(
-    int currentOccupancy,
-    int totalCapacity,
-  ) {
-    return _calculateUpdatedCenterStatus(currentOccupancy, totalCapacity);
   }
 }

@@ -4,16 +4,16 @@ import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/supplies/data/supply_dto.dart';
 import 'package:kalig_onan_evac_system/features/supplies/domain/supply.dart';
 
-final updateSupplyProvider = Provider<UpdateSupply>((ref) {
+final updateSupplyProvider = Provider<UpdateSupplyUseCase>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
-  return UpdateSupply(databaseService: databaseService);
+  return UpdateSupplyUseCase(databaseService: databaseService);
 });
 
-class UpdateSupply {
+class UpdateSupplyUseCase {
   final DatabaseService _databaseService;
 
-  UpdateSupply({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  UpdateSupplyUseCase({required DatabaseService databaseService})
+    : _databaseService = databaseService;
 
   Future<void> updateSupply(Supply supply) async {
     final db = await _databaseService.database;

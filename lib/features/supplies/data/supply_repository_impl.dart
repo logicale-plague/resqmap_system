@@ -7,13 +7,13 @@ import 'package:kalig_onan_evac_system/features/supplies/domain/supply_repositor
 
 class SupplyRepositoryImpl implements SupplyRepository {
   final DatabaseService _databaseService;
-  final AddSupply _addSupply;
-  final UpdateSupply _updateSupply;
+  final AddSupplyUseCase _addSupply;
+  final UpdateSupplyUseCase _updateSupply;
 
   SupplyRepositoryImpl(
     this._databaseService, {
-    required AddSupply addSupply,
-    required UpdateSupply updateSupply,
+    required AddSupplyUseCase addSupply,
+    required UpdateSupplyUseCase updateSupply,
   }) : _addSupply = addSupply,
        _updateSupply = updateSupply;
 
@@ -42,8 +42,7 @@ class SupplyRepositoryImpl implements SupplyRepository {
   Future<void> insert(Supply supply) => _addSupply.insertSupply(supply);
 
   @override
-  Future<void> update(Supply supply) =>
-      _updateSupply.updateSupply(supply);
+  Future<void> update(Supply supply) => _updateSupply.updateSupply(supply);
 
   @override
   Future<void> upsertFromRemote(Supply supply) =>

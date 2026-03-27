@@ -8,13 +8,13 @@ import 'package:kalig_onan_evac_system/features/stations/domain/station_reposito
 
 class StationRepositoryImpl implements StationRepository {
   final DatabaseService _databaseService;
-  final RegisterStationService _registerStationService;
-  final UpdateStation _updateStationService;
+  final RegisterStationUseCase _registerStationService;
+  final UpdateStationUseCase _updateStationService;
 
   StationRepositoryImpl(
     this._databaseService, {
-    required RegisterStationService registerStationService,
-    required UpdateStation updateStationService,
+    required RegisterStationUseCase registerStationService,
+    required UpdateStationUseCase updateStationService,
   }) : _registerStationService = registerStationService,
        _updateStationService = updateStationService;
 

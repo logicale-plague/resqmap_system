@@ -105,11 +105,7 @@ extension EvacueeDatabaseExtensions on DatabaseService {
 
       await txn.update(
         'evacuees',
-        {
-          'id': newId,
-          'synced': 0,
-          'lastUpdated': DateTime.now().toIso8601String(),
-        },
+        {'id': newId, 'synced': 0},
         where: 'id = ?',
         whereArgs: [oldId],
       );

@@ -341,7 +341,20 @@ class SuppliesScreen extends ConsumerWidget {
                 return;
               }
               final updatedSupply = supply.copyWith(currentStock: parsedStock);
-              await supplyRepository.update(updatedSupply);
+              try {
+                await supplyRepository.update(updatedSupply);
+              } on StateError {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Supply no longer exists')),
+                );
+              } catch (_) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to update supply stock')),
+                );
+                return;
+              }
               if (!context.mounted) return;
               Navigator.pop(context);
 

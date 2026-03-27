@@ -14,8 +14,8 @@ final registerEvacueeUseCaseProvider = Provider<RegisterEvacueeUseCase>((ref) {
 class RegisterEvacueeUseCase {
   final DatabaseService _databaseService;
 
-  RegisterEvacueeUseCase({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  RegisterEvacueeUseCase({required DatabaseService databaseService})
+    : _databaseService = databaseService;
 
   Future<void> registerEvacuee(Evacuee evacuee) async {
     final db = await _databaseService.database;
@@ -31,19 +31,3 @@ class RegisterEvacueeUseCase {
     });
   }
 }
-
-// extension RegisterEvacueeUseCase on DatabaseService {
-//   Future<void> insertEvacuee(Evacuee evacuee) async {
-//     final db = await database;
-//     await db.transaction((txn) async {
-//       final row = evacueeToRow(evacuee);
-//       row['synced'] = 0;
-//       await txn.insert(
-//         'evacuees',
-//         row,
-//         conflictAlgorithm: ConflictAlgorithm.replace,
-//       );
-//       await refreshCurrentCenterOccupancy(executor: txn);
-//     });
-//   }
-// }
