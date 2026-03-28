@@ -7,4 +7,3 @@ export 'package:kalig_onan_evac_system/features/evacuees/presentation/providers/
 export 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
 export 'package:kalig_onan_evac_system/features/stations/presentation/providers/station_providers.dart';
 export 'package:kalig_onan_evac_system/features/supplies/presentation/providers/supply_providers.dart';
-export 'package:kalig_onan_evac_system/features/alerts/presentation/providers/alert_providers.dart';

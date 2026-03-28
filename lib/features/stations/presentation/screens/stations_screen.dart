@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/stations/presentation/widgets/stations_widgets.dart';
 
 class StationsScreen extends ConsumerWidget {
   const StationsScreen({super.key});
@@ -15,8 +15,10 @@ class StationsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: buildScreenAppBar(title: 'Stations Management'),
-      body: centerAsync.when(
-        data: (center) {
+      body: AsyncDataBuilder<EvacuationCenter?>(
+        asyncValue: centerAsync,
+        errorPrefix: 'Error loading center',
+        builder: (center) {
           if (center == null) {
             return const AppEmptyState(
               icon: Icons.home_work_outlined,
@@ -25,14 +27,16 @@ class StationsScreen extends ConsumerWidget {
           }
 
           final stationsAsync = ref.watch(stationsByCenterProvider(center.id));
-          return stationsAsync.when(
-            data: (stations) {
+          return AsyncDataBuilder<List<Station>>(
+            asyncValue: stationsAsync,
+            errorPrefix: 'Error loading stations',
+            builder: (stations) {
               if (stations.isEmpty) {
                 return AppEmptyState(
                   icon: Icons.meeting_room,
                   message: 'No stations created yet',
                   action: ElevatedButton.icon(
-                    onPressed: () => _openStationDialog(context, ref, center),
+                    onPressed: () => openStationDialog(context, ref, center),
                     icon: const Icon(Icons.add),
                     label: const Text('Add First Station'),
                   ),
@@ -48,7 +52,7 @@ class StationsScreen extends ConsumerWidget {
                     evacueeCountByStationProvider(station.id),
                   );
                   final occupancyCount = occupancyAsync.asData?.value ?? 0;
-                  final occupancyColor = _occupancyChipColor(
+                  final occupancyColor = occupancyChipColor(
                     occupancyCount,
                     station.capacity,
                   );
@@ -62,7 +66,7 @@ class StationsScreen extends ConsumerWidget {
                     contentPadding: const EdgeInsets.all(14),
                     isThreeLine: true,
                     onTap: () =>
-                        _openStationArrivalsSheet(context, ref, station),
+                        openStationArrivalsSheet(context, ref, station),
                     leading: const CircleAvatar(
                       backgroundColor: Colors.indigo,
                       child: Icon(Icons.meeting_room, color: Colors.white),
@@ -86,11 +90,11 @@ class StationsScreen extends ConsumerWidget {
                             color: occupancyColor.withAlpha(60),
                           ),
                           AppTagChip(
-                            label: _ageLabel(station.allowedAgeGroup),
+                            label: ageLabel(station.allowedAgeGroup),
                             color: Colors.blue[100]!,
                           ),
                           AppTagChip(
-                            label: _medicalLabel(
+                            label: medicalLabel(
                               station.allowedMedicalCondition,
                             ),
                             color: Colors.orange[100]!,
@@ -105,14 +109,14 @@ class StationsScreen extends ConsumerWidget {
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _openStationDialog(
+                          openStationDialog(
                             context,
                             ref,
                             center,
                             station: station,
                           );
                         } else if (value == 'delete') {
-                          _confirmDelete(context, ref, station);
+                          openConfirmDelete(context, ref, station);
                         }
                       },
                       itemBuilder: (context) => const [
@@ -124,384 +128,17 @@ class StationsScreen extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const AppLoadingState(),
-            error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
           );
         },
-        loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
       floatingActionButton: centerAsync.asData?.value == null
           ? null
           : FloatingActionButton.extended(
               onPressed: () =>
-                  _openStationDialog(context, ref, centerAsync.asData!.value!),
+                  openStationDialog(context, ref, centerAsync.asData!.value!),
               icon: const Icon(Icons.add),
               label: const Text('Add Station'),
             ),
     );
-  }
-
-  String _ageLabel(AgeGroup? ageGroup) {
-    if (ageGroup == null) return 'Any Age Group';
-    switch (ageGroup) {
-      case AgeGroup.child:
-        return 'Children';
-      case AgeGroup.adult:
-        return 'Adults';
-      case AgeGroup.elderly:
-        return 'Elderly';
-    }
-  }
-
-  String _medicalLabel(MedicalCondition? medicalCondition) {
-    if (medicalCondition == null) return 'Any Condition';
-    switch (medicalCondition) {
-      case MedicalCondition.none:
-        return 'No Condition';
-      case MedicalCondition.minor:
-        return 'Minor Condition';
-      case MedicalCondition.serious:
-        return 'Serious Condition';
-    }
-  }
-
-  Color _occupancyChipColor(int occupancy, int capacity) {
-    if (capacity <= 0) return Colors.grey;
-    final ratio = occupancy / capacity;
-    if (ratio >= 1) return Colors.red;
-    if (ratio >= 0.8) return Colors.amber;
-    return Colors.green;
-  }
-
-  Future<void> _openStationDialog(
-    BuildContext context,
-    WidgetRef ref,
-    EvacuationCenter center, {
-    Station? station,
-  }) async {
-    final nameController = TextEditingController(text: station?.name ?? '');
-    final capacityController = TextEditingController(
-      text: (station?.capacity ?? 0).toString(),
-    );
-    AgeGroup? selectedAgeGroup = station?.allowedAgeGroup;
-    MedicalCondition? selectedMedical = station?.allowedMedicalCondition;
-
-    final shouldSave = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              title: Text(station == null ? 'Add Station' : 'Edit Station'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Station Name',
-                        prefixIcon: Icon(Icons.edit),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: capacityController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Capacity',
-                        prefixIcon: Icon(Icons.people),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<AgeGroup?>(
-                      initialValue: selectedAgeGroup,
-                      decoration: const InputDecoration(
-                        labelText: 'Allowed Age Group',
-                        prefixIcon: Icon(Icons.people),
-                      ),
-                      items: [
-                        const DropdownMenuItem<AgeGroup?>(
-                          value: null,
-                          child: Text('Any Age Group'),
-                        ),
-                        ...AgeGroup.values.map(
-                          (ageGroup) => DropdownMenuItem<AgeGroup?>(
-                            value: ageGroup,
-                            child: Text(_ageLabel(ageGroup)),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedAgeGroup = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<MedicalCondition?>(
-                      initialValue: selectedMedical,
-                      decoration: const InputDecoration(
-                        labelText: 'Allowed Medical Condition',
-                        prefixIcon: Icon(Icons.local_hospital),
-                      ),
-                      items: [
-                        const DropdownMenuItem<MedicalCondition?>(
-                          value: null,
-                          child: Text('Any Condition'),
-                        ),
-                        ...MedicalCondition.values.map(
-                          (condition) => DropdownMenuItem<MedicalCondition?>(
-                            value: condition,
-                            child: Text(_medicalLabel(condition)),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedMedical = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter a station name'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final parsedCapacity = int.tryParse(
-                      capacityController.text.trim(),
-                    );
-                    if (parsedCapacity == null || parsedCapacity < 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Capacity must be a non-negative number',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    Navigator.pop(dialogContext, true);
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (shouldSave != true) return;
-
-    final db = ref.read(databaseServiceProvider);
-    final trimmedName = nameController.text.trim();
-    final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
-
-    final stationToSave =
-        (station ??
-                Station(
-                  id: IdService.newId(),
-                  name: trimmedName,
-                  evacuationCenterId: center.id,
-                  capacity: parsedCapacity,
-                ))
-            .copyWith(
-              name: trimmedName,
-              capacity: parsedCapacity,
-              allowedAgeGroup: selectedAgeGroup,
-              allowedMedicalCondition: selectedMedical,
-              clearAllowedAgeGroup: selectedAgeGroup == null,
-              clearAllowedMedicalCondition: selectedMedical == null,
-              synced: false,
-            );
-
-    if (station == null) {
-      await db.insertStation(stationToSave);
-    } else {
-      await db.updateStation(stationToSave);
-    }
-
-    ref.invalidate(stationsByCenterProvider(center.id));
-  }
-
-  Future<void> _openStationArrivalsSheet(
-    BuildContext context,
-    WidgetRef ref,
-    Station station,
-  ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.95,
-          builder: (context, controller) {
-            final unnamedAsync = ref.watch(
-              unnamedEvacueesByStationProvider(station.id),
-            );
-
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${station.name} - Unnamed Arrivals',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: unnamedAsync.when(
-                      data: (evacuees) {
-                        if (evacuees.isEmpty) {
-                          return const Center(
-                            child: Text('No unnamed evacuees in this station.'),
-                          );
-                        }
-
-                        return ListView.builder(
-                          controller: controller,
-                          itemCount: evacuees.length,
-                          itemBuilder: (context, index) {
-                            final evacuee = evacuees[index];
-                            return AppListItemCard(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              title: Text('Arrival ${index + 1}'),
-                              subtitle: Text(
-                                '${_ageLabel(evacuee.ageGroup)} | ${_medicalLabel(evacuee.medicalCondition)}',
-                              ),
-                              trailing: TextButton(
-                                onPressed: () async {
-                                  final name = await _promptName(
-                                    context,
-                                    'Register Name',
-                                  );
-                                  if (name == null || name.trim().isEmpty) {
-                                    return;
-                                  }
-
-                                  final db = ref.read(databaseServiceProvider);
-                                  await db.registerEvacueeName(
-                                    evacuee.id,
-                                    name,
-                                  );
-                                  ref.invalidate(
-                                    unnamedEvacueesByStationProvider(
-                                      station.id,
-                                    ),
-                                  );
-                                  ref.invalidate(allEvacueesProvider);
-                                },
-                                child: const Text('Register Name'),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      loading: () => const AppLoadingState(),
-                      error: (err, stack) =>
-                          AppErrorState(error: err, stackTrace: stack),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<String?> _promptName(BuildContext context, String title) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Enter evacuee name'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-    return result;
-  }
-
-  Future<void> _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    Station station,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete Station'),
-          content: Text(
-            'Delete "${station.name}"? Any evacuees assigned here will be unassigned.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm != true) return;
-
-    final db = ref.read(databaseServiceProvider);
-    await db.deleteStation(station.id);
-
-    final center = ref.read(currentCenterProvider).asData?.value;
-    if (center != null) {
-      ref.invalidate(stationsByCenterProvider(center.id));
-    }
-    ref.invalidate(allEvacueesProvider);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Station deleted')));
-    }
   }
 }

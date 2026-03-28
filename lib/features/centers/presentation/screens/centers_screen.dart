@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/features/centers/presentation/widgets/evacuation_center_widgets.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 
 class CentersScreen extends ConsumerWidget {
@@ -15,8 +16,10 @@ class CentersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: buildScreenAppBar(title: 'Evacuation Centers'),
-      body: centersAsync.when(
-        data: (centers) {
+      body: AsyncDataBuilder<List<EvacuationCenter>>(
+        asyncValue: centersAsync,
+        errorPrefix: 'Error loading centers',
+        builder: (centers) {
           if (centers.isEmpty) {
             return AppEmptyState(
               icon: Icons.home_work_outlined,
@@ -41,7 +44,7 @@ class CentersScreen extends ConsumerWidget {
                 elevation: 1,
                 isThreeLine: true,
                 leading: CircleAvatar(
-                  backgroundColor: _statusColor(center.status),
+                  backgroundColor: statusColor(center.status),
                   child: const Icon(Icons.apartment, color: Colors.white),
                 ),
                 title: Text(
@@ -60,8 +63,8 @@ class CentersScreen extends ConsumerWidget {
                         color: Colors.blue[100]!,
                       ),
                       AppTagChip(
-                        label: _statusText(center.status),
-                        color: _statusColor(center.status).withAlpha(55),
+                        label: statusText(center.status),
+                        color: statusColor(center.status).withAlpha(55),
                       ),
                       AppTagChip(
                         label: center.medicalAvailable
@@ -78,12 +81,6 @@ class CentersScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(
-          error: err,
-          stackTrace: stack,
-          prefix: 'Error loading centers',
-        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/map'),
@@ -91,31 +88,5 @@ class CentersScreen extends ConsumerWidget {
         label: const Text('View Map'),
       ),
     );
-  }
-
-  String _statusText(CenterStatus status) {
-    switch (status) {
-      case CenterStatus.operational:
-        return 'Operational';
-      case CenterStatus.nearCapacity:
-        return 'Near Capacity';
-      case CenterStatus.atCapacity:
-        return 'At Capacity';
-      case CenterStatus.closed:
-        return 'Closed';
-    }
-  }
-
-  Color _statusColor(CenterStatus status) {
-    switch (status) {
-      case CenterStatus.operational:
-        return Colors.green;
-      case CenterStatus.nearCapacity:
-        return Colors.orange;
-      case CenterStatus.atCapacity:
-        return Colors.red;
-      case CenterStatus.closed:
-        return Colors.grey;
-    }
   }
 }

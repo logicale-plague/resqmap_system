@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/features/evacuees/presentation/widgets/evacuees_widgets.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+// import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
 
 class EvacueesScreen extends ConsumerWidget {
   const EvacueesScreen({super.key});
@@ -18,8 +20,9 @@ class EvacueesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: buildScreenAppBar(title: 'Evacuees List'),
-      body: evacueesAsync.when(
-        data: (evacuees) {
+      body: AsyncDataBuilder<List<Evacuee>>(
+        asyncValue: evacueesAsync,
+        builder: (evacuees) {
           final stationsById = <String, Station>{
             for (final station in stationsAsync.value ?? [])
               station.id: station,
@@ -61,15 +64,15 @@ class EvacueesScreen extends ConsumerWidget {
                     Row(
                       children: [
                         AppTagChip(
-                          label: _getAgeGroupDisplay(evacuee.ageGroup),
+                          label: getAgeGroupDisplay(evacuee.ageGroup),
                           color: Colors.blue[100]!,
                         ),
                         const SizedBox(width: 8),
                         AppTagChip(
-                          label: _getMedicalConditionDisplay(
+                          label: getMedicalConditionDisplay(
                             evacuee.medicalCondition,
                           ),
-                          color: _getMedicalConditionColor(
+                          color: getMedicalConditionColor(
                             evacuee.medicalCondition,
                           ).withAlpha(80),
                         ),
@@ -95,82 +98,14 @@ class EvacueesScreen extends ConsumerWidget {
                   ],
                 ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () {
-                    _showDeleteDialog(context, ref, evacuee);
-                  },
+                  icon: const Icon(Icons.edit),
+                  tooltip: 'Edit not implemented',
+                  onPressed: null,
                 ),
               );
             },
           );
         },
-        loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
-      ),
-    );
-  }
-
-  String _getAgeGroupDisplay(AgeGroup ageGroup) {
-    switch (ageGroup) {
-      case AgeGroup.child:
-        return 'Child';
-      case AgeGroup.adult:
-        return 'Adult';
-      case AgeGroup.elderly:
-        return 'Elderly';
-    }
-  }
-
-  String _getMedicalConditionDisplay(MedicalCondition condition) {
-    switch (condition) {
-      case MedicalCondition.none:
-        return 'None';
-      case MedicalCondition.minor:
-        return 'Minor';
-      case MedicalCondition.serious:
-        return 'Serious';
-    }
-  }
-
-  Color _getMedicalConditionColor(MedicalCondition condition) {
-    switch (condition) {
-      case MedicalCondition.none:
-        return Colors.green;
-      case MedicalCondition.minor:
-        return Colors.orange;
-      case MedicalCondition.serious:
-        return Colors.red;
-    }
-  }
-
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, Evacuee evacuee) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Evacuee'),
-        content: Text(
-          'Are you sure you want to remove ${evacuee.name ?? 'this evacuee'}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final db = ref.read(databaseServiceProvider);
-              await db.removeEvacuee(evacuee.id);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              ref.invalidate(allEvacueesProvider);
-              ref.invalidate(evacueeCountProvider);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Evacuee removed')));
-            },
-            child: const Text('Remove', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
   }

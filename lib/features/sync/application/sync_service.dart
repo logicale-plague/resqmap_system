@@ -1,31 +1,49 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/indices/db_extensions_index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:kalig_onan_evac_system/features/alerts/presentation/providers/alert_providers.dart';
-import 'package:kalig_onan_evac_system/features/centers/presentation/providers/evacuation_center_providers.dart';
-import 'package:kalig_onan_evac_system/features/evacuees/presentation/providers/evacuee_providers.dart';
-import 'package:kalig_onan_evac_system/features/stations/presentation/providers/station_providers.dart';
-import 'package:kalig_onan_evac_system/features/supplies/presentation/providers/supply_providers.dart';
-import 'package:kalig_onan_evac_system/services/database_service.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
+import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final databaseService = ref.watch(databaseServiceProvider);
+  final supabase = ref.watch(supabaseProvider);
+  final service = SyncService(
+    databaseService: databaseService,
+    supabase: supabase,
+  );
+  ref.onDispose(() {
+    unawaited(service.shutdown());
+  });
+  return service;
+});
+
 class SyncService {
-  static final SyncService _instance = SyncService._internal();
+  SyncService({
+    required DatabaseService databaseService,
+    required SupabaseClient supabase,
+  }) : _databaseService = databaseService,
+       _supabase = supabase;
 
-  factory SyncService() {
-    return _instance;
-  }
-
-  SyncService._internal();
-
-  final _databaseService = DatabaseService();
-  final _supabase = Supabase.instance.client;
+  final DatabaseService _databaseService;
+  final SupabaseClient _supabase;
   final _syncStatusController = StreamController<bool>.broadcast();
   DateTime? _lastSyncTime;
   bool _isShutDown = false;
+  // bool _isSyncInProgress = false;
+  Future<void>? _activeSyncFuture;
+  Timer? _retryTimer;
+  int _retryAttempts = 0;
+
+  static const int _maxRetryAttempts = 5;
+  static const Duration _baseRetryDelay = Duration(seconds: 3);
+  static const Duration _maxRetryDelay = Duration(minutes: 2);
 
   Stream<bool> get syncStatusStream => _syncStatusController.stream;
 
@@ -44,9 +62,15 @@ class SyncService {
       return;
     }
 
+    final wasOnline = _isOnline;
     _isOnline = online;
-    if (online) {
-      unawaited(syncNow());
+    if (!online) {
+      _cancelRetryTimer();
+      _retryAttempts = 0;
+    }
+    if (online && !wasOnline) {
+      _retryAttempts = 0;
+      _runSyncInBackground();
     }
     if (!_syncStatusController.isClosed) {
       _syncStatusController.add(online);
@@ -59,6 +83,25 @@ class SyncService {
       return;
     }
 
+    final activeSyncFuture = _activeSyncFuture;
+    if (activeSyncFuture != null) {
+      debugPrint('Sync already in progress; joining active sync request.');
+      return activeSyncFuture;
+    }
+
+    late final Future<void> trackedSyncFuture;
+    trackedSyncFuture = _performSync().whenComplete(() {
+      if (identical(_activeSyncFuture, trackedSyncFuture)) {
+        _activeSyncFuture = null;
+      }
+    });
+    _activeSyncFuture = trackedSyncFuture;
+    return trackedSyncFuture;
+  }
+
+  Future<void> _performSync() async {
+    // _isSyncInProgress = true;
+
     try {
       await _normalizeLegacyIds();
 
@@ -66,7 +109,7 @@ class SyncService {
       final unsyncedStations = await _databaseService.getUnsyncedStations();
       final unsyncedEvacuees = await _databaseService.getUnsyncedEvacuees();
       final unsyncedSupplies = await _databaseService.getUnsyncedSupplies();
-      final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
+      // final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
 
       if (unsyncedCenters.isNotEmpty) {
         final payload = unsyncedCenters
@@ -109,25 +152,69 @@ class SyncService {
         );
       }
 
-      if (unsyncedAlerts.isNotEmpty) {
-        final payload = unsyncedAlerts
-            .map((alert) => _alertToRemoteMap(alert))
-            .toList();
-        await _supabase.from('alerts').upsert(payload);
-        await _databaseService.markAlertsSynced(
-          unsyncedAlerts.map((alert) => alert.id).toList(),
-        );
-      }
-
       await _pullAndMergeFromSupabase();
 
       _lastSyncTime = DateTime.now();
+      _retryAttempts = 0;
+      _cancelRetryTimer();
 
       debugPrint('Sync completed successfully with Supabase upload');
     } catch (e) {
       debugPrint('Sync failed: $e');
+      _scheduleRetry();
       rethrow;
+    } finally {
+      // _isSyncInProgress = false;
     }
+  }
+
+  void _runSyncInBackground() {
+    unawaited(
+      syncNow().catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Background sync attempt failed: $error');
+      }),
+    );
+  }
+
+  void _scheduleRetry() {
+    if (_isShutDown || !_isOnline) {
+      return;
+    }
+    if (_retryTimer?.isActive ?? false) {
+      return;
+    }
+    if (_retryAttempts >= _maxRetryAttempts) {
+      debugPrint('Sync retry limit reached ($_maxRetryAttempts attempts).');
+      return;
+    }
+
+    _retryAttempts += 1;
+    final delay = _retryDelayForAttempt(_retryAttempts);
+    debugPrint(
+      'Scheduling sync retry $_retryAttempts/$_maxRetryAttempts in ${delay.inSeconds}s.',
+    );
+
+    _retryTimer = Timer(delay, () {
+      _retryTimer = null;
+      if (_isShutDown || !_isOnline) {
+        return;
+      }
+      _runSyncInBackground();
+    });
+  }
+
+  Duration _retryDelayForAttempt(int attempt) {
+    final multiplier = 1 << (attempt - 1);
+    final seconds = _baseRetryDelay.inSeconds * multiplier;
+    final clampedSeconds = seconds > _maxRetryDelay.inSeconds
+        ? _maxRetryDelay.inSeconds
+        : seconds;
+    return Duration(seconds: clampedSeconds);
+  }
+
+  void _cancelRetryTimer() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
   }
 
   Future<void> _normalizeLegacyIds() async {
@@ -158,13 +245,6 @@ class SyncService {
     for (final supply in supplies) {
       if (!_isUuid(supply.id)) {
         await _databaseService.replaceSupplyId(supply.id, IdService.newId());
-      }
-    }
-
-    final alerts = await _databaseService.getAllAlerts();
-    for (final alert in alerts) {
-      if (!_isUuid(alert.id)) {
-        await _databaseService.replaceAlertId(alert.id, IdService.newId());
       }
     }
   }
@@ -199,10 +279,10 @@ class SyncService {
       await _mergeSupply(_asMap(row));
     }
 
-    final alertRows = await _supabase.from('alerts').select();
-    for (final row in alertRows) {
-      await _mergeAlert(_asMap(row));
-    }
+    // final alertRows = await _supabase.from('alerts').select();
+    // for (final row in alertRows) {
+    //   await _mergeAlert(_asMap(row));
+    // }
   }
 
   Future<void> _mergeCenter(Map<String, dynamic> row) async {
@@ -309,32 +389,32 @@ class SyncService {
     await _databaseService.upsertSupplyFromRemote(remote);
   }
 
-  Future<void> _mergeAlert(Map<String, dynamic> row) async {
-    final fallbackCenterId = await _currentCenterIdOrDefault();
-    final remote = Alert(
-      id: _readString(row, 'id'),
-      evacuationCenterId:
-          _readAnyOrNull(row, 'evacuation_center_id')?.toString() ??
-          fallbackCenterId,
-      message: _readString(row, 'message'),
-      severity: AlertSeverity.values[_readNum(row, 'severity').toInt()],
-      createdAt: DateTime.parse(_readString(row, 'created_at')),
-      read: _asBool(_readAny(row, 'read')),
-      synced: true,
-    );
+  // Future<void> _mergeAlert(Map<String, dynamic> row) async {
+  //   final fallbackCenterId = await _currentCenterIdOrDefault();
+  //   final remote = Alert(
+  //     id: _readString(row, 'id'),
+  //     evacuationCenterId:
+  //         _readAnyOrNull(row, 'evacuation_center_id')?.toString() ??
+  //         fallbackCenterId,
+  //     message: _readString(row, 'message'),
+  //     severity: AlertSeverity.values[_readNum(row, 'severity').toInt()],
+  //     createdAt: DateTime.parse(_readString(row, 'created_at')),
+  //     read: _asBool(_readAny(row, 'read')),
+  //     synced: true,
+  //   );
 
-    final local = await _databaseService.getAlertById(remote.id);
-    if (local == null) {
-      await _databaseService.upsertAlertFromRemote(remote);
-      return;
-    }
+  //   final local = await _databaseService.getAlertById(remote.id);
+  //   if (local == null) {
+  //     await _databaseService.upsertAlertFromRemote(remote);
+  //     return;
+  //   }
 
-    if (!local.synced && !remote.createdAt.isAfter(local.createdAt)) {
-      return;
-    }
+  //   if (!local.synced && !remote.createdAt.isAfter(local.createdAt)) {
+  //     return;
+  //   }
 
-    await _databaseService.upsertAlertFromRemote(remote);
-  }
+  //   await _databaseService.upsertAlertFromRemote(remote);
+  // }
 
   Map<String, dynamic> _asMap(dynamic row) {
     if (row is Map<String, dynamic>) {
@@ -406,16 +486,16 @@ class SyncService {
     };
   }
 
-  Map<String, dynamic> _alertToRemoteMap(Alert alert) {
-    return {
-      'id': alert.id,
-      'evacuation_center_id': alert.evacuationCenterId,
-      'message': alert.message,
-      'severity': alert.severity.index,
-      'created_at': alert.createdAt.toIso8601String(),
-      'read': alert.read ? 1 : 0,
-    };
-  }
+  // Map<String, dynamic> _alertToRemoteMap(Alert alert) {
+  //   return {
+  //     'id': alert.id,
+  //     'evacuation_center_id': alert.evacuationCenterId,
+  //     'message': alert.message,
+  //     'severity': alert.severity.index,
+  //     'created_at': alert.createdAt.toIso8601String(),
+  //     'read': alert.read ? 1 : 0,
+  //   };
+  // }
 
   dynamic _readAny(Map<String, dynamic> row, String key, {String? fallback}) {
     if (row.containsKey(key)) {
@@ -453,9 +533,17 @@ class SyncService {
 
   T? _enumOrNull<T>(List<T> values, dynamic rawValue) {
     if (rawValue == null) return null;
+    if (rawValue is String) {
+      for (final value in values) {
+        if (value is Enum && value.name == rawValue) {
+          return value;
+        }
+      }
+    }
     final index = rawValue is num
         ? rawValue.toInt()
-        : int.parse(rawValue.toString());
+        : int.tryParse(rawValue.toString());
+    if (index == null) return null;
     if (index < 0 || index >= values.length) return null;
     return values[index];
   }
@@ -494,14 +582,14 @@ class SyncService {
     final unsyncedStations = await _databaseService.getUnsyncedStations();
     final unsyncedEvacuees = await _databaseService.getUnsyncedEvacuees();
     final unsyncedSupplies = await _databaseService.getUnsyncedSupplies();
-    final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
+    // final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
 
     final pendingUpdates =
         unsyncedCenters.length +
         unsyncedStations.length +
         unsyncedEvacuees.length +
-        unsyncedSupplies.length +
-        unsyncedAlerts.length;
+        unsyncedSupplies.length;
+    // unsyncedAlerts.length;
 
     return {
       'isOnline': _isOnline,
@@ -512,7 +600,7 @@ class SyncService {
         'stations': unsyncedStations.length,
         'evacuees': unsyncedEvacuees.length,
         'supplies': unsyncedSupplies.length,
-        'alerts': unsyncedAlerts.length,
+        // 'alerts': unsyncedAlerts.length,
       },
     };
   }
@@ -537,6 +625,7 @@ class SyncService {
 
     _isShutDown = true;
     _isOnline = false;
+    _cancelRetryTimer();
 
     if (!_syncStatusController.isClosed) {
       await _syncStatusController.close();

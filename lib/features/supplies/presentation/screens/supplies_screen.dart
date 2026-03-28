@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/supplies/presentation/widgets/supplies_widgets.dart';
 
 class SuppliesScreen extends ConsumerWidget {
   const SuppliesScreen({super.key});
@@ -22,8 +22,9 @@ class SuppliesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: suppliesAsync.when(
-        data: (supplies) {
+      body: AsyncDataBuilder<List<Supply>>(
+        asyncValue: suppliesAsync,
+        builder: (supplies) {
           if (supplies.isEmpty) {
             return const AppEmptyState(
               icon: Icons.medical_services,
@@ -36,8 +37,11 @@ class SuppliesScreen extends ConsumerWidget {
             itemCount: supplies.length,
             itemBuilder: (context, index) {
               final supply = supplies[index];
-              final statusColor = _getStockStatusColor(supply.daysRemaining);
-              final statusText = _getStockStatusText(supply.daysRemaining);
+              final statusColor = getStockStatusColor(supply.daysRemaining);
+              final statusText = getStockStatusText(supply.daysRemaining);
+              final daysRemainingText = supply.daysRemaining == null
+                  ? 'Not currently consumed'
+                  : '${supply.daysRemaining} days remaining';
 
               return AppListItemCard(
                 leading: Container(
@@ -109,7 +113,7 @@ class SuppliesScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${supply.daysRemaining} days remaining',
+                      daysRemainingText,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[700],
@@ -121,7 +125,7 @@ class SuppliesScreen extends ConsumerWidget {
                 trailing: PopupMenuButton(
                   onSelected: (value) {
                     if (value == 'update') {
-                      _showUpdateSupplyDialog(context, ref, supply);
+                      showUpdateSupplyDialog(context, ref, supply);
                     }
                   },
                   itemBuilder: (context) => [
@@ -141,181 +145,11 @@ class SuppliesScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSupplyDialog(context, ref),
+        onPressed: () => showAddSupplyDialog(context, ref),
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Color _getStockStatusColor(int daysRemaining) {
-    if (daysRemaining < 1) return Colors.red;
-    if (daysRemaining < 7) return Colors.orange;
-    return Colors.green;
-  }
-
-  String _getStockStatusText(int daysRemaining) {
-    if (daysRemaining < 1) return 'CRITICAL';
-    if (daysRemaining < 7) return 'LOW';
-    return 'ADEQUATE';
-  }
-
-  void _showAddSupplyDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    final stockController = TextEditingController();
-    final usageController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Supply'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Supply Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: stockController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Current Stock',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: usageController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Usage Rate (units/day)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isEmpty ||
-                  stockController.text.isEmpty ||
-                  usageController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please fill all fields')),
-                );
-                return;
-              }
-
-              final db = ref.read(databaseServiceProvider);
-              final center = await db.getCurrentCenter();
-              if (center == null) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('No evacuation center found for this device'),
-                  ),
-                );
-                return;
-              }
-              final supply = Supply(
-                id: IdService.newId(),
-                evacuationCenterId: center.id,
-                name: nameController.text,
-                currentStock: int.parse(stockController.text),
-                usageRatePerDay: int.parse(usageController.text),
-                lastRestocked: DateTime.now(),
-              );
-
-              await db.insertSupply(supply);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-
-              ref.invalidate(allSuppliesProvider);
-
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Supply added')));
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showUpdateSupplyDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Supply supply,
-  ) {
-    final stockController = TextEditingController(
-      text: supply.currentStock.toString(),
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Stock'),
-        content: TextField(
-          controller: stockController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: 'Current Stock',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (stockController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter stock quantity')),
-                );
-                return;
-              }
-
-              final db = ref.read(databaseServiceProvider);
-              await db.updateSupplyStock(
-                supply.id,
-                int.parse(stockController.text),
-              );
-              if (!context.mounted) return;
-              Navigator.pop(context);
-
-              ref.invalidate(allSuppliesProvider);
-
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Stock updated')));
-            },
-            child: const Text('Update'),
-          ),
-        ],
       ),
     );
   }

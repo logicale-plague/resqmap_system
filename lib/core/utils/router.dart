@@ -35,7 +35,6 @@ final router = GoRouter(
       builder: (context, state) => const CentersScreen(),
     ),
     GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
-    GoRoute(path: '/alerts', builder: (context, state) => const AlertsScreen()),
     GoRoute(
       path: '/analytics',
       builder: (context, state) => const VisualAnalyticsScreen(),
