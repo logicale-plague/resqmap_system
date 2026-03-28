@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kalig_onan_evac_system/features/users/data/user.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_dto.dart';
+import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:sqflite/sqflite.dart';
@@ -14,7 +15,7 @@ extension UserDatabaseExtensions on DatabaseService {
     final db = await database;
     await db.insert(
       'users',
-      user.toMap(),
+      userToMap(user),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -22,6 +23,6 @@ extension UserDatabaseExtensions on DatabaseService {
   Future<User?> getCurrentUser() async {
     final db = await database;
     final maps = await db.query('users', limit: 1);
-    return maps.isEmpty ? null : User.fromMap(maps.first);
+    return maps.isEmpty ? null : userFromMap(maps.first);
   }
 }
