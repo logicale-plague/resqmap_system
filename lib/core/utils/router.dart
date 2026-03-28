@@ -1,9 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/admin_screens_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/staff_screens_index.dart';
-import 'package:kalig_onan_evac_system/feature/page/homePage.dart';
+import 'package:kalig_onan_evac_system/features/centers/presentation/screens/homePage.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
-import 'package:kalig_onan_evac_system/screens/alerts_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/homePage',

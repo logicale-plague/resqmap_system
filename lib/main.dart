@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:kalig_onan_evac_system/services/sync_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kalig_onan_evac_system/core/utils/router.dart';
@@ -25,8 +24,6 @@ void main() async {
 
   // Initialize sample data if needed
   // await _initializeSampleData();
-
-  await _startSync();
 
   /// Maruuu1101110:
   // Initialize MapBox access

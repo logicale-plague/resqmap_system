@@ -6,6 +6,9 @@ class EvacuationCenter {
   final String commandCenterId;
   final double latitude;
   final double longitude;
+  // // // UPDATE: NEW // // //
+  final String? fullAddress;
+  final String? postalCode;
   final int totalCapacity;
   final int currentOccupancy;
   final CenterStatus status;
@@ -19,6 +22,9 @@ class EvacuationCenter {
     required this.commandCenterId,
     required this.latitude,
     required this.longitude,
+    // // // UPDATE: NEW // // //
+    this.fullAddress,
+    this.postalCode,
     required this.totalCapacity,
     required this.currentOccupancy,
     required this.status,
@@ -34,12 +40,59 @@ class EvacuationCenter {
   int get availableSpaces =>
       (totalCapacity - currentOccupancy).clamp(0, totalCapacity);
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'commandCenterId': commandCenterId,
+      'latitude': latitude,
+      'longitude': longitude,
+      // // // UPDATE: NEW // // //
+      'fullAddress': fullAddress,
+      'postalCode': postalCode,
+
+      'totalCapacity': totalCapacity,
+      'currentOccupancy': currentOccupancy,
+      'status': status.index,
+      'medicalAvailable': medicalAvailable ? 1 : 0,
+      'lastUpdated': lastUpdated.toIso8601String(),
+      'synced': synced ? 1 : 0,
+    };
+  }
+
+  factory EvacuationCenter.fromMap(Map<String, dynamic> map) {
+    return EvacuationCenter(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      commandCenterId:
+          map['commandCenterId'] as String? ??
+          map['commandcenterid'] as String? ??
+          map['command_center_id'] as String? ??
+          'default-command-center',
+      latitude: (map['latitude'] as num).toDouble(),
+      longitude: (map['longitude'] as num).toDouble(),
+      // // // UPDATE: NEW // // //
+      fullAddress: map['fullAddress'] as String?,
+      postalCode: map['postalCode'],
+
+      totalCapacity: map['totalCapacity'] as int,
+      currentOccupancy: map['currentOccupancy'] as int,
+      status: CenterStatus.values[map['status'] as int],
+      medicalAvailable: (map['medicalAvailable'] as int) == 1,
+      lastUpdated: DateTime.parse(map['lastUpdated'] as String),
+      synced: (map['synced'] as int) == 1,
+    );
+  }
+
   EvacuationCenter copyWith({
     String? id,
     String? name,
     String? commandCenterId,
     double? latitude,
     double? longitude,
+    // // // UPDATE: NEW // // //
+    String? fullAddress,
+    String? postalCode,
     int? totalCapacity,
     int? currentOccupancy,
     CenterStatus? status,
@@ -53,6 +106,9 @@ class EvacuationCenter {
       commandCenterId: commandCenterId ?? this.commandCenterId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      // // // UPDATE: NEW // // //
+      fullAddress: fullAddress ?? this.fullAddress,
+      postalCode: postalCode ?? this.postalCode,
       totalCapacity: totalCapacity ?? this.totalCapacity,
       currentOccupancy: currentOccupancy ?? this.currentOccupancy,
       status: status ?? this.status,
