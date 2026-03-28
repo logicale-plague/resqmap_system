@@ -77,8 +77,6 @@ void showAddSupplyDialog(BuildContext context, WidgetRef ref) {
             onPressed: isSubmitting
                 ? null
                 : () async {
-                    if (isSubmitting) return;
-
                     if (nameController.text.isEmpty ||
                         stockController.text.isEmpty ||
                         usageController.text.isEmpty) {

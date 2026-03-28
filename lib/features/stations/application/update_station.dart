@@ -40,6 +40,16 @@ class UpdateStationUseCase {
         where: 'id = ?',
         whereArgs: [station.id],
       );
+
+      // Auto-unassign evacuees if station is deactivated
+      if (!station.active) {
+        await txn.update(
+          'evacuees',
+          {'stationId': null, 'synced': 0},
+          where: 'stationId = ?',
+          whereArgs: [station.id],
+        );
+      }
     });
   }
 }

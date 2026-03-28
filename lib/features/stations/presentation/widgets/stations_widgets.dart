@@ -53,157 +53,167 @@ Future<void> openStationDialog(
   );
   AgeGroup? selectedAgeGroup = station?.allowedAgeGroup;
   MedicalCondition? selectedMedical = station?.allowedMedicalCondition;
+  final localRef = ref;
 
-  final shouldSave = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (dialogContext, setDialogState) {
-          return AlertDialog(
-            title: Text(station == null ? 'Add Station' : 'Edit Station'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Station Name',
-                      prefixIcon: Icon(Icons.edit),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: capacityController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Capacity',
-                      prefixIcon: Icon(Icons.people),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<AgeGroup?>(
-                    initialValue: selectedAgeGroup,
-                    decoration: const InputDecoration(
-                      labelText: 'Allowed Age Group',
-                      prefixIcon: Icon(Icons.people),
-                    ),
-                    items: [
-                      const DropdownMenuItem<AgeGroup?>(
-                        value: null,
-                        child: Text('Any Age Group'),
+  try {
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text(station == null ? 'Add Station' : 'Edit Station'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Station Name',
+                        prefixIcon: Icon(Icons.edit),
                       ),
-                      ...AgeGroup.values.map(
-                        (ageGroup) => DropdownMenuItem<AgeGroup?>(
-                          value: ageGroup,
-                          child: Text(ageLabel(ageGroup)),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: capacityController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Capacity',
+                        prefixIcon: Icon(Icons.people),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<AgeGroup?>(
+                      initialValue: selectedAgeGroup,
+                      decoration: const InputDecoration(
+                        labelText: 'Allowed Age Group',
+                        prefixIcon: Icon(Icons.people),
+                      ),
+                      items: [
+                        const DropdownMenuItem<AgeGroup?>(
+                          value: null,
+                          child: Text('Any Age Group'),
                         ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedAgeGroup = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<MedicalCondition?>(
-                    value: selectedMedical,
-                    decoration: const InputDecoration(
-                      labelText: 'Allowed Medical Condition',
-                      prefixIcon: Icon(Icons.local_hospital),
-                    ),
-                    items: [
-                      const DropdownMenuItem<MedicalCondition?>(
-                        value: null,
-                        child: Text('Any Condition'),
-                      ),
-                      ...MedicalCondition.values.map(
-                        (condition) => DropdownMenuItem<MedicalCondition?>(
-                          value: condition,
-                          child: Text(medicalLabel(condition)),
+                        ...AgeGroup.values.map(
+                          (ageGroup) => DropdownMenuItem<AgeGroup?>(
+                            value: ageGroup,
+                            child: Text(ageLabel(ageGroup)),
+                          ),
                         ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedAgeGroup = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<MedicalCondition?>(
+                      value: selectedMedical,
+                      decoration: const InputDecoration(
+                        labelText: 'Allowed Medical Condition',
+                        prefixIcon: Icon(Icons.local_hospital),
                       ),
-                    ],
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedMedical = value;
-                      });
-                    },
-                  ),
-                ],
+                      items: [
+                        const DropdownMenuItem<MedicalCondition?>(
+                          value: null,
+                          child: Text('Any Condition'),
+                        ),
+                        ...MedicalCondition.values.map(
+                          (condition) => DropdownMenuItem<MedicalCondition?>(
+                            value: condition,
+                            child: Text(medicalLabel(condition)),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedMedical = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (nameController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please enter a station name'),
-                      ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter a station name'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final parsedCapacity = int.tryParse(
+                      capacityController.text.trim(),
                     );
-                    return;
-                  }
+                    if (parsedCapacity == null || parsedCapacity < 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Capacity must be a non-negative number',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
-                  final parsedCapacity = int.tryParse(
-                    capacityController.text.trim(),
-                  );
-                  if (parsedCapacity == null || parsedCapacity < 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Capacity must be a non-negative number'),
-                      ),
-                    );
-                    return;
-                  }
+                    Navigator.pop(dialogContext, true);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
 
-                  Navigator.pop(dialogContext, true);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
+    if (shouldSave != true) return;
 
-  if (shouldSave != true) return;
+    final stationRepository = ref.read(stationRepositoryProvider);
+    final trimmedName = nameController.text.trim();
+    final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
 
-  final stationRepository = ref.read(stationRepositoryProvider);
-  final trimmedName = nameController.text.trim();
-  final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
+    final stationToSave =
+        (station ??
+                Station(
+                  id: IdService.newId(),
+                  name: trimmedName,
+                  evacuationCenterId: center.id,
+                  capacity: parsedCapacity,
+                ))
+            .copyWith(
+              name: trimmedName,
+              capacity: parsedCapacity,
+              allowedAgeGroup: selectedAgeGroup,
+              allowedMedicalCondition: selectedMedical,
+              clearAllowedAgeGroup: selectedAgeGroup == null,
+              clearAllowedMedicalCondition: selectedMedical == null,
+              synced: false,
+            );
 
-  final stationToSave =
-      (station ??
-              Station(
-                id: IdService.newId(),
-                name: trimmedName,
-                evacuationCenterId: center.id,
-                capacity: parsedCapacity,
-              ))
-          .copyWith(
-            name: trimmedName,
-            capacity: parsedCapacity,
-            allowedAgeGroup: selectedAgeGroup,
-            allowedMedicalCondition: selectedMedical,
-            clearAllowedAgeGroup: selectedAgeGroup == null,
-            clearAllowedMedicalCondition: selectedMedical == null,
-            synced: false,
-          );
+    if (station == null) {
+      await stationRepository.insert(stationToSave);
+    } else {
+      await stationRepository.update(stationToSave);
+    }
 
-  if (station == null) {
-    await stationRepository.insert(stationToSave);
-  } else {
-    await stationRepository.update(stationToSave);
+    if (context.mounted) {
+      localRef.invalidate(stationsByCenterProvider(center.id));
+    }
+  } finally {
+    nameController.dispose();
+    capacityController.dispose();
   }
-
-  ref.invalidate(stationsByCenterProvider(center.id));
 }
 
 Future<void> openStationArrivalsSheet(
@@ -261,6 +271,7 @@ Future<void> openStationArrivalsSheet(
                                 ),
                                 trailing: TextButton(
                                   onPressed: () async {
+                                    final localSheetRef = sheetRef;
                                     final name = await _promptName(
                                       context,
                                       'Register Name',
@@ -269,18 +280,21 @@ Future<void> openStationArrivalsSheet(
                                       return;
                                     }
 
-                                    final evacueeRepository = sheetRef.read(
-                                      evacueeRepositoryProvider,
-                                    );
+                                    final evacueeRepository = localSheetRef
+                                        .read(evacueeRepositoryProvider);
                                     await evacueeRepository.update(
                                       evacuee.copyWith(name: name.trim()),
                                     );
-                                    sheetRef.invalidate(
-                                      unnamedEvacueesByStationProvider(
-                                        station.id,
-                                      ),
-                                    );
-                                    sheetRef.invalidate(allEvacueesProvider);
+                                    if (context.mounted) {
+                                      localSheetRef.invalidate(
+                                        unnamedEvacueesByStationProvider(
+                                          station.id,
+                                        ),
+                                      );
+                                      localSheetRef.invalidate(
+                                        allEvacueesProvider,
+                                      );
+                                    }
                                   },
                                   child: const Text('Register Name'),
                                 ),
@@ -341,6 +355,7 @@ Future<void> openConfirmDelete(
   WidgetRef ref,
   Station station,
 ) async {
+  final localRef = ref;
   final confirm = await showDialog<bool>(
     context: context,
     builder: (dialogContext) {
@@ -365,15 +380,12 @@ Future<void> openConfirmDelete(
 
   if (confirm != true) return;
 
-  final stationRepository = ref.read(stationRepositoryProvider);
-  final evacueeRepository = ref.read(evacueeRepositoryProvider);
+  final stationRepository = localRef.read(stationRepositoryProvider);
   await stationRepository.delete(station);
-  await evacueeRepository.unassignEvacueesFromStation(station.id);
-
-  ref.invalidate(stationsByCenterProvider(station.evacuationCenterId));
-  ref.invalidate(allEvacueesProvider);
 
   if (context.mounted) {
+    localRef.invalidate(stationsByCenterProvider(station.evacuationCenterId));
+    localRef.invalidate(allEvacueesProvider);
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Station deleted')));
