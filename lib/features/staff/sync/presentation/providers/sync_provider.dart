@@ -1,0 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/features/staff/sync/application/sync_service.dart';
+
+final syncStatusProvider = StreamProvider<bool>((ref) {
+  final syncService = ref.watch(syncServiceProvider);
+  return syncService.syncStatusStream;
+});
