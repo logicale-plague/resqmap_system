@@ -15,6 +15,7 @@ abstract interface class EvacueeRepository {
   Future<void> insert(Evacuee evacuee);
   Future<void> update(Evacuee evacuee);
   Future<void> upsertFromRemote(Evacuee evacuee);
+  Future<void> unassignEvacueesFromStation(String stationId);
   Future<void> markSynced(List<String> ids);
   Future<void> replaceId(String oldId, String newId);
 }

@@ -72,6 +72,16 @@ extension EvacueeDatabaseExtensions on DatabaseService {
     );
   }
 
+  Future<void> unassignEvacueesFromStation(String stationId) async {
+    final db = await database;
+    await db.update(
+      'evacuees',
+      {'stationId': null, 'synced': 0},
+      where: 'stationId = ?',
+      whereArgs: [stationId],
+    );
+  }
+
   Future<List<Evacuee>> getUnsyncedEvacuees() async {
     final db = await database;
     final maps = await db.query('evacuees', where: 'synced = 0');

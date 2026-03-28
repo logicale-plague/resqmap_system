@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/core/widgets/screen_components.dart';
+import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 import 'package:kalig_onan_evac_system/features/sync/application/sync_service.dart';
+import 'package:kalig_onan_evac_system/features/sync/presentation/widgets/sync_widgets.dart';
 
 class SyncScreen extends ConsumerStatefulWidget {
   const SyncScreen({super.key});
@@ -48,7 +49,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final unsyncedCenters = ref.watch(unsyncedCentersProvider);
     final unsyncedEvacuees = ref.watch(unsyncedEvacueesProvider);
     final unsyncedSupplies = ref.watch(unsyncedSuppliesProvider);
-    // final unsyncedAlerts = ref.watch(unsyncedAlertsProvider);
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
@@ -58,47 +58,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Connection Status
             syncStatus.when(
-              data: (isOnline) => Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: isOnline ? Colors.green[50] : Colors.red[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isOnline ? Colors.green : Colors.red,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isOnline ? Icons.cloud_done : Icons.cloud_off,
-                      size: 64,
-                      color: isOnline ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      isOnline ? 'CONNECTED' : 'OFFLINE',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: isOnline ? Colors.green : Colors.red,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      isOnline
-                          ? 'Connected to command center'
-                          : 'Working offline - data will sync when connected',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+              data: (isOnline) => buildConnectionStatusBox(isOnline),
               loading: () => const SizedBox(
                 height: 180,
                 child: Center(child: CircularProgressIndicator()),
@@ -106,8 +67,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
             const SizedBox(height: 32),
-
-            // Pending Updates
             Text('Sync Status', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             unsyncedCenters.when(
@@ -116,13 +75,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                   data: (supplies) {
                     final pendingCount =
                         centers.length + evacuees.length + supplies.length;
-                    return Container(
+                    return InfoContainer.warning(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.yellow[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.yellow[700]!),
-                      ),
                       child: Row(
                         children: [
                           Icon(
@@ -150,8 +104,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Centers: ${centers.length} • '
-                                  'Evacuees: ${evacuees.length} • '
+                                  'Centers: ${centers.length} \u2022 '
+                                  'Evacuees: ${evacuees.length} \u2022 '
                                   'Supplies: ${supplies.length}',
                                   style: TextStyle(
                                     fontSize: 12,
@@ -184,15 +138,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
             const SizedBox(height: 16),
-
-            // Last Sync Time
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue),
-              ),
+            InfoContainer.info(
               child: Row(
                 children: [
                   Icon(Icons.schedule, color: Colors.blue[700]),
@@ -222,8 +168,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               ),
             ),
             const SizedBox(height: 32),
-
-            // Info Section
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -238,24 +182,22 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
-                  _buildBulletPoint(
+                  buildBulletPoint(
                     'All data changes are saved locally on this device',
                   ),
-                  _buildBulletPoint(
+                  buildBulletPoint(
                     'When connection is restored, data automatically syncs',
                   ),
-                  _buildBulletPoint(
+                  buildBulletPoint(
                     'Command center receives all pending updates',
                   ),
-                  _buildBulletPoint(
+                  buildBulletPoint(
                     'Conflicts are resolved automatically when possible',
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 32),
-
-            // Sync Button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -290,19 +232,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(fontSize: 20)),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
-        ],
       ),
     );
   }
