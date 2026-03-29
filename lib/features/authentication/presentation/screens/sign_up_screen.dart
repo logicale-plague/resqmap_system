@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 
@@ -84,6 +85,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       context.go('/login');
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Sign-up error: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Sign-up failed: $e')));
@@ -123,7 +125,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Widget build(BuildContext context) {
     final dobText = _dateOfBirth == null
         ? 'Select date of birth'
-        : '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}';
+        : DateFormat.yMd().format(_dateOfBirth!);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sign Up')),
