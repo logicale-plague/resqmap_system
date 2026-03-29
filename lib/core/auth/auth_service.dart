@@ -60,7 +60,7 @@ class AuthService {
     }
 
     try {
-      await _databaseService.insertUser(userWithId);
+      await _databaseService.insertUser(userWithId, password: password);
     } catch (e) {
       final profileCleanupError = await _deleteRemoteProfileSafely(
         supabaseUser.id,
@@ -93,7 +93,7 @@ class AuthService {
       return response;
     }
     try {
-      await _fetchAndStoreUser(supabaseUser.id);
+      await _fetchAndStoreUser(supabaseUser.id, password: password);
     } catch (e) {
       await _supabase.auth.signOut();
       rethrow;
@@ -110,7 +110,7 @@ class AuthService {
     }
   }
 
-  Future<void> _fetchAndStoreUser(String userId) async {
+  Future<void> _fetchAndStoreUser(String userId, {String? password}) async {
     final data = await _supabase
         .from('users')
         .select()
@@ -122,7 +122,7 @@ class AuthService {
     }
 
     final user = userFromMap(data);
-    await _databaseService.insertUser(user);
+    await _databaseService.insertUser(user, password: password);
   }
 
   Future<String?> _deleteAuthUserSafely(String userId) async {

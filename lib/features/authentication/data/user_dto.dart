@@ -32,7 +32,7 @@ User userFromMap(Map<String, dynamic> map) {
     username: _read<String>("username", "username"),
     email: _read<String>("email", "email"),
     dateOfBirth: DateTime.parse(_read<String>("date_of_birth", "dateOfBirth")),
-    role: UserPermissionSerialization.fromCode(map["role"]),
+    role: UserPermissionSerialization.fromCode(_read<String>("role", "role")),
     createdAt: DateTime.parse(_read<String>("created_at", "createdAt")),
   );
 }
@@ -40,6 +40,7 @@ User userFromMap(Map<String, dynamic> map) {
 Future<Map<String, dynamic>> userToLocalDbMap(
   User user, {
   UserPiiCipher? cipher,
+  String? passwordHash,
 }) async {
   final piiCipher = cipher ?? UserPiiCipher.instance();
   return {
@@ -53,6 +54,7 @@ Future<Map<String, dynamic>> userToLocalDbMap(
     "dateOfBirth": (await piiCipher.encryptNullable(
       user.dateOfBirth.toIso8601String(),
     ))!,
+    "passwordHash": passwordHash,
     "role": user.role.toCode(),
     "createdAt": user.createdAt.toIso8601String(),
   };

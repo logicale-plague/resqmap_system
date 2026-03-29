@@ -23,7 +23,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -112,6 +112,7 @@ class DatabaseService {
         username TEXT NOT NULL,
         email TEXT NOT NULL,
         dateOfBirth TEXT NOT NULL,
+        passwordHash TEXT,
         role INTEGER NOT NULL DEFAULT 2,
         latitude REAL,
         longitude REAL,
@@ -176,6 +177,12 @@ class DatabaseService {
           fullAddress TEXT,
           createdAt TEXT NOT NULL
         )
+      ''');
+    }
+
+    if (oldVersion < 5) {
+      await db.execute('''
+        ALTER TABLE users ADD COLUMN passwordHash TEXT
       ''');
     }
   }

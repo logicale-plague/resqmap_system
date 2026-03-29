@@ -47,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!isOnline) {
         // Offline mode: try local database
-        await _handleOfflineLogin(email);
+        await _handleOfflineLogin(email, password);
         return;
       }
 
@@ -89,10 +89,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _handleOfflineLogin(String email) async {
+  Future<void> _handleOfflineLogin(String email, String password) async {
     try {
       final db = ref.read(databaseServiceProvider);
-      final user = await db.getUserByEmail(email);
+      final user = await db.verifyLocalUserCredentials(email, password);
 
       if (user == null) {
         if (!mounted) return;
@@ -105,9 +105,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
         return;
       }
-
-      // Successfully logged in with cached credentials
-      await db.insertUser(user);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
