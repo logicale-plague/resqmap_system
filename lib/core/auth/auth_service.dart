@@ -52,6 +52,7 @@ class AuthService {
       await _supabase.from('users').insert(userToMap(userWithId));
     } catch (e) {
       final cleanupError = await _deleteAuthUserSafely(supabaseUser.id);
+      await _supabase.auth.signOut();
       final cleanupNote = cleanupError == null
           ? ''
           : ' Cleanup failed: $cleanupError';
@@ -65,6 +66,7 @@ class AuthService {
         supabaseUser.id,
       );
       final authCleanupError = await _deleteAuthUserSafely(supabaseUser.id);
+      await _supabase.auth.signOut();
       final cleanupMessages = <String>[
         if (profileCleanupError != null)
           'profile cleanup failed: $profileCleanupError',
@@ -90,13 +92,22 @@ class AuthService {
       // Sign-in failed, return the response with error
       return response;
     }
-    await _fetchAndStoreUser(supabaseUser.id);
+    try {
+      await _fetchAndStoreUser(supabaseUser.id);
+    } catch (e) {
+      await _supabase.auth.signOut();
+      rethrow;
+    }
 
     return response;
   }
 
   Future<void> signOut() async {
-    await _supabase.auth.signOut();
+    try {
+      await _supabase.auth.signOut();
+    } finally {
+      await _databaseService.clearCurrentUser();
+    }
   }
 
   Future<void> _fetchAndStoreUser(String userId) async {
@@ -106,7 +117,9 @@ class AuthService {
         .eq('id', userId)
         .maybeSingle();
 
-    if (data == null) return;
+    if (data == null) {
+      throw StateError('User profile not found for ID: $userId');
+    }
 
     final user = userFromMap(data);
     await _databaseService.insertUser(user);

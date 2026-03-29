@@ -76,11 +76,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       await authService.signUp(newUser, _passwordController.text);
 
       if (!mounted) return;
-
-      context.go('/login');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account created. You can now log in.')),
       );
+
+      if (!mounted) return;
+      context.go('/login');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

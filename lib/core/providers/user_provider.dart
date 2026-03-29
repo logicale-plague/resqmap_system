@@ -21,6 +21,11 @@ extension UserDatabaseExtensions on DatabaseService {
     );
   }
 
+  Future<void> clearCurrentUser() async {
+    final db = await database;
+    await db.delete('users');
+  }
+
   Future<User?> getCurrentUser() async {
     final db = await database;
     final maps = await db.query('users', limit: 1);
