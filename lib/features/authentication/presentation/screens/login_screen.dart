@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,11 +39,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      // Check if device is online
+      final isOnline = await ref.read(isOnlineProvider.future);
+
+      if (!isOnline) {
+        // Offline mode: try local database
+        await _handleOfflineLogin(email);
+        return;
+      }
+
+      // Online mode: try Supabase authentication
       final authService = ref.read(authServiceProvider);
-      final response = await authService.signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      final response = await authService.signIn(email, password);
 
       if (!mounted) return;
 
@@ -67,6 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.go(destination);
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Login error: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
@@ -74,6 +86,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _handleOfflineLogin(String email) async {
+    try {
+      final db = ref.read(databaseServiceProvider);
+      final user = await db.getUserByEmail(email);
+
+      if (user == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'User not found locally. Please sign up or reconnect to internet.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Successfully logged in with cached credentials
+      await db.insertUser(user);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Logged in offline using cached credentials. Sync when connected.',
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      final destination = switch (user.role) {
+        UserPermission.admin => '/command-center',
+        UserPermission.staff => '/dashboard',
+        UserPermission.user => '/map',
+      };
+      context.go(destination);
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Offline login error: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Offline login failed: $e')));
     }
   }
 

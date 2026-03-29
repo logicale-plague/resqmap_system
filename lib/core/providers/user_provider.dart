@@ -58,6 +58,25 @@ extension UserDatabaseExtensions on DatabaseService {
     return userFromLocalDbMap(raw, cipher: piiCipher);
   }
 
+  Future<User?> getUserByEmail(String email) async {
+    final db = await database;
+    final maps = await db.query('users');
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    final piiCipher = UserPiiCipher.instance();
+
+    for (final raw in maps) {
+      final user = await userFromLocalDbMap(raw, cipher: piiCipher);
+      if (user.email == email) {
+        return user;
+      }
+    }
+
+    return null;
+  }
+
   bool _isEncryptedOrNull(Object? value, UserPiiCipher cipher) {
     if (value == null) {
       return true;

@@ -4,30 +4,36 @@ import 'package:kalig_onan_evac_system/core/services/user_pii_cipher.dart';
 Map<String, dynamic> userToMap(User user) {
   return {
     "id": user.id,
-    "latitude": user.latitude,
-    "longitude": user.longitude,
-    "postalCode": user.postalCode,
-    "fullAddress": user.fullAddress,
     "username": user.username,
     "email": user.email,
-    "dateOfBirth": user.dateOfBirth.toIso8601String(),
+    "date_of_birth": user.dateOfBirth.toIso8601String(),
     "role": user.role.toCode(),
-    "createdAt": user.createdAt.toIso8601String(),
+    "created_at": user.createdAt.toIso8601String(),
   };
 }
 
 User userFromMap(Map<String, dynamic> map) {
+  T _read<T>(String snakeCase, String camelCase) {
+    final value = map[snakeCase] ?? map[camelCase];
+    if (value is T) {
+      return value;
+    }
+    throw FormatException(
+      'Missing or invalid field: $snakeCase/$camelCase (${value.runtimeType})',
+    );
+  }
+
   return User(
-    id: map["id"] as String,
-    latitude: (map["latitude"] as num?)?.toDouble(),
-    longitude: (map["longitude"] as num?)?.toDouble(),
-    postalCode: map["postalCode"] as String?,
-    fullAddress: map["fullAddress"] as String?,
-    username: map["username"] as String,
-    email: map["email"] as String,
-    dateOfBirth: DateTime.parse(map["dateOfBirth"] as String),
+    id: _read<String>("id", "id"),
+    latitude: null,
+    longitude: null,
+    postalCode: null,
+    fullAddress: null,
+    username: _read<String>("username", "username"),
+    email: _read<String>("email", "email"),
+    dateOfBirth: DateTime.parse(_read<String>("date_of_birth", "dateOfBirth")),
     role: UserPermissionSerialization.fromCode(map["role"]),
-    createdAt: DateTime.parse(map["createdAt"] as String),
+    createdAt: DateTime.parse(_read<String>("created_at", "createdAt")),
   );
 }
 
