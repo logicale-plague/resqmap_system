@@ -7,7 +7,7 @@ declare const Deno: {
 };
 
 // @ts-ignore URL imports are resolved by the Supabase Edge (Deno) runtime.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { createClient } from '@supabase/supabase-js';
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
@@ -44,6 +44,52 @@ function parseAndValidateUserId(body: DeleteUserRequest): string {
   return userId;
 }
 
+async function verifyAndAuthorizeRequest(
+  req: Request,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  targetUserId: string
+): Promise<{ isAuthorized: boolean; error?: string }> {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader == null || typeof authHeader !== 'string') {
+    return { isAuthorized: false, error: 'Missing authorization header.' };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  if (token.length === 0) {
+    return { isAuthorized: false, error: 'Invalid bearer token format.' };
+  }
+
+  try {
+    const authClient = createClient(supabaseUrl, serviceRoleKey);
+    const { data: user, error } = await authClient.auth.getUser(token);
+
+    if (error != null || user?.user?.id == null) {
+      return { isAuthorized: false, error: 'Invalid or expired token.' };
+    }
+
+    const callerId = user.user.id;
+
+    // Authorization: caller must be the same user or have admin role.
+    const isOwnDecision = callerId === targetUserId;
+    const isAdmin =
+      user.user.user_metadata?.role === 'admin' ||
+      user.user.app_metadata?.role === 'admin';
+
+    if (!isOwnDecision && !isAdmin) {
+      return {
+        isAuthorized: false,
+        error: 'Not authorized to delete this user.',
+      };
+    }
+
+    return { isAuthorized: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Token verification failed.';
+    return { isAuthorized: false, error: message };
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return jsonResponse(405, {
@@ -74,9 +120,25 @@ Deno.serve(async (req: Request) => {
     try {
       userId = parseAndValidateUserId(requestBody);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Invalid request payload.';
+        console.error('User ID validation error:', e);
       return jsonResponse(400, {
-        error: message,
+        error: 'Unexpected server error during payload validation.',
+      });
+    }
+
+    const authResult = await verifyAndAuthorizeRequest(
+      req,
+      supabaseUrl,
+      serviceRoleKey,
+      userId
+    );
+
+    if (!authResult.isAuthorized) {
+      const statusCode = authResult.error?.includes('authorization')
+        ? 403
+        : 401;
+      return jsonResponse(statusCode, {
+        error: authResult.error ?? 'Authorization failed.',
       });
     }
 
