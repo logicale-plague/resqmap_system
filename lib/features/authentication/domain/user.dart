@@ -1,5 +1,49 @@
 enum UserPermission { admin, staff, user }
 
+extension UserPermissionSerialization on UserPermission {
+  String toCode() {
+    switch (this) {
+      case UserPermission.admin:
+        return 'admin';
+      case UserPermission.staff:
+        return 'staff';
+      case UserPermission.user:
+        return 'user';
+    }
+  }
+
+  static UserPermission fromCode(Object? rawRole) {
+    if (rawRole is String) {
+      switch (rawRole) {
+        case 'admin':
+          return UserPermission.admin;
+        case 'staff':
+          return UserPermission.staff;
+        case 'user':
+          return UserPermission.user;
+      }
+      throw FormatException('Unknown user role code: $rawRole');
+    }
+
+    // Backward compatibility for legacy rows serialized with enum ordinals.
+    if (rawRole is int) {
+      switch (rawRole) {
+        case 0:
+          return UserPermission.admin;
+        case 1:
+          return UserPermission.staff;
+        case 2:
+          return UserPermission.user;
+      }
+      throw FormatException('Unknown legacy user role ordinal: $rawRole');
+    }
+
+    throw FormatException(
+      'Invalid user role value: $rawRole (${rawRole.runtimeType})',
+    );
+  }
+}
+
 class User {
   final String id;
   final double? latitude;

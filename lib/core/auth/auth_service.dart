@@ -35,20 +35,48 @@ class AuthService {
       throw Exception('Failed to create user.');
     }
 
+    final userWithId = User(
+      id: supabaseUser.id,
+      latitude: user.latitude,
+      longitude: user.longitude,
+      postalCode: user.postalCode,
+      fullAddress: user.fullAddress,
+      username: user.username,
+      email: user.email,
+      dateOfBirth: user.dateOfBirth,
+      role: user.role,
+      createdAt: DateTime.now(),
+    );
+
     try {
-      final userWithId = User(
-        id: supabaseUser.id,
-        username: user.username,
-        email: user.email,
-        dateOfBirth: user.dateOfBirth,
-        createdAt: DateTime.now(),
-      );
       await _supabase.from('users').insert(userToMap(userWithId));
-      return response;
     } catch (e) {
-      // Handle any errors that occur during user creation
-      throw Exception('Failed to create user in database: $e');
+      final cleanupError = await _deleteAuthUserSafely(supabaseUser.id);
+      final cleanupNote = cleanupError == null
+          ? ''
+          : ' Cleanup failed: $cleanupError';
+      throw Exception('Failed to create user profile: $e.$cleanupNote');
     }
+
+    try {
+      await _databaseService.insertUser(userWithId);
+    } catch (e) {
+      final profileCleanupError = await _deleteRemoteProfileSafely(
+        supabaseUser.id,
+      );
+      final authCleanupError = await _deleteAuthUserSafely(supabaseUser.id);
+      final cleanupMessages = <String>[
+        if (profileCleanupError != null)
+          'profile cleanup failed: $profileCleanupError',
+        if (authCleanupError != null) 'auth cleanup failed: $authCleanupError',
+      ];
+      final cleanupNote = cleanupMessages.isEmpty
+          ? ''
+          : ' Cleanup failed: ${cleanupMessages.join('; ')}';
+      throw Exception('Failed to persist local user profile: $e.$cleanupNote');
+    }
+
+    return response;
   }
 
   Future<AuthResponse> signIn(String email, String password) async {
@@ -83,5 +111,23 @@ class AuthService {
 
     final user = userFromMap(data);
     await _databaseService.insertUser(user);
+  }
+
+  Future<String?> _deleteAuthUserSafely(String userId) async {
+    try {
+      await _supabase.auth.admin.deleteUser(userId);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> _deleteRemoteProfileSafely(String userId) async {
+    try {
+      await _supabase.from('users').delete().eq('id', userId);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
   }
 }
