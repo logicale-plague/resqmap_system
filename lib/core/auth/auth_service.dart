@@ -91,7 +91,6 @@ class AuthService {
       return response;
     }
     await _fetchAndStoreUser(supabaseUser.id);
-    // await _fetchAndStoreUser(supabaseUser.id);
 
     return response;
   }
@@ -115,7 +114,13 @@ class AuthService {
 
   Future<String?> _deleteAuthUserSafely(String userId) async {
     try {
-      await _supabase.auth.admin.deleteUser(userId);
+      final response = await _supabase.functions.invoke(
+        'delete-user',
+        body: {'userId': userId},
+      );
+      if (response.status != 200) {
+        throw Exception('Server deletion failed: ${response.data}');
+      }
       return null;
     } catch (e) {
       return e.toString();

@@ -89,6 +89,11 @@ Future<Map<String, dynamic>> rotateLocalUserPiiFields(
   final decryptedDateOfBirth = await cipher.decryptNullable(
     map["dateOfBirth"] as String?,
   );
+  if (decryptedEmail == null || decryptedDateOfBirth == null) {
+    throw const FormatException(
+      'Missing required encrypted user fields for rotation.',
+    );
+  }
   final decryptedPostalCode = await cipher.decryptNullable(
     map["postalCode"] as String?,
   );
@@ -98,8 +103,8 @@ Future<Map<String, dynamic>> rotateLocalUserPiiFields(
 
   return {
     ...map,
-    "email": (await cipher.encryptNullable(decryptedEmail))!,
-    "dateOfBirth": (await cipher.encryptNullable(decryptedDateOfBirth))!,
+    "email": await cipher.encryptNullable(decryptedEmail),
+    "dateOfBirth": await cipher.encryptNullable(decryptedDateOfBirth),
     "postalCode": await cipher.encryptNullable(decryptedPostalCode),
     "fullAddress": await cipher.encryptNullable(decryptedFullAddress),
   };
