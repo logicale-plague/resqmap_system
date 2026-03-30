@@ -23,7 +23,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -106,6 +106,22 @@ class DatabaseService {
         value TEXT NOT NULL
       )
     ''');
+
+    // Create users table
+    await db.execute('''
+      CREATE TABLE users(
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        email TEXT NOT NULL,
+        dateOfBirth TEXT NOT NULL,
+        role INTEGER NOT NULL DEFAULT 2,
+        latitude REAL,
+        longitude REAL,
+        postalCode TEXT,
+        fullAddress TEXT,
+        createdAt TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -145,6 +161,23 @@ class DatabaseService {
     if (oldVersion < 3) {
       await db.execute('''
         ALTER TABLE stations ADD COLUMN active INTEGER NOT NULL DEFAULT 1
+      ''');
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users(
+          id TEXT PRIMARY KEY,
+          username TEXT NOT NULL,
+          email TEXT NOT NULL,
+          dateOfBirth TEXT NOT NULL,
+          role INTEGER NOT NULL DEFAULT 2,
+          latitude REAL,
+          longitude REAL,
+          postalCode TEXT,
+          fullAddress TEXT,
+          createdAt TEXT NOT NULL
+        )
       ''');
     }
   }

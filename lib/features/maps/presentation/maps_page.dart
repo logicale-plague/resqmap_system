@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/providers/map_provider.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/add_evac_sheet.dart';
-import 'package:kalig_onan_evac_system/features/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 class MapsPage extends ConsumerStatefulWidget {

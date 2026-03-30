@@ -1,14 +1,12 @@
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/admin_screens_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/staff_screens_index.dart';
-import 'package:kalig_onan_evac_system/features/centers/presentation/screens/homePage.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
+import '../indices/auth_screens_index.dart';
 
 final router = GoRouter(
-  initialLocation: '/homePage',
+  initialLocation: '/centers',
   routes: [
-    // MARU DEBUG //
-    GoRoute(path: '/homePage', builder: (context, state) => const HomePage()),
     GoRoute(
       path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
@@ -29,23 +27,7 @@ final router = GoRouter(
       path: '/supplies',
       builder: (context, state) => const SuppliesScreen(),
     ),
-    GoRoute(
-      path: '/centers',
-      builder: (context, state) => const CentersScreen(),
-    ),
     GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
-    GoRoute(
-      path: '/analytics',
-      builder: (context, state) => const VisualAnalyticsScreen(),
-    ),
-    GoRoute(
-      path: '/monitoring',
-      builder: (context, state) => const ResourceMonitoringScreen(),
-    ),
-    GoRoute(
-      path: '/command-center',
-      builder: (context, state) => const CommandCenterDashboardScreen(),
-    ),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
   ],
 );
