@@ -1,4 +1,5 @@
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
+import 'package:kalig_onan_evac_system/core/services/email_hash_service.dart';
 import 'package:kalig_onan_evac_system/core/services/user_pii_cipher.dart';
 
 Map<String, dynamic> userToMap(User user) {
@@ -51,6 +52,7 @@ Future<Map<String, dynamic>> userToLocalDbMap(
     "fullAddress": await piiCipher.encryptNullable(user.fullAddress),
     "username": user.username,
     "email": (await piiCipher.encryptNullable(user.email))!,
+    "emailHash": await EmailHashService.hashNormalizedEmail(user.email),
     "dateOfBirth": (await piiCipher.encryptNullable(
       user.dateOfBirth.toIso8601String(),
     ))!,
@@ -112,6 +114,7 @@ Future<Map<String, dynamic>> rotateLocalUserPiiFields(
   return {
     ...map,
     "email": await cipher.encryptNullable(decryptedEmail),
+    "emailHash": await EmailHashService.hashNormalizedEmail(decryptedEmail),
     "dateOfBirth": await cipher.encryptNullable(decryptedDateOfBirth),
     "postalCode": await cipher.encryptNullable(decryptedPostalCode),
     "fullAddress": await cipher.encryptNullable(decryptedFullAddress),

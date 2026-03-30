@@ -92,9 +92,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleOfflineLogin(String email, String password) async {
     try {
       final db = ref.read(databaseServiceProvider);
-      final user = await db.verifyLocalUserCredentials(email, password);
+      final verification = await db.verifyLocalUserCredentialsDetailed(
+        email,
+        password,
+      );
 
-      if (user == null) {
+      if (verification.status ==
+          LocalCredentialVerificationStatus.userNotFound) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -102,6 +106,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'User not found locally. Please sign up or reconnect to internet.',
             ),
           ),
+        );
+        return;
+      }
+
+      if (verification.status ==
+          LocalCredentialVerificationStatus.wrongPassword) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Incorrect password for local account.'),
+          ),
+        );
+        return;
+      }
+
+      final user = verification.user;
+      if (user == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offline login unavailable.')),
         );
         return;
       }

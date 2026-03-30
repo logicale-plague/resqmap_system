@@ -7,6 +7,7 @@ import 'package:cryptography/cryptography.dart';
 class PasswordHasher {
   static const _algorithmName = 'pbkdf2_sha256';
   static const _iterations = 100000;
+  static const _maxIterations = 10000000;
   static const _saltLength = 16;
   static const _keyLength = 32;
 
@@ -45,7 +46,7 @@ class PasswordHasher {
     }
 
     final iterations = int.tryParse(parts[1]);
-    if (iterations == null || iterations <= 0) {
+    if (iterations == null || iterations <= 0 || iterations > _maxIterations) {
       return false;
     }
 
