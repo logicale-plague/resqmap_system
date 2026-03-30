@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
-import 'package:kalig_onan_evac_system/core/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,11 +39,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      // Check if device is online (force refresh for latest status)
+      final isOnline = await ref.refresh(isOnlineProvider.future);
+
+      if (!isOnline) {
+        // Offline mode: try local database
+        await _handleOfflineLogin(email, password);
+        return;
+      }
+
+      // Online mode: try Supabase authentication
       final authService = ref.read(authServiceProvider);
-      final response = await authService.signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      final response = await authService.signIn(email, password);
 
       if (!mounted) return;
 
@@ -67,13 +78,95 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.go(destination);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      debugPrint('Login error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login failed. Please try again.')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _handleOfflineLogin(String email, String password) async {
+    try {
+      final db = ref.read(databaseServiceProvider);
+      final verification = await db.verifyLocalUserCredentialsDetailed(
+        email,
+        password,
+      );
+
+      if (verification.status ==
+          LocalCredentialVerificationStatus.userNotFound) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'User not found locally. Please sign up or reconnect to internet.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (verification.status ==
+          LocalCredentialVerificationStatus.wrongPassword) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Incorrect password for local account.'),
+          ),
+        );
+        return;
+      }
+
+      if (verification.status ==
+          LocalCredentialVerificationStatus.missingCachedHash) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Local credentials need refreshing. Please reconnect to internet.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final user = verification.user;
+      if (user == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offline login unavailable.')),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Logged in offline using cached credentials. Sync when connected.',
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      final destination = switch (user.role) {
+        UserPermission.admin => '/command-center',
+        UserPermission.staff => '/dashboard',
+        UserPermission.user => '/map',
+      };
+      context.go(destination);
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Offline login error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Offline login failed. Please try again.'),
+        ),
+      );
     }
   }
 

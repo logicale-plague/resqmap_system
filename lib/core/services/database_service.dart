@@ -23,7 +23,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -114,14 +114,19 @@ class DatabaseService {
         username TEXT NOT NULL,
         email TEXT NOT NULL,
         dateOfBirth TEXT NOT NULL,
-        role INTEGER NOT NULL DEFAULT 2,
+        passwordHash TEXT,
+        role TEXT NOT NULL DEFAULT 'user',
         latitude REAL,
         longitude REAL,
         postalCode TEXT,
         fullAddress TEXT,
+        emailHash TEXT,
         createdAt TEXT NOT NULL
       )
     ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_users_emailHash ON users(emailHash)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -180,6 +185,138 @@ class DatabaseService {
         )
       ''');
     }
+
+    if (oldVersion < 5) {
+      await db.execute('''
+        ALTER TABLE users ADD COLUMN passwordHash TEXT
+      ''');
+    }
+
+    if (oldVersion < 6) {
+      final usersTableExists = await _tableExists(db, 'users');
+      if (usersTableExists) {
+        await db.execute('ALTER TABLE users RENAME TO users_legacy_v5');
+
+        await db.execute('''
+          CREATE TABLE users(
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            dateOfBirth TEXT NOT NULL,
+            passwordHash TEXT,
+            role TEXT NOT NULL DEFAULT 'user',
+            latitude REAL,
+            longitude REAL,
+            postalCode TEXT,
+            fullAddress TEXT,
+            emailHash TEXT,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+
+        final legacyHasPasswordHash = await _columnExists(
+          db,
+          table: 'users_legacy_v5',
+          column: 'passwordHash',
+        );
+        final legacyHasEmailHash = await _columnExists(
+          db,
+          table: 'users_legacy_v5',
+          column: 'emailHash',
+        );
+        final passwordHashExpr = legacyHasPasswordHash
+            ? 'passwordHash'
+            : 'NULL AS passwordHash';
+        final emailHashExpr = legacyHasEmailHash
+            ? 'emailHash'
+            : 'NULL AS emailHash';
+
+        await db.execute('''
+          INSERT INTO users (
+            id,
+            username,
+            email,
+            dateOfBirth,
+            passwordHash,
+            role,
+            latitude,
+            longitude,
+            postalCode,
+            fullAddress,
+            emailHash,
+            createdAt
+          )
+          SELECT
+            id,
+            username,
+            email,
+            dateOfBirth,
+            $passwordHashExpr,
+            CASE
+              WHEN typeof(role) = 'integer' THEN
+                CASE role
+                  WHEN 0 THEN 'admin'
+                  WHEN 1 THEN 'staff'
+                  ELSE 'user'
+                END
+              WHEN role IN ('admin', 'staff', 'user') THEN role
+              ELSE 'user'
+            END AS role,
+            latitude,
+            longitude,
+            postalCode,
+            fullAddress,
+            $emailHashExpr,
+            createdAt
+          FROM users_legacy_v5
+        ''');
+
+        await db.execute('DROP TABLE users_legacy_v5');
+      } else {
+        await db.execute('''
+          CREATE TABLE users(
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            dateOfBirth TEXT NOT NULL,
+            passwordHash TEXT,
+            role TEXT NOT NULL DEFAULT 'user',
+            latitude REAL,
+            longitude REAL,
+            postalCode TEXT,
+            fullAddress TEXT,
+            emailHash TEXT,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+      }
+
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_users_emailHash ON users(emailHash)',
+      );
+    }
+  }
+
+  Future<bool> _tableExists(Database db, String table) async {
+    final rows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      [table],
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<bool> _columnExists(
+    Database db, {
+    required String table,
+    required String column,
+  }) async {
+    final rows = await db.rawQuery('PRAGMA table_info($table)');
+    for (final row in rows) {
+      if (row['name'] == column) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // Future<void> _backfillCenterOccupancy(Database db) async {
