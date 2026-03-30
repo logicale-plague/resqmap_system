@@ -122,6 +122,8 @@ class AuthService {
     }
 
     final user = userFromMap(data);
+    // Keep local auth cache scoped to the currently authenticated user.
+    await _databaseService.clearCurrentUser();
     await _databaseService.insertUser(user, password: password);
   }
 

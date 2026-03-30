@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_list_item_card.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_state/app_error_state.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_state/app_loading_state.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/presentation/providers/evacuee_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/providers/station_providers.dart';
+import 'package:kalig_onan_evac_system/features/staff/sync/application/sync_service.dart';
 
 import '../../../../../core/indices/models_index.dart';
 
@@ -209,6 +214,8 @@ Future<void> openStationDialog(
 
     if (context.mounted) {
       localRef.invalidate(stationsByCenterProvider(center.id));
+      // localRef.invalidate(currentCenterProvider);
+      localRef.invalidate(eligibleStationsProvider);
     }
   } finally {
     nameController.dispose();
@@ -221,6 +228,8 @@ Future<void> openStationArrivalsSheet(
   WidgetRef ref,
   Station station,
 ) async {
+  final editingIndexNotifier = ValueNotifier<int?>(-1);
+
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -258,46 +267,89 @@ Future<void> openStationArrivalsSheet(
                             );
                           }
 
-                          return ListView.builder(
-                            controller: controller,
-                            itemCount: evacuees.length,
-                            itemBuilder: (context, index) {
-                              final evacuee = evacuees[index];
-                              return AppListItemCard(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                title: Text('Arrival ${index + 1}'),
-                                subtitle: Text(
-                                  '${ageLabel(evacuee.ageGroup)} | ${medicalLabel(evacuee.medicalCondition)}',
-                                ),
-                                trailing: TextButton(
-                                  onPressed: () async {
-                                    final localSheetRef = sheetRef;
-                                    final name = await _promptName(
-                                      context,
-                                      'Register Name',
-                                    );
-                                    if (name == null || name.trim().isEmpty) {
-                                      return;
-                                    }
+                          return ValueListenableBuilder<int?>(
+                            valueListenable: editingIndexNotifier,
+                            builder: (context, editingIndex, _) {
+                              return ListView.builder(
+                                controller: controller,
+                                itemCount: evacuees.length,
+                                itemBuilder: (context, index) {
+                                  final evacuee = evacuees[index];
 
-                                    final evacueeRepository = localSheetRef
-                                        .read(evacueeRepositoryProvider);
-                                    await evacueeRepository.update(
-                                      evacuee.copyWith(name: name.trim()),
+                                  if (editingIndex == index) {
+                                    // Inline edit mode
+                                    return _InlineRenameCard(
+                                      evacuee: evacuee,
+                                      index: index,
+                                      onSave: (name) async {
+                                        if (name.trim().isEmpty) {
+                                          editingIndexNotifier.value = -1;
+                                          return;
+                                        }
+
+                                        try {
+                                          final dbService = sheetRef.read(
+                                            databaseServiceProvider,
+                                          );
+                                          final db = await dbService.database;
+                                          await db.update(
+                                            'evacuees',
+                                            {'name': name.trim(), 'synced': 0},
+                                            where: 'id = ?',
+                                            whereArgs: [evacuee.id],
+                                          );
+                                          if (context.mounted) {
+                                            // Invalidate provider to refresh list with updated data
+                                            sheetRef.invalidate(
+                                              unnamedEvacueesByStationProvider(
+                                                station.id,
+                                              ),
+                                            );
+                                            // Trigger sync to upload renamed evacuee to remote
+                                            final syncService = sheetRef.read(
+                                              syncServiceProvider,
+                                            );
+                                            unawaited(syncService.syncNow());
+                                            editingIndexNotifier.value = -1;
+                                          }
+                                        } catch (e, stackTrace) {
+                                          debugPrint(
+                                            'Rename evacuee failed: $e\n$stackTrace',
+                                          );
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Error updating: $e',
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                      onCancel: () {
+                                        editingIndexNotifier.value = -1;
+                                      },
                                     );
-                                    if (context.mounted) {
-                                      localSheetRef.invalidate(
-                                        unnamedEvacueesByStationProvider(
-                                          station.id,
-                                        ),
-                                      );
-                                      localSheetRef.invalidate(
-                                        allEvacueesProvider,
-                                      );
-                                    }
-                                  },
-                                  child: const Text('Register Name'),
-                                ),
+                                  }
+
+                                  // Normal display mode
+                                  return AppListItemCard(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    title: Text('Arrival ${index + 1}'),
+                                    subtitle: Text(
+                                      '${ageLabel(evacuee.ageGroup)} | ${medicalLabel(evacuee.medicalCondition)}',
+                                    ),
+                                    trailing: TextButton(
+                                      onPressed: () {
+                                        editingIndexNotifier.value = index;
+                                      },
+                                      child: const Text('Register Name'),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           );
@@ -318,35 +370,79 @@ Future<void> openStationArrivalsSheet(
   );
 }
 
-Future<String?> _promptName(BuildContext context, String title) async {
-  final controller = TextEditingController();
-  try {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Enter evacuee name'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-    return result;
-  } finally {
+class _InlineRenameCard extends StatefulWidget {
+  final Evacuee evacuee;
+  final int index;
+  final Function(String name) onSave;
+  final VoidCallback onCancel;
+
+  const _InlineRenameCard({
+    required this.evacuee,
+    required this.index,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  @override
+  State<_InlineRenameCard> createState() => _InlineRenameCardState();
+}
+
+class _InlineRenameCardState extends State<_InlineRenameCard> {
+  late final TextEditingController controller;
+  late final FocusNode focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController();
+    focusNode = FocusNode();
+    // Auto-focus the input field
+    Future.microtask(() {
+      FocusScope.of(context).requestFocus(focusNode);
+    });
+  }
+
+  @override
+  void dispose() {
     controller.dispose();
+    focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppListItemCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      title: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        decoration: const InputDecoration(
+          hintText: 'Enter evacuee name',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: () {
+              focusNode.unfocus();
+              widget.onCancel();
+            },
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              focusNode.unfocus();
+              widget.onSave(controller.text);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

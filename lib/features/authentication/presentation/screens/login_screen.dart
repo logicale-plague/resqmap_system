@@ -65,7 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final db = ref.read(databaseServiceProvider);
-      final currentUser = await db.getCurrentUser();
+      final currentUser = await db.getUserByEmail(email);
 
       if (!mounted) return;
 
