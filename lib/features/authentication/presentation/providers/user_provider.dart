@@ -20,7 +20,12 @@ class LocalAuthUser {
   const LocalAuthUser({required this.user, required this.passwordHash});
 }
 
-enum LocalCredentialVerificationStatus { success, userNotFound, wrongPassword }
+enum LocalCredentialVerificationStatus {
+  success,
+  userNotFound,
+  wrongPassword,
+  missingCachedHash,
+}
 
 class LocalCredentialVerificationResult {
   final LocalCredentialVerificationStatus status;
@@ -36,6 +41,9 @@ class LocalCredentialVerificationResult {
 
   const LocalCredentialVerificationResult.wrongPassword()
     : this._(LocalCredentialVerificationStatus.wrongPassword, null);
+
+  const LocalCredentialVerificationResult.missingCachedHash()
+    : this._(LocalCredentialVerificationStatus.missingCachedHash, null);
 }
 
 extension UserDatabaseExtensions on DatabaseService {
@@ -224,7 +232,7 @@ extension UserDatabaseExtensions on DatabaseService {
 
     final passwordHash = localAuthUser.passwordHash;
     if (passwordHash == null || passwordHash.isEmpty) {
-      return const LocalCredentialVerificationResult.wrongPassword();
+      return const LocalCredentialVerificationResult.missingCachedHash();
     }
 
     final isValid = await PasswordHasher.verifyPassword(
