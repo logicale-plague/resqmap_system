@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
-import 'package:kalig_onan_evac_system/core/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/authentication/data/user_dto.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';

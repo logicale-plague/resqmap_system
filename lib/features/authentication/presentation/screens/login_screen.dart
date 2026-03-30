@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
-import 'package:kalig_onan_evac_system/core/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 
@@ -42,8 +42,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      // Check if device is online
-      final isOnline = await ref.read(isOnlineProvider.future);
+      // Check if device is online (force refresh for latest status)
+      final isOnline = await ref.refresh(isOnlineProvider.future);
 
       if (!isOnline) {
         // Offline mode: try local database
@@ -79,9 +79,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       debugPrint('Login error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login failed. Please try again.')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -121,6 +121,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
+      if (verification.status ==
+          LocalCredentialVerificationStatus.missingCachedHash) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Local credentials need refreshing. Please reconnect to internet.',
+            ),
+          ),
+        );
+        return;
+      }
+
       final user = verification.user;
       if (user == null) {
         if (!mounted) return;
@@ -149,9 +162,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       debugPrint('Offline login error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Offline login failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Offline login failed. Please try again.'),
+        ),
+      );
     }
   }
 

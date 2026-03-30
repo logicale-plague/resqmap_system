@@ -8,6 +8,10 @@ Map<String, dynamic> userToMap(User user) {
     "username": user.username,
     "email": user.email,
     "date_of_birth": user.dateOfBirth.toIso8601String(),
+    "latitude": user.latitude,
+    "longitude": user.longitude,
+    "postal_code": user.postalCode,
+    "full_address": user.fullAddress,
     "role": user.role.toCode(),
     "created_at": user.createdAt.toIso8601String(),
   };
@@ -24,12 +28,17 @@ User userFromMap(Map<String, dynamic> map) {
     );
   }
 
+  T? _readOptional<T>(String snakeCase, String camelCase) {
+    final value = map[snakeCase] ?? map[camelCase];
+    return value is T ? value : null;
+  }
+
   return User(
     id: _read<String>("id", "id"),
-    latitude: null,
-    longitude: null,
-    postalCode: null,
-    fullAddress: null,
+    latitude: _readOptional<num>("latitude", "latitude")?.toDouble(),
+    longitude: _readOptional<num>("longitude", "longitude")?.toDouble(),
+    postalCode: _readOptional<String>("postal_code", "postalCode"),
+    fullAddress: _readOptional<String>("full_address", "fullAddress"),
     username: _read<String>("username", "username"),
     email: _read<String>("email", "email"),
     dateOfBirth: DateTime.parse(_read<String>("date_of_birth", "dateOfBirth")),
