@@ -16,7 +16,6 @@ class _MapsPageState extends ConsumerState<MapsPage> {
   void _onMapCreated(MapboxMap mapboxMap) async {
     final controller = ref.read(mapControllerProvider.notifier);
     await controller.configureMap(mapboxMap);
-
     ref
         .read(mapControllerProvider)
         .pointAnnotationManager
@@ -101,35 +100,35 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     final mapProvider = ref.watch(mapControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black26,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Iloilo Crisis Map",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              "Scope: Brgy. San Jose",
-              style: TextStyle(fontSize: 12, color: Colors.white70),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.cloud_done_outlined,
-              color: Colors.greenAccent,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(icon: const Icon(Icons.layers_outlined), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-        ],
-      ),
-      extendBodyBehindAppBar: true,
+      // appBar: AppBar(
+      //   backgroundColor: Colors.black26,
+      //   elevation: 0,
+      //   title: Column(
+      //     crossAxisAlignment: CrossAxisAlignment.start,
+      //     children: [
+      //       const Text(
+      //         "Iloilo Crisis Map",
+      //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      //       ),
+      //       Text(
+      //         "Scope: Brgy. San Jose",
+      //         style: TextStyle(fontSize: 12, color: Colors.white70),
+      //       ),
+      //     ],
+      //   ),
+      //   actions: [
+      //     IconButton(
+      //       icon: const Icon(
+      //         Icons.cloud_done_outlined,
+      //         color: Colors.greenAccent,
+      //       ),
+      //       onPressed: () {},
+      //     ),
+      //     IconButton(icon: const Icon(Icons.layers_outlined), onPressed: () {}),
+      //     IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+      //   ],
+      // ),
+      // extendBodyBehindAppBar: true,
       body: MapWidget(
         key: const ValueKey("mapWidget"),
         onMapCreated: _onMapCreated,

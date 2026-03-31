@@ -1,4 +1,6 @@
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 import '../indices/staff_screens_index.dart';
 import '../indices/admin_screens_index.dart';
@@ -52,5 +54,13 @@ final router = GoRouter(
     ),
     GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/userhome',
+      builder: (context, state) => const UserHomeScreen(),
+    ),
   ],
 );
