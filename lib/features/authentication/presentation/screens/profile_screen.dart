@@ -190,12 +190,14 @@ class ProfileScreen extends ConsumerWidget {
                                           ),
                                           const SizedBox(width: 8),
                                           ElevatedButton(
-                                            onPressed: () {
+                                            onPressed: () async {
                                               Navigator.of(context).pop();
-                                              ref
+                                              await ref
                                                   .read(authServiceProvider)
                                                   .signOut();
-                                              context.go('/login');
+                                              if (context.mounted) {
+                                                context.go('/login');
+                                              }
                                             },
                                             child: const Text('Logout'),
                                           ),
