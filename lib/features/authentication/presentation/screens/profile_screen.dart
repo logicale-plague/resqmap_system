@@ -100,7 +100,7 @@ class ProfileScreen extends ConsumerWidget {
                       _buildInfoCard(
                         icon: Icons.location_on,
                         title: 'Location',
-                        value: currentUserAsync.value?.fullAddress ?? 'N/A',
+                        value: user.fullAddress ?? 'N/A',
                         context: context,
                       ),
                       const SizedBox(height: 16),
@@ -108,7 +108,7 @@ class ProfileScreen extends ConsumerWidget {
                       _buildInfoCard(
                         icon: Icons.email,
                         title: 'Email',
-                        value: currentUserAsync.value?.email ?? 'N/A',
+                        value: user.email,
                         context: context,
                       ),
                       const SizedBox(height: 16),
@@ -158,7 +158,7 @@ class ProfileScreen extends ConsumerWidget {
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder: (context) => Dialog(
+                              builder: (dialogContext) => Dialog(
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -184,14 +184,15 @@ class ProfileScreen extends ConsumerWidget {
                                             MainAxisAlignment.end,
                                         children: [
                                           TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
+                                            onPressed: () => Navigator.of(
+                                              dialogContext,
+                                            ).pop(),
                                             child: const Text('Cancel'),
                                           ),
                                           const SizedBox(width: 8),
                                           ElevatedButton(
                                             onPressed: () async {
-                                              Navigator.of(context).pop();
+                                              Navigator.of(dialogContext).pop();
                                               await ref
                                                   .read(authServiceProvider)
                                                   .signOut();
