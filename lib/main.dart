@@ -54,6 +54,7 @@ class MainApp extends ConsumerWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.indigo,
+          primary: Colors.cyan[900],
           brightness: Brightness.light,
         ),
         useMaterial3: true,

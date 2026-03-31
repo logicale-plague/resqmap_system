@@ -18,7 +18,6 @@ class _MapsPageState extends ConsumerState<MapsPage> {
   void _onMapCreated(MapboxMap mapboxMap) async {
     final controller = ref.read(mapControllerProvider.notifier);
     await controller.configureMap(mapboxMap);
-
     ref
         .read(mapControllerProvider)
         .pointAnnotationManager

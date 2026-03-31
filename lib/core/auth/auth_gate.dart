@@ -5,6 +5,7 @@ import 'package:kalig_onan_evac_system/features/admin/command_center/presentatio
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 // import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/login_screen.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/presentation/screens/centers_screen.dart';
 
@@ -41,10 +42,8 @@ class AuthGate extends ConsumerWidget {
                   return const AdminShell();
                 case UserPermission.staff:
                   return const CentersScreen();
-                default:
-                  return const LoginScreen(
-                    message: 'User role not recognized. Please log in again.',
-                  );
+                case UserPermission.user:
+                  return const UserHomeScreen();
               }
             },
             loading: () => const Scaffold(
