@@ -9,45 +9,39 @@ class CommandCenterDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Command Center Dashboard'),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Text(
-              'Overview Dashboard',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 24),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Text(
+            'Overview Dashboard',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 24),
 
-            // Statistics Grid
-            const _OverviewStatisticsGrid(),
-            const SizedBox(height: 32),
+          // Statistics Grid
+          const _OverviewStatisticsGrid(),
+          const SizedBox(height: 32),
 
-            // Supply Shortages Details
-            Text(
-              'Supply Shortage Details',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            const _SupplyShortagesList(),
-            const SizedBox(height: 32),
+          // Supply Shortages Details
+          Text(
+            'Supply Shortage Details',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          const _SupplyShortagesList(),
+          const SizedBox(height: 32),
 
-            // Overcrowded Centers Details
-            Text(
-              'Overcrowded Centers',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            const _OvercrowdedCentersSection(),
-          ],
-        ),
+          // Overcrowded Centers Details
+          Text(
+            'Overcrowded Centers',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          const _OvercrowdedCentersSection(),
+        ],
       ),
     );
   }

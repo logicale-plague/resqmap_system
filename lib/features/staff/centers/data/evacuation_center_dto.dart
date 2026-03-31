@@ -9,9 +9,25 @@ Map<String, dynamic> centerToMap(EvacuationCenter center) {
     'longitude': center.longitude,
     'totalCapacity': center.totalCapacity,
     'currentOccupancy': center.currentOccupancy,
-    'status': center.status.name,
+    'status': center.status.index,
     'medicalAvailable': center.medicalAvailable ? 1 : 0,
     'lastUpdated': center.lastUpdated.toIso8601String(),
+    'synced': center.synced ? 1 : 0,
+  };
+}
+
+Map<String, dynamic> centerToRemoteMap(EvacuationCenter center) {
+  return {
+    'id': center.id,
+    'name': center.name,
+    'command_center_id': center.commandCenterId,
+    'latitude': center.latitude,
+    'longitude': center.longitude,
+    'total_capacity': center.totalCapacity,
+    'current_occupancy': center.currentOccupancy,
+    'status': center.status.index,
+    'medical_available': center.medicalAvailable ? 1 : 0,
+    'last_updated': center.lastUpdated.toIso8601String(),
     'synced': center.synced ? 1 : 0,
   };
 }

@@ -70,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
 
       final destination = switch (currentUser?.role) {
-        UserPermission.admin => '/command-center',
+        UserPermission.admin => '/admin-shell',
         UserPermission.staff => '/dashboard',
         UserPermission.user => '/map',
         null => '/dashboard',
@@ -154,7 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
       final destination = switch (user.role) {
-        UserPermission.admin => '/command-center',
+        UserPermission.admin => '/admin-shell',
         UserPermission.staff => '/dashboard',
         UserPermission.user => '/map',
       };

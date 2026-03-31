@@ -82,11 +82,6 @@ class CentersScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/map'),
-        icon: const Icon(Icons.map),
-        label: const Text('View Map'),
-      ),
     );
   }
 }

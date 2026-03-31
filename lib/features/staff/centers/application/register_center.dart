@@ -46,7 +46,7 @@ class RegisterCenterUseCase {
 
     await _supabaseService
         .from('evacuation_centers')
-        .insert(centerToMap(center));
+        .insert(centerToRemoteMap(center));
 
     await _databaseService.upsertCenterFromRemote(
       center.copyWith(synced: true),
