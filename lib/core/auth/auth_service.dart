@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/user_provider.dart'
+    show currentUserProvider;
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
-import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
 import 'package:kalig_onan_evac_system/features/authentication/data/user_dto.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
@@ -10,17 +12,20 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 final authServiceProvider = Provider<AuthService>((ref) {
   final supabase = ref.watch(supabaseProvider);
   final db = ref.watch(databaseServiceProvider);
-  return AuthService(supabase: supabase, databaseService: db);
+  return AuthService(ref: ref, supabase: supabase, databaseService: db);
 });
 
 class AuthService {
+  final Ref _ref;
   final SupabaseClient _supabase;
   final DatabaseService _databaseService;
 
   AuthService({
+    required Ref ref,
     required SupabaseClient supabase,
     required DatabaseService databaseService,
-  }) : _supabase = supabase,
+  }) : _ref = ref,
+       _supabase = supabase,
        _databaseService = databaseService;
 
   Future<AuthResponse> signUp(User user, String password) async {
@@ -60,7 +65,7 @@ class AuthService {
     }
 
     try {
-      await _databaseService.insertUser(userWithId, password: password);
+      await _persistCurrentUserLocally(userWithId, password: password);
     } catch (e) {
       final profileCleanupError = await _deleteRemoteProfileSafely(
         supabaseUser.id,
@@ -107,6 +112,7 @@ class AuthService {
       await _supabase.auth.signOut();
     } finally {
       await _databaseService.clearCurrentUser();
+      _ref.invalidate(currentUserProvider);
     }
   }
 
@@ -122,7 +128,13 @@ class AuthService {
     }
 
     final user = userFromMap(data);
-    await _databaseService.insertUser(user, password: password);
+    await _persistCurrentUserLocally(user, password: password);
+  }
+
+  Future<void> _persistCurrentUserLocally(User user, {String? password}) async {
+    // Replace cached auth user in one transaction to avoid transient null reads.
+    await _databaseService.replaceCurrentUser(user, password: password);
+    _ref.invalidate(currentUserProvider);
   }
 
   Future<String?> _deleteAuthUserSafely(String userId) async {

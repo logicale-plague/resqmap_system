@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
-import 'package:kalig_onan_evac_system/core/widgets/app_list_item_card.dart';
-import 'package:kalig_onan_evac_system/core/widgets/app_state/app_error_state.dart';
-import 'package:kalig_onan_evac_system/core/widgets/app_state/app_loading_state.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/presentation/providers/evacuee_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/providers/station_providers.dart';
+import 'package:kalig_onan_evac_system/features/staff/stations/presentation/widgets/station_arrivals_sheet.dart';
 
 import '../../../../../core/indices/models_index.dart';
 
@@ -56,261 +54,93 @@ Future<void> openStationDialog(
   final localRef = ref;
 
   try {
-    final shouldSave = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              title: Text(station == null ? 'Add Station' : 'Edit Station'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Station Name',
-                        prefixIcon: Icon(Icons.edit),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: capacityController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Capacity',
-                        prefixIcon: Icon(Icons.people),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<AgeGroup?>(
-                      initialValue: selectedAgeGroup,
-                      decoration: const InputDecoration(
-                        labelText: 'Allowed Age Group',
-                        prefixIcon: Icon(Icons.people),
-                      ),
-                      items: [
-                        const DropdownMenuItem<AgeGroup?>(
-                          value: null,
-                          child: Text('Any Age Group'),
-                        ),
-                        ...AgeGroup.values.map(
-                          (ageGroup) => DropdownMenuItem<AgeGroup?>(
-                            value: ageGroup,
-                            child: Text(ageLabel(ageGroup)),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedAgeGroup = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<MedicalCondition?>(
-                      value: selectedMedical,
-                      decoration: const InputDecoration(
-                        labelText: 'Allowed Medical Condition',
-                        prefixIcon: Icon(Icons.local_hospital),
-                      ),
-                      items: [
-                        const DropdownMenuItem<MedicalCondition?>(
-                          value: null,
-                          child: Text('Any Condition'),
-                        ),
-                        ...MedicalCondition.values.map(
-                          (condition) => DropdownMenuItem<MedicalCondition?>(
-                            value: condition,
-                            child: Text(medicalLabel(condition)),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedMedical = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter a station name'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final parsedCapacity = int.tryParse(
-                      capacityController.text.trim(),
-                    );
-                    if (parsedCapacity == null || parsedCapacity < 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Capacity must be a non-negative number',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    Navigator.pop(dialogContext, true);
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
+    final shouldSave = await _showStationDialog(
+      context,
+      station,
+      nameController,
+      capacityController,
+      selectedAgeGroup: selectedAgeGroup,
+      selectedMedical: selectedMedical,
+      onAgeGroupChanged: (value) {
+        selectedAgeGroup = value;
+      },
+      onMedicalChanged: (value) {
+        selectedMedical = value;
       },
     );
 
     if (shouldSave != true) return;
 
-    final stationRepository = ref.read(stationRepositoryProvider);
-    final trimmedName = nameController.text.trim();
-    final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
-
-    final stationToSave =
-        (station ??
-                Station(
-                  id: IdService.newId(),
-                  name: trimmedName,
-                  evacuationCenterId: center.id,
-                  capacity: parsedCapacity,
-                ))
-            .copyWith(
-              name: trimmedName,
-              capacity: parsedCapacity,
-              allowedAgeGroup: selectedAgeGroup,
-              allowedMedicalCondition: selectedMedical,
-              clearAllowedAgeGroup: selectedAgeGroup == null,
-              clearAllowedMedicalCondition: selectedMedical == null,
-              synced: false,
-            );
-
-    if (station == null) {
-      await stationRepository.insert(stationToSave);
-    } else {
-      await stationRepository.update(stationToSave);
-    }
-
-    if (context.mounted) {
-      localRef.invalidate(stationsByCenterProvider(center.id));
-    }
+    await _saveStationChanges(
+      context,
+      localRef,
+      center,
+      station,
+      nameController,
+      capacityController,
+      selectedAgeGroup,
+      selectedMedical,
+    );
   } finally {
     nameController.dispose();
     capacityController.dispose();
   }
 }
 
-Future<void> openStationArrivalsSheet(
+Future<bool?> _showStationDialog(
   BuildContext context,
-  WidgetRef ref,
-  Station station,
-) async {
-  await showModalBottomSheet<void>(
+  Station? station,
+  TextEditingController nameController,
+  TextEditingController capacityController, {
+  required AgeGroup? selectedAgeGroup,
+  required MedicalCondition? selectedMedical,
+  required ValueChanged<AgeGroup?> onAgeGroupChanged,
+  required ValueChanged<MedicalCondition?> onMedicalChanged,
+}) {
+  return showDialog<bool>(
     context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) {
-      return DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        minChildSize: 0.4,
-        maxChildSize: 0.95,
-        builder: (context, controller) {
-          return Consumer(
-            builder: (context, sheetRef, _) {
-              final unnamedAsync = sheetRef.watch(
-                unnamedEvacueesByStationProvider(station.id),
-              );
-
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${station.name} - Unnamed Arrivals',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: unnamedAsync.when(
-                        data: (evacuees) {
-                          if (evacuees.isEmpty) {
-                            return const Center(
-                              child: Text(
-                                'No unnamed evacuees in this station.',
-                              ),
-                            );
-                          }
-
-                          return ListView.builder(
-                            controller: controller,
-                            itemCount: evacuees.length,
-                            itemBuilder: (context, index) {
-                              final evacuee = evacuees[index];
-                              return AppListItemCard(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                title: Text('Arrival ${index + 1}'),
-                                subtitle: Text(
-                                  '${ageLabel(evacuee.ageGroup)} | ${medicalLabel(evacuee.medicalCondition)}',
-                                ),
-                                trailing: TextButton(
-                                  onPressed: () async {
-                                    final localSheetRef = sheetRef;
-                                    final name = await _promptName(
-                                      context,
-                                      'Register Name',
-                                    );
-                                    if (name == null || name.trim().isEmpty) {
-                                      return;
-                                    }
-
-                                    final evacueeRepository = localSheetRef
-                                        .read(evacueeRepositoryProvider);
-                                    await evacueeRepository.update(
-                                      evacuee.copyWith(name: name.trim()),
-                                    );
-                                    if (context.mounted) {
-                                      localSheetRef.invalidate(
-                                        unnamedEvacueesByStationProvider(
-                                          station.id,
-                                        ),
-                                      );
-                                      localSheetRef.invalidate(
-                                        allEvacueesProvider,
-                                      );
-                                    }
-                                  },
-                                  child: const Text('Register Name'),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        loading: () => const AppLoadingState(),
-                        error: (err, stack) =>
-                            AppErrorState(error: err, stackTrace: stack),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          return AlertDialog(
+            title: Text(station == null ? 'Add Station' : 'Edit Station'),
+            content: _buildStationDialogForm(
+              nameController,
+              capacityController,
+              selectedAgeGroup,
+              selectedMedical,
+              (value) {
+                setDialogState(() {
+                  selectedAgeGroup = value;
+                });
+                onAgeGroupChanged(value);
+              },
+              (value) {
+                setDialogState(() {
+                  selectedMedical = value;
+                });
+                onMedicalChanged(value);
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (!_validateStationForm(
+                    context,
+                    nameController,
+                    capacityController,
+                  )) {
+                    return;
+                  }
+                  Navigator.pop(dialogContext, true);
+                },
+                child: const Text('Save'),
+              ),
+            ],
           );
         },
       );
@@ -318,35 +148,197 @@ Future<void> openStationArrivalsSheet(
   );
 }
 
-Future<String?> _promptName(BuildContext context, String title) async {
-  final controller = TextEditingController();
-  try {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Enter evacuee name'),
+Widget _buildStationDialogForm(
+  TextEditingController nameController,
+  TextEditingController capacityController,
+  AgeGroup? selectedAgeGroup,
+  MedicalCondition? selectedMedical,
+  ValueChanged<AgeGroup?> onAgeGroupChanged,
+  ValueChanged<MedicalCondition?> onMedicalChanged,
+) {
+  return SingleChildScrollView(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Station Name',
+            prefixIcon: Icon(Icons.edit),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: capacityController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Capacity',
+            prefixIcon: Icon(Icons.people),
+          ),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<AgeGroup?>(
+          initialValue: selectedAgeGroup,
+          decoration: const InputDecoration(
+            labelText: 'Allowed Age Group',
+            prefixIcon: Icon(Icons.people),
+          ),
+          items: [
+            const DropdownMenuItem<AgeGroup?>(
+              value: null,
+              child: Text('Any Age Group'),
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text),
-              child: const Text('Save'),
+            ...AgeGroup.values.map(
+              (ageGroup) => DropdownMenuItem<AgeGroup?>(
+                value: ageGroup,
+                child: Text(ageLabel(ageGroup)),
+              ),
             ),
           ],
+          onChanged: onAgeGroupChanged,
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<MedicalCondition?>(
+          value: selectedMedical,
+          decoration: const InputDecoration(
+            labelText: 'Allowed Medical Condition',
+            prefixIcon: Icon(Icons.local_hospital),
+          ),
+          items: [
+            const DropdownMenuItem<MedicalCondition?>(
+              value: null,
+              child: Text('Any Condition'),
+            ),
+            ...MedicalCondition.values.map(
+              (condition) => DropdownMenuItem<MedicalCondition?>(
+                value: condition,
+                child: Text(medicalLabel(condition)),
+              ),
+            ),
+          ],
+          onChanged: onMedicalChanged,
+        ),
+      ],
+    ),
+  );
+}
+
+bool _validateStationForm(
+  BuildContext context,
+  TextEditingController nameController,
+  TextEditingController capacityController,
+) {
+  if (nameController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please enter a station name')),
+    );
+    return false;
+  }
+
+  final parsedCapacity = int.tryParse(capacityController.text.trim());
+  if (parsedCapacity == null || parsedCapacity < 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Capacity must be a non-negative number')),
+    );
+    return false;
+  }
+
+  return true;
+}
+
+Future<void> _saveStationChanges(
+  BuildContext context,
+  WidgetRef ref,
+  EvacuationCenter center,
+  Station? station,
+  TextEditingController nameController,
+  TextEditingController capacityController,
+  AgeGroup? selectedAgeGroup,
+  MedicalCondition? selectedMedical,
+) async {
+  final stationRepository = ref.read(stationRepositoryProvider);
+  final trimmedName = nameController.text.trim();
+  final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
+
+  final stationToSave = _buildStationToSave(
+    station,
+    center,
+    trimmedName,
+    parsedCapacity,
+    selectedAgeGroup,
+    selectedMedical,
+  );
+
+  if (station == null) {
+    await stationRepository.insert(stationToSave);
+  } else {
+    await stationRepository.update(stationToSave);
+  }
+
+  if (!context.mounted) {
+    return;
+  }
+
+  ref.invalidate(stationsByCenterProvider(center.id));
+  // ref.invalidate(currentCenterProvider);
+  ref.invalidate(eligibleStationsProvider);
+}
+
+Station _buildStationToSave(
+  Station? station,
+  EvacuationCenter center,
+  String trimmedName,
+  int parsedCapacity,
+  AgeGroup? selectedAgeGroup,
+  MedicalCondition? selectedMedical,
+) {
+  return (station ??
+          Station(
+            id: IdService.newId(),
+            name: trimmedName,
+            evacuationCenterId: center.id,
+            capacity: parsedCapacity,
+          ))
+      .copyWith(
+        name: trimmedName,
+        capacity: parsedCapacity,
+        allowedAgeGroup: selectedAgeGroup,
+        allowedMedicalCondition: selectedMedical,
+        clearAllowedAgeGroup: selectedAgeGroup == null,
+        clearAllowedMedicalCondition: selectedMedical == null,
+        synced: false,
+      );
+}
+
+Future<void> openStationArrivalsSheet(
+  BuildContext context,
+  WidgetRef ref,
+  Station station,
+) async {
+  final editingIdNotifier = ValueNotifier<String?>(null);
+
+  try {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder: (context, controller) {
+            return StationArrivalsSheetContent(
+              station: station,
+              controller: controller,
+              editingIdNotifier: editingIdNotifier,
+            );
+          },
         );
       },
     );
-    return result;
   } finally {
-    controller.dispose();
+    editingIdNotifier.dispose();
   }
 }
 

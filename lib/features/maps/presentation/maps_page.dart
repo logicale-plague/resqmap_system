@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/providers/map_provider.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/add_evac_sheet.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
+import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/add_user_location.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 class MapsPage extends ConsumerStatefulWidget {
@@ -27,21 +30,75 @@ class _MapsPageState extends ConsumerState<MapsPage> {
         );
   }
 
-  // FEATURE FOR ADMIN
-  void _onMapLongPressed(MapContentGestureContext mapContext) {
-    final point = mapContext.point;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: AddEvacSheet(point: point),
+  Future<void> _onMapLongPressed(MapContentGestureContext mapContext) async {
+    User? currentUser;
+    try {
+      currentUser = await ref.read(currentUserProvider.future);
+    } catch (e, stackTrace) {
+      debugPrint('Failed to load current user for map long press: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to determine user access.')),
         );
-      },
-    );
+      }
+      rethrow;
+    }
+
+    if (!mounted) return;
+
+    final point = mapContext.point;
+    switch (currentUser?.role) {
+      case UserPermission.admin:
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: AddEvacSheet(point: point),
+            );
+          },
+        );
+        return;
+      case UserPermission.staff:
+        await showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: const Text(
+                "View only mode: Only admins can add evacuation centers.",
+                style: TextStyle(fontSize: 16),
+              ),
+            );
+          },
+        );
+        return;
+      case UserPermission.user:
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: AddUserLocation(point: point),
+            );
+          },
+        );
+        return;
+      case null:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only admins can add evacuation centers'),
+          ),
+        );
+        return;
+    }
   }
 
   void _handleMarkerTap(PointAnnotation annotation) {

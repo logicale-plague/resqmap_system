@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
@@ -14,6 +15,10 @@ final router = GoRouter(
     GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
 
     // admin routes
+    GoRoute(
+      path: '/admin-shell',
+      builder: (context, state) => const AdminShell(),
+    ),
     GoRoute(
       path: '/command-center',
       builder: (context, state) => const CommandCenterDashboardScreen(),

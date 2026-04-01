@@ -65,12 +65,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final db = ref.read(databaseServiceProvider);
-      final currentUser = await db.getCurrentUser();
+      final currentUser = await db.getUserByEmail(response.user!.email!);
 
       if (!mounted) return;
 
       final destination = switch (currentUser?.role) {
-        UserPermission.admin => '/command-center',
+        UserPermission.admin => '/admin-shell',
         UserPermission.staff => '/dashboard',
         UserPermission.user => '/userhome',
         null => '/login', // fallback in case of missing user data
@@ -154,7 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
       final destination = switch (user.role) {
-        UserPermission.admin => '/command-center',
+        UserPermission.admin => '/admin-shell',
         UserPermission.staff => '/dashboard',
         UserPermission.user => '/map',
       };
