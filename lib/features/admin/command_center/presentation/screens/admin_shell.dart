@@ -11,12 +11,16 @@ class AdminShell extends StatefulWidget {
 }
 
 class _AdminShellState extends State<AdminShell> {
-  List<String> titles = ['Command Center', 'Evacuation Centers', 'Map'];
+  static const List<String> titles = [
+    'Command Center',
+    'Evacuation Centers',
+    'Map',
+  ];
 
-  List<Widget> screens = [
-    const CommandCenterDashboardScreen(),
-    const AdminEvacCenterScreens(), // Evacuation Centers Screen
-    const MapsPage(), // Map Screen
+  static const List<Widget> screens = [
+    CommandCenterDashboardScreen(),
+    AdminEvacCenterScreens(), // Evacuation Centers Screen
+    MapsPage(), // Map Screen
   ];
 
   int _currentIndex = 0;
@@ -25,7 +29,7 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(titles[_currentIndex])),
-      body: screens[_currentIndex],
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {

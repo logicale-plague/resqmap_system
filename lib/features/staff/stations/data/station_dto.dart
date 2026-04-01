@@ -37,7 +37,7 @@ Station stationFromMap(Map<String, dynamic> map) {
     id: map['id'] as String,
     name: map['name'] as String,
     evacuationCenterId:
-        map['evacuationCenterId'] ?? map['evacuation_center_id'] as String,
+        (map['evacuationCenterId'] ?? map['evacuation_center_id']) as String,
     capacity: (map['capacity'] as num?)?.toInt() ?? 0,
     allowedAgeGroup: _parseAgeGroup(rawAge),
     allowedMedicalCondition: _parseMedicalCondition(rawMedical),
