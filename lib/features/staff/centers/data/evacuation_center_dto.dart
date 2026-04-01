@@ -1,4 +1,4 @@
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
 Map<String, dynamic> centerToMap(EvacuationCenter center) {
   return {

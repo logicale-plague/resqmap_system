@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/widgets/evacuation_center_widgets.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 
 class CentersScreen extends ConsumerWidget {

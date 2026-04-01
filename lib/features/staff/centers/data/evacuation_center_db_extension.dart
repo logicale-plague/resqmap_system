@@ -1,6 +1,6 @@
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/data/evacuation_center_dto.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:sqflite/sqflite.dart';
 
 extension EvacuationCenterDatabaseExtensions on DatabaseService {
@@ -140,7 +140,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       'evacuation_centers',
       {
         'totalCapacity': totalCapacity,
-        'status': status.name,
+        'status': status.index,
         'lastUpdated': DateTime.now().toIso8601String(),
         'synced': 0,
       },
@@ -185,7 +185,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       'evacuation_centers',
       {
         'currentOccupancy': evacueeCount,
-        'status': status.name,
+        'status': status.index,
         'lastUpdated': DateTime.now().toIso8601String(),
         'synced': 0,
       },

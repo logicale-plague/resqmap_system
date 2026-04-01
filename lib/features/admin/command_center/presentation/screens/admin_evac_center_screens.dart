@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/providers/evacuation_center_providers.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/widgets/evacuation_center_widgets.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
 import '../../../../../core/widgets/index.dart';
 

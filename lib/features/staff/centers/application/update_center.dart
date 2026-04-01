@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 

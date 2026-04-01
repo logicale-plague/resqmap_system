@@ -4,7 +4,7 @@ import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/data/station_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/data/station_dto.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/domain/station.dart';

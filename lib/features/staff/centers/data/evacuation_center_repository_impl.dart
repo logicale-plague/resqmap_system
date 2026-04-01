@@ -1,7 +1,7 @@
 import 'package:kalig_onan_evac_system/features/staff/centers/application/register_center.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/application/update_center.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/data/evacuation_center_db_extension.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center_repository.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 

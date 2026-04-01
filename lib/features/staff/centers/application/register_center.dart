@@ -6,7 +6,7 @@ import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/data/evacuation_center_db_extension.dart';
 import 'package:kalig_onan_evac_system/features/staff/centers/data/evacuation_center_dto.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final registerCenterProvider = Provider<RegisterCenterUseCase>((ref) {
