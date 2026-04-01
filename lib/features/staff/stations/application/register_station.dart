@@ -42,7 +42,9 @@ class RegisterStationUseCase {
         'An internet connection is required to register a station.',
       );
     }
-    final payload = stationToRemoteMap(station)..['name'] = station.name.trim();
+    final payload = stationToRemoteMap(station)
+      ..remove('synced')
+      ..['name'] = station.name.trim();
 
     await _supabaseService.from('stations').insert(payload);
     await _databaseService.upsertStationFromRemote(

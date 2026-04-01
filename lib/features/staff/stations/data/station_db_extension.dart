@@ -26,8 +26,17 @@ extension StationDatabaseExtensions on DatabaseService {
     final maps = await db.query(
       'stations',
       where:
-          'evacuationCenterId = ? AND (allowedAgeGroup IS NULL OR allowedAgeGroup = ?) AND (allowedMedicalCondition IS NULL OR allowedMedicalCondition = ?) AND active = 1',
-      whereArgs: [centerId, ageGroup.index, medicalCondition.index],
+          'evacuationCenterId = ? '
+          'AND (allowedAgeGroup IS NULL OR allowedAgeGroup = ? OR allowedAgeGroup = ?) '
+          'AND (allowedMedicalCondition IS NULL OR allowedMedicalCondition = ? OR allowedMedicalCondition = ?) '
+          'AND active = 1',
+      whereArgs: [
+        centerId,
+        ageGroup.index,
+        ageGroup.name,
+        medicalCondition.index,
+        medicalCondition.name,
+      ],
       orderBy: 'name ASC',
     );
     return [for (final map in maps) stationFromMap(map)];

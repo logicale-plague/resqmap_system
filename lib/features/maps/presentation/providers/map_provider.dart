@@ -48,6 +48,7 @@ class MapState {
 
 class MapController extends Notifier<MapState> {
   bool _isAddingMarker = false;
+  PointAnnotation? _currentUserLocationAnnotation;
 
   @override
   MapState build() {
@@ -145,6 +146,12 @@ class MapController extends Notifier<MapState> {
     required String address,
     required String postalCode,
   }) async {
+    // Check online status before allowing location update
+    final syncService = ref.read(syncServiceProvider);
+    if (!syncService.isOnline) {
+      throw OfflineException('Cannot set location: No internet connection');
+    }
+
     final manager = state.pointAnnotationManager;
 
     // Guard against double-submit: return early if already in progress
@@ -169,12 +176,17 @@ class MapController extends Notifier<MapState> {
       ref.invalidate(currentUserProvider);
 
       if (manager != null) {
+        if (_currentUserLocationAnnotation != null) {
+          await manager.delete(_currentUserLocationAnnotation!);
+          _currentUserLocationAnnotation = null;
+        }
+
         final ByteData bytes = await rootBundle.load(
           'assets/map_icons/shelter-icon.png',
         );
         final Uint8List imageData = bytes.buffer.asUint8List();
 
-        await manager.create(
+        final annotation = await manager.create(
           PointAnnotationOptions(
             geometry: point,
             image: imageData,
@@ -187,6 +199,7 @@ class MapController extends Notifier<MapState> {
             textHaloWidth: 2.0,
           ),
         );
+        _currentUserLocationAnnotation = annotation;
       }
     } finally {
       _isAddingMarker = false;

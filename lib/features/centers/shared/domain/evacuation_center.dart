@@ -25,7 +25,12 @@ class EvacuationCenter {
     this.medicalAvailable = false,
     required this.lastUpdated,
     this.synced = false,
-  });
+  }) : assert(totalCapacity >= 0, 'totalCapacity cannot be negative'),
+       assert(currentOccupancy >= 0, 'currentOccupancy cannot be negative'),
+       assert(
+         currentOccupancy <= totalCapacity,
+         'currentOccupancy cannot exceed totalCapacity',
+       );
 
   double get occupancyPercentage => totalCapacity == 0
       ? 0
