@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 // import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
@@ -15,17 +14,17 @@ class DashboardScreen extends ConsumerWidget {
     final evacueeCountAsync = ref.watch(evacueeCountProvider);
 
     return Scaffold(
-      appBar: buildScreenAppBar(
-        title: 'Dashboard',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              context.push('/centers');
-            },
-          ),
-        ],
-      ),
+      // appBar: buildScreenAppBar(
+      //   title: 'Dashboard',
+      //   actions: [
+      //     IconButton(
+      //       icon: const Icon(Icons.logout, color: Colors.white),
+      //       onPressed: () {
+      //         context.push('/centers');
+      //       },
+      //     ),
+      //   ],
+      // ),
       body: centerAsync.when(
         data: (center) {
           if (center == null) {
@@ -169,12 +168,12 @@ class DashboardScreen extends ConsumerWidget {
                 },
                 color: Colors.green,
               ),
-              QuickActionButton(
-                icon: Icons.remove_circle_outline,
-                label: 'Remove Evacuee',
-                onPressed: () => _removeEvacuee(context, ref),
-                color: Colors.red,
-              ),
+              // QuickActionButton(
+              //   icon: Icons.remove_circle_outline,
+              //   label: 'Remove Evacuee',
+              //   onPressed: () => _removeEvacuee(context, ref),
+              //   color: Colors.red,
+              // ),
               QuickActionButton(
                 icon: Icons.medical_services,
                 label: 'Supplies',
@@ -201,14 +200,14 @@ class DashboardScreen extends ConsumerWidget {
                 },
                 color: Colors.purple,
               ),
-              QuickActionButton(
-                icon: Icons.sync,
-                label: 'Sync',
-                onPressed: () {
-                  context.push('/sync');
-                },
-                color: Colors.teal,
-              ),
+              // QuickActionButton(
+              //   icon: Icons.sync,
+              //   label: 'Sync',
+              //   onPressed: () {
+              //     context.push('/sync');
+              //   },
+              //   color: Colors.teal,
+              // ),
             ],
           ),
           const SizedBox(height: 24),
@@ -244,40 +243,40 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _removeEvacuee(BuildContext context, WidgetRef ref) async {
-    // final db = ref.read(databaseServiceProvider);
-    final evacuees = await ref.read(allEvacueesProvider.future);
+  // Future<void> _removeEvacuee(BuildContext context, WidgetRef ref) async {
+  //   // final db = ref.read(databaseServiceProvider);
+  //   final evacuees = await ref.read(allEvacueesProvider.future);
 
-    if (evacuees.isEmpty) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No evacuees to remove')));
-      return;
-    }
+  //   if (evacuees.isEmpty) {
+  //     if (!context.mounted) return;
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text('No evacuees to remove')));
+  //     return;
+  //   }
 
-    if (!context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => ListView(
-        children: evacuees.map((evacuee) {
-          return ListTile(
-            title: Text(evacuee.name ?? 'ID: ${evacuee.id}'),
-            subtitle: Text('Age: ${evacuee.ageGroup.name}'),
-            trailing: const Icon(Icons.delete, color: Colors.red),
-            onTap: () async {
-              // await db.removeEvacuee(evacuee.id);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              ref.invalidate(allEvacueesProvider);
-              ref.invalidate(currentCenterProvider);
-              ref.invalidate(evacueeCountProvider);
-            },
-          );
-        }).toList(),
-      ),
-    );
-  }
+  //   if (!context.mounted) return;
+  //   showModalBottomSheet(
+  //     context: context,
+  //     builder: (context) => ListView(
+  //       children: evacuees.map((evacuee) {
+  //         return ListTile(
+  //           title: Text(evacuee.name ?? 'ID: ${evacuee.id}'),
+  //           subtitle: Text('Age: ${evacuee.ageGroup.name}'),
+  //           trailing: const Icon(Icons.delete, color: Colors.red),
+  //           onTap: () async {
+  //             // await db.removeEvacuee(evacuee.id);
+  //             if (!context.mounted) return;
+  //             Navigator.pop(context);
+  //             ref.invalidate(allEvacueesProvider);
+  //             ref.invalidate(currentCenterProvider);
+  //             ref.invalidate(evacueeCountProvider);
+  //           },
+  //         );
+  //       }).toList(),
+  //     ),
+  //   );
+  // }
 
   Color _getStatusColor(CenterStatus status) {
     switch (status) {

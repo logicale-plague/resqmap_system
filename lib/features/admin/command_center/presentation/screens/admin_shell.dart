@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_evac_center_screens.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
 class AdminShell extends StatefulWidget {
@@ -15,12 +16,14 @@ class _AdminShellState extends State<AdminShell> {
     'Command Center',
     'Evacuation Centers',
     'Map',
+    'Profile',
   ];
 
   static const List<Widget> screens = [
     CommandCenterDashboardScreen(),
     AdminEvacCenterScreens(), // Evacuation Centers Screen
     MapsPage(), // Map Screen
+    ProfileScreen(), // Profile Screen
   ];
 
   int _currentIndex = 0;
@@ -47,6 +50,10 @@ class _AdminShellState extends State<AdminShell> {
             label: 'Centers',
           ),
           BottomNavigationBarItem(icon: const Icon(Icons.map), label: 'Map'),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );

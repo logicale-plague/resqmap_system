@@ -73,7 +73,7 @@ class MainApp extends ConsumerWidget {
         ),
         useMaterial3: true,
       ),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       routerConfig: router,
     );
   }

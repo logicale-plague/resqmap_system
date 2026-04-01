@@ -11,7 +11,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserAsync = ref.watch(currentUserProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile'), elevation: 0),
+      // appBar: AppBar(title: const Text('Profile'), elevation: 0),
       body: currentUserAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),

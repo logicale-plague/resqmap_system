@@ -71,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       final destination = switch (currentUser?.role) {
         UserPermission.admin => '/admin-shell',
-        UserPermission.staff => '/dashboard',
+        UserPermission.staff => '/staff-shell',
         UserPermission.user => '/userhome',
         null => '/login', // fallback in case of missing user data
       };
