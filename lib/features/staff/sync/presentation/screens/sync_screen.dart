@@ -52,7 +52,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
-      // appBar: buildScreenAppBar(title: 'Sync Status'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
