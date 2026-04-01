@@ -36,10 +36,12 @@ class UpdateCenterUseCase {
         ..['longitude'] = center.longitude
         ..['totalCapacity'] = center.totalCapacity
         ..['currentOccupancy'] = center.currentOccupancy
-        ..['status'] = calculateUpdatedCenterStatus(
-          center.currentOccupancy,
-          center.totalCapacity,
-        ).name
+        ..['status'] = center.status == CenterStatus.closed
+            ? center.status.name
+            : calculateUpdatedCenterStatus(
+                center.currentOccupancy,
+                center.totalCapacity,
+              ).name
         ..['medicalAvailable'] = center.medicalAvailable ? 1 : 0
         ..['lastUpdated'] = DateTime.now().toIso8601String()
         ..['synced'] = 0;

@@ -169,7 +169,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       ''',
       [centerId],
     );
-    final evacueeCount = int.parse(countResult.first['count'].toString());
+    final evacueeCount = (countResult.first['count'] as num).toInt();
     final status = calculateUpdatedCenterStatus(evacueeCount, totalCapacity);
 
     await db.update(

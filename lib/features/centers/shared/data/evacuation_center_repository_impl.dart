@@ -52,6 +52,10 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
       _databaseService.replaceCenterId(oldId, newId);
 
   @override
-  Future<void> update(EvacuationCenter center) =>
-      _updateCenterCapacity.updateCenter(center);
+  Future<void> update(EvacuationCenter center) async {
+    final updated = await _updateCenterCapacity.updateCenter(center);
+    if (!updated) {
+      throw StateError('Failed to update center with id=${center.id}.');
+    }
+  }
 }

@@ -55,7 +55,7 @@ class RegisterStationUseCase {
     _ref.invalidate(currentCenterProvider);
     // Invalidate all instances of stationsByCenterProvider and eligibleStationsProvider
     // This ensures the registration screen and stations list see the new station
-    _ref.invalidate(stationsByCenterProvider);
+    _ref.invalidate(stationsByCenterProvider(station.evacuationCenterId));
     _ref.invalidate(eligibleStationsProvider);
   }
 }
