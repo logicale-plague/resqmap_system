@@ -176,16 +176,19 @@ class MapController extends Notifier<MapState> {
       await dbService.replaceCurrentUser(updatedUser);
 
       final supabase = ref.read(supabaseProvider);
-      await supabase
-          .from('users')
-          .update({
-            'latitude': updatedUser.latitude,
-            'longitude': updatedUser.longitude,
-            'full_address': updatedUser.fullAddress,
-            'postal_code': updatedUser.postalCode,
-          })
-          .eq('id', updatedUser.id);
-
+      try {
+        await supabase
+            .from('users')
+            .update({
+              'latitude': updatedUser.latitude,
+              'longitude': updatedUser.longitude,
+              'full_address': updatedUser.fullAddress,
+              'postal_code': updatedUser.postalCode,
+            })
+            .eq('id', updatedUser.id);
+      } catch (e) {
+        rethrow;
+      }
       ref.invalidate(currentUserProvider);
 
       if (manager != null) {

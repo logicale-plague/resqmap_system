@@ -168,12 +168,6 @@ class DashboardScreen extends ConsumerWidget {
                 },
                 color: Colors.green,
               ),
-              // QuickActionButton(
-              //   icon: Icons.remove_circle_outline,
-              //   label: 'Remove Evacuee',
-              //   onPressed: () => _removeEvacuee(context, ref),
-              //   color: Colors.red,
-              // ),
               QuickActionButton(
                 icon: Icons.medical_services,
                 label: 'Supplies',
@@ -200,14 +194,6 @@ class DashboardScreen extends ConsumerWidget {
                 },
                 color: Colors.purple,
               ),
-              // QuickActionButton(
-              //   icon: Icons.sync,
-              //   label: 'Sync',
-              //   onPressed: () {
-              //     context.push('/sync');
-              //   },
-              //   color: Colors.teal,
-              // ),
             ],
           ),
           const SizedBox(height: 24),

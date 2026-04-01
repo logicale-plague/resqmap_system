@@ -11,12 +11,17 @@ class StaffShell extends StatefulWidget {
 }
 
 class _StaffShellState extends State<StaffShell> {
-  static final List<Widget> _pages = [
-    DashboardScreen(),
-    SyncScreen(), // SyncStatusScreen(),
-    MapsPage(), // EvacueesScreen(),
-    ProfileScreen(), // MapsScreen(),
+  final List<WidgetBuilder> _pageBuilders = [
+    (_) => DashboardScreen(),
+    (_) => SyncScreen(),
+    (_) => MapsPage(),
+    (_) => ProfileScreen(),
   ];
+  final Map<int, Widget> _pageCache = {};
+
+  Widget _getPage(int index) {
+    return _pageCache.putIfAbsent(index, () => _pageBuilders[index](context));
+  }
 
   static const List<String> _pageTitles = [
     'Dashboard',
@@ -32,9 +37,12 @@ class _StaffShellState extends State<StaffShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_pageTitles[_selectedIndex]),
-        backgroundColor: ThemeData.light().primaryColor,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: List.generate(_pageBuilders.length, _getPage),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
