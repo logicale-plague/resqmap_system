@@ -20,10 +20,75 @@ class UpdateEvacueeUseCase {
   UpdateEvacueeUseCase({required DatabaseService databaseService})
     : _databaseService = databaseService;
 
+  Future<void> updateEvacueeName({
+    required String evacueeId,
+    required String name,
+  }) async {
+    final db = await _databaseService.database;
+    final evacueeRows = await db.query(
+      'evacuees',
+      where: 'id = ?',
+      whereArgs: [evacueeId],
+      limit: 1,
+    );
+
+    if (evacueeRows.isEmpty) {
+      throw StateError(
+        'updateEvacueeName could not find evacueeId=$evacueeId.',
+      );
+    }
+
+    final existing = evacueeFromRow(evacueeRows.first);
+    await updateEvacuee(existing.copyWith(name: name, synced: false));
+  }
+
   Future<void> updateEvacuee(Evacuee evacuee) async {
     for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
       final db = await _databaseService.database;
+      final evacueePartialRow = evacueeToPartialRow(evacuee)..['synced'] = 0;
       try {
+        await db.transaction((txn) async {
+          if (kDebugMode) {
+            debugPrint(
+              'updateEvacuee: attempt=$attempt id=${evacuee.id} (transactional update)',
+            );
+          }
+
+          final evacueeRows = await txn.query(
+            'evacuees',
+            where: 'id = ?',
+            whereArgs: [evacuee.id],
+            limit: 1,
+          );
+
+          if (evacueeRows.isEmpty) {
+            throw StateError(
+              'updateEvacuee could not find evacueeId=${evacuee.id}.',
+            );
+          }
+
+          final existing = evacueeFromRow(evacueeRows.first);
+          final occupancyAffected =
+              existing.stationId != evacuee.stationId ||
+              existing.active != evacuee.active;
+
+          if (kDebugMode) {
+            debugPrint(
+              'updateEvacuee: fetched existing id=${evacuee.id} occupancyAffected=$occupancyAffected',
+            );
+          }
+
+          await txn.update(
+            'evacuees',
+            evacueePartialRow,
+            where: 'id = ?',
+            whereArgs: [evacuee.id],
+          );
+
+          if (occupancyAffected) {
+            await _databaseService.refreshCurrentCenterOccupancy(executor: txn);
+          }
+        });
         if (kDebugMode) {
           debugPrint(
             'updateEvacuee: attempt=$attempt id=${evacuee.id} (non-transactional update)',
@@ -54,18 +119,9 @@ class UpdateEvacueeUseCase {
           );
         }
 
-        final evacueeRow = <String, Object?>{
-          'name': evacuee.name,
-          'stationId': evacuee.stationId,
-          'ageGroup': evacuee.ageGroup.index,
-          'medicalCondition': evacuee.medicalCondition.index,
-          'synced': 0,
-          'active': evacuee.active ? 1 : 0,
-        };
-
         await db.update(
           'evacuees',
-          evacueeRow,
+          evacueePartialRow,
           where: 'id = ?',
           whereArgs: [evacuee.id],
         );
@@ -84,9 +140,11 @@ class UpdateEvacueeUseCase {
         final isBusy = _isBusyDatabaseError(e);
         final isLastAttempt = attempt >= _maxAttempts;
 
-        debugPrint(
-          'updateEvacuee: failed attempt=$attempt id=${evacuee.id} busy=$isBusy error=$e\n$stackTrace',
-        );
+        if (kDebugMode) {
+          debugPrint(
+            'updateEvacuee: failed attempt=$attempt id=${evacuee.id} busy=$isBusy error=$e\n$stackTrace',
+          );
+        }
 
         if (!isBusy || isLastAttempt) {
           rethrow;

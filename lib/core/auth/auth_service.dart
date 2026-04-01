@@ -60,7 +60,7 @@ class AuthService {
     }
 
     try {
-      await _databaseService.insertUser(userWithId, password: password);
+      await _persistCurrentUserLocally(userWithId, password: password);
     } catch (e) {
       final profileCleanupError = await _deleteRemoteProfileSafely(
         supabaseUser.id,
@@ -122,9 +122,12 @@ class AuthService {
     }
 
     final user = userFromMap(data);
-    // Keep local auth cache scoped to the currently authenticated user.
-    await _databaseService.clearCurrentUser();
-    await _databaseService.insertUser(user, password: password);
+    await _persistCurrentUserLocally(user, password: password);
+  }
+
+  Future<void> _persistCurrentUserLocally(User user, {String? password}) async {
+    // Replace cached auth user in one transaction to avoid transient null reads.
+    await _databaseService.replaceCurrentUser(user, password: password);
   }
 
   Future<String?> _deleteAuthUserSafely(String userId) async {

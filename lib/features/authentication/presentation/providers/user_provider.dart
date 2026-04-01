@@ -47,35 +47,71 @@ class LocalCredentialVerificationResult {
 }
 
 extension UserDatabaseExtensions on DatabaseService {
-  Future<void> insertUser(User user, {String? password}) async {
-    final db = await database;
-    String? passwordHash;
+  Future<void> insertUser(
+    User user, {
+    String? password,
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
+    final passwordHash = await _resolvePasswordHash(
+      db,
+      userId: user.id,
+      password: password,
+    );
+    await _insertUserRecord(db, user, passwordHash: passwordHash);
+  }
 
-    if (password != null && password.isNotEmpty) {
-      passwordHash = await PasswordHasher.hashPassword(password);
-    } else {
-      final existing = await db.query(
-        'users',
-        columns: ['passwordHash'],
-        where: 'id = ?',
-        whereArgs: [user.id],
-        limit: 1,
+  Future<void> replaceCurrentUser(User user, {String? password}) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final passwordHash = await _resolvePasswordHash(
+        txn,
+        userId: user.id,
+        password: password,
       );
-      if (existing.isNotEmpty) {
-        passwordHash = existing.first['passwordHash'] as String?;
-      }
+      await clearCurrentUser(executor: txn);
+      await _insertUserRecord(txn, user, passwordHash: passwordHash);
+    });
+  }
+
+  Future<void> clearCurrentUser({DatabaseExecutor? executor}) async {
+    final db = executor ?? await database;
+    await db.delete('users');
+  }
+
+  Future<String?> _resolvePasswordHash(
+    DatabaseExecutor db, {
+    required String userId,
+    String? password,
+  }) async {
+    if (password != null && password.isNotEmpty) {
+      return PasswordHasher.hashPassword(password);
     }
 
+    final existing = await db.query(
+      'users',
+      columns: ['passwordHash'],
+      where: 'id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      return existing.first['passwordHash'] as String?;
+    }
+
+    return null;
+  }
+
+  Future<void> _insertUserRecord(
+    DatabaseExecutor db,
+    User user, {
+    required String? passwordHash,
+  }) async {
     await db.insert(
       'users',
       await userToLocalDbMap(user, passwordHash: passwordHash),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-  }
-
-  Future<void> clearCurrentUser() async {
-    final db = await database;
-    await db.delete('users');
   }
 
   Future<User?> getCurrentUser() async {
