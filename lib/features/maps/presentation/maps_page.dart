@@ -50,7 +50,7 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     final point = mapContext.point;
     switch (currentUser?.role) {
       case UserPermission.admin:
-        showModalBottomSheet(
+        await showModalBottomSheet(
           context: context,
           isScrollControlled: true,
           builder: (context) {
@@ -62,8 +62,9 @@ class _MapsPageState extends ConsumerState<MapsPage> {
             );
           },
         );
+        return;
       case UserPermission.staff:
-        showModalBottomSheet(
+        await showModalBottomSheet(
           context: context,
           builder: (context) {
             return Container(
@@ -75,8 +76,9 @@ class _MapsPageState extends ConsumerState<MapsPage> {
             );
           },
         );
+        return;
       case UserPermission.user:
-        showModalBottomSheet(
+        await showModalBottomSheet(
           context: context,
           isScrollControlled: true,
           builder: (context) {
@@ -88,6 +90,7 @@ class _MapsPageState extends ConsumerState<MapsPage> {
             );
           },
         );
+        return;
       case null:
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
