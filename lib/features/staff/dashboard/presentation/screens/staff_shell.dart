@@ -4,7 +4,9 @@ import 'package:kalig_onan_evac_system/features/authentication/presentation/scre
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
 class StaffShell extends StatefulWidget {
-  const StaffShell({super.key});
+  final int initialIndex;
+
+  const StaffShell({super.key, this.initialIndex = 0});
 
   @override
   State<StaffShell> createState() => _StaffShellState();
@@ -12,7 +14,7 @@ class StaffShell extends StatefulWidget {
 
 class _StaffShellState extends State<StaffShell> {
   final List<WidgetBuilder> _pageBuilders = [
-    (_) => DashboardScreen(),
+    (_) => CentersScreen(),
     (_) => SyncScreen(),
     (_) => MapsPage(),
     (_) => ProfileScreen(),
@@ -24,13 +26,19 @@ class _StaffShellState extends State<StaffShell> {
   }
 
   static const List<String> _pageTitles = [
-    'Dashboard',
+    'Centers',
     'Sync Status',
     'Map',
     'Profile',
   ];
 
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex.clamp(0, _pageBuilders.length - 1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +61,7 @@ class _StaffShellState extends State<StaffShell> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: 'Centers',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.sync), label: 'Sync Status'),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),

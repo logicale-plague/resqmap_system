@@ -3,51 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-// import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
 
 class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+  final EvacuationCenter center;
+
+  const DashboardScreen({super.key, required this.center});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centerAsync = ref.watch(currentCenterProvider);
     final evacueeCountAsync = ref.watch(evacueeCountProvider);
 
     return Scaffold(
-      // appBar: buildScreenAppBar(
-      //   title: 'Dashboard',
-      //   actions: [
-      //     IconButton(
-      //       icon: const Icon(Icons.logout, color: Colors.white),
-      //       onPressed: () {
-      //         context.push('/centers');
-      //       },
-      //     ),
-      //   ],
-      // ),
-      body: centerAsync.when(
-        data: (center) {
-          if (center == null) {
-            return const AppEmptyState(
-              icon: Icons.home_work_outlined,
-              message: 'No evacuation center assigned',
-            );
-          }
-          return evacueeCountAsync.when(
-            data: (count) => _buildDashboard(context, ref, center, count),
-            loading: () => const AppLoadingState(),
-            error: (err, stack) => AppErrorState(
-              error: err,
-              stackTrace: stack,
-              prefix: 'Error loading evacuee count',
-            ),
-          );
-        },
+      body: evacueeCountAsync.when(
+        data: (count) => _buildDashboard(context, ref, center, count),
         loading: () => const AppLoadingState(),
         error: (err, stack) => AppErrorState(
           error: err,
           stackTrace: stack,
-          prefix: 'Error loading center',
+          prefix: 'Error loading evacuee count',
         ),
       ),
     );
@@ -162,7 +135,6 @@ class DashboardScreen extends ConsumerWidget {
                 onPressed: () async {
                   final result = await context.push('/register');
                   if (result == true && context.mounted) {
-                    ref.invalidate(currentCenterProvider);
                     ref.invalidate(evacueeCountProvider);
                   }
                 },
@@ -189,7 +161,6 @@ class DashboardScreen extends ConsumerWidget {
                 label: 'Evacuees',
                 onPressed: () async {
                   await context.push('/evacuees');
-                  ref.invalidate(currentCenterProvider);
                   ref.invalidate(evacueeCountProvider);
                 },
                 color: Colors.purple,

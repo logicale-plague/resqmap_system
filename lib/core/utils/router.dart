@@ -35,7 +35,10 @@ final router = GoRouter(
     // staff routes
     GoRoute(
       path: '/staff-shell',
-      builder: (context, state) => const StaffShell(),
+      builder: (context, state) {
+        final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+        return StaffShell(initialIndex: tab);
+      },
     ),
     GoRoute(
       path: '/centers',
@@ -43,7 +46,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/dashboard',
-      builder: (context, state) => const DashboardScreen(),
+      redirect: (context, state) => '/staff-shell?tab=0',
     ),
     GoRoute(
       path: '/register',
@@ -61,7 +64,7 @@ final router = GoRouter(
       path: '/supplies',
       builder: (context, state) => const SuppliesScreen(),
     ),
-    GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
+    GoRoute(path: '/sync', redirect: (context, state) => '/staff-shell?tab=1'),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
     GoRoute(
       path: '/userhome',
