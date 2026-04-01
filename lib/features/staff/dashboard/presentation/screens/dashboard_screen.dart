@@ -11,9 +11,21 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final evacueeCountAsync = ref.watch(evacueeCountProvider);
+    final evacueeCountAsync = ref.watch(
+      evacueeCountByCenterProvider(center.id),
+    );
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text(center.name),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: () => context.push('/staff-shell'),
+          ),
+        ],
+      ),
       body: evacueeCountAsync.when(
         data: (count) => _buildDashboard(context, ref, center, count),
         loading: () => const AppLoadingState(),
@@ -46,12 +58,12 @@ class DashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Center Name
-          Text(
-            center.name,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
+          // // Center Name
+          // Text(
+          //   center.name,
+          //   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          // ),
+          // const SizedBox(height: 20),
 
           // Status Badge
           Container(
@@ -87,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
               Expanded(
                 child: MetricCard(
                   title: 'Current Occupancy',
-                  value: evacueeCount.toString(),
+                  value: center.currentOccupancy.toString(),
                   icon: Icons.group,
                 ),
               ),
@@ -135,7 +147,7 @@ class DashboardScreen extends ConsumerWidget {
                 onPressed: () async {
                   final result = await context.push('/register');
                   if (result == true && context.mounted) {
-                    ref.invalidate(evacueeCountProvider);
+                    ref.invalidate(evacueeCountByCenterProvider(center.id));
                   }
                 },
                 color: Colors.green,
@@ -161,7 +173,7 @@ class DashboardScreen extends ConsumerWidget {
                 label: 'Evacuees',
                 onPressed: () async {
                   await context.push('/evacuees');
-                  ref.invalidate(evacueeCountProvider);
+                  ref.invalidate(evacueeCountByCenterProvider(center.id));
                 },
                 color: Colors.purple,
               ),

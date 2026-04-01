@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 
 class CentersScreen extends ConsumerWidget {
@@ -27,7 +26,7 @@ class CentersScreen extends ConsumerWidget {
     final centersAsync = ref.watch(allCentersProvider);
 
     return Scaffold(
-      appBar: buildScreenAppBar(title: 'Evacuation Centers'),
+      // appBar: buildScreenAppBar(title: 'Evacuation Centers'),
       body: AsyncDataBuilder<List<EvacuationCenter>>(
         asyncValue: centersAsync,
         errorPrefix: 'Error loading centers',

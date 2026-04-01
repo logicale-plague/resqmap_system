@@ -59,10 +59,7 @@ class _StaffShellState extends State<StaffShell> {
           });
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Centers',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.business), label: 'Centers'),
           BottomNavigationBarItem(icon: Icon(Icons.sync), label: 'Sync Status'),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),

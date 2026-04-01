@@ -11,9 +11,12 @@ class EvacueesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final evacueesAsync = ref.watch(allEvacueesProvider);
     final centerAsync = ref.watch(currentCenterProvider);
     final currentCenter = centerAsync.asData?.value;
+
+    final evacueesAsync = currentCenter == null
+        ? const AsyncValue<List<Evacuee>>.data([])
+        : ref.watch(evacueesByCenterProvider(currentCenter.id));
     final stationsAsync = currentCenter == null
         ? const AsyncValue<List<Station>>.data([])
         : ref.watch(stationsByCenterProvider(currentCenter.id));

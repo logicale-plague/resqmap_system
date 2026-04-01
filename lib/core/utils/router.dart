@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 import 'package:kalig_onan_evac_system/features/staff/dashboard/presentation/screens/staff_shell.dart';
 import '../indices/staff_screens_index.dart';
@@ -46,7 +48,16 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/dashboard',
-      redirect: (context, state) => '/staff-shell?tab=0',
+      builder: (context, state) {
+        final center = state.extra as EvacuationCenter?;
+        if (center == null) {
+          return const Scaffold(
+            body: Center(child: Text('No evacuation center selected')),
+          );
+        }
+
+        return DashboardScreen(center: center);
+      },
     ),
     GoRoute(
       path: '/register',
