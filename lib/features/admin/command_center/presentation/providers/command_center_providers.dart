@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
-import 'package:kalig_onan_evac_system/features/admin/command_center/application/update_command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/data/command_center_repository_impl.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center_repository.dart';
@@ -9,11 +8,7 @@ final commandCenterRepositoryProvider = Provider<CommandCenterRepository>((
   ref,
 ) {
   final supabase = ref.watch(supabaseProvider);
-  final updateCommandCenter = ref.read(updateCommandCenterProvider);
-  return CommandCenterRepositoryImpl(
-    supabaseClient: supabase,
-    updateCommandCenter: updateCommandCenter,
-  );
+  return CommandCenterRepositoryImpl(supabaseClient: supabase);
 });
 
 final allCommandCentersProvider = FutureProvider((ref) async {

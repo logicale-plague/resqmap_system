@@ -90,7 +90,6 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
-    final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
 
     return centersAsync.when(
       data: (centers) {
@@ -106,14 +105,12 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
           centers.length,
         );
         final centerIds = centers.map((center) => center.id).toSet();
+        final shortagesAsync = ref.watch(
+          lowStockSuppliesForCenterIdsProvider(centerIds),
+        );
 
         return shortagesAsync.when(
-          data: (shortagesByCenter) {
-            final selectedShortagesByCenter = {
-              for (final entry in shortagesByCenter.entries)
-                if (centerIds.contains(entry.key)) entry.key: entry.value,
-            };
-
+          data: (selectedShortagesByCenter) {
             return GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 16,
@@ -220,7 +217,6 @@ class _SupplyShortagesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
-    final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
 
     return centersAsync.when(
       data: (centers) {
@@ -234,12 +230,13 @@ class _SupplyShortagesList extends ConsumerWidget {
           for (final center in centers) center.id: center,
         };
         final centerIds = centersById.keys.toSet();
+        final shortagesAsync = ref.watch(
+          lowStockSuppliesForCenterIdsProvider(centerIds),
+        );
 
         return shortagesAsync.when(
           data: (shortagesByCenter) {
-            final entries = shortagesByCenter.entries
-                .where((entry) => centerIds.contains(entry.key))
-                .toList();
+            final entries = shortagesByCenter.entries.toList();
             if (entries.isEmpty) {
               return const _SectionPlaceholder(
                 message: 'No supply shortages for this command center.',

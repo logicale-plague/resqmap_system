@@ -1,4 +1,3 @@
-import 'package:kalig_onan_evac_system/features/admin/command_center/application/update_command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/data/command_center_dto.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center_repository.dart';
@@ -6,13 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CommandCenterRepositoryImpl implements CommandCenterRepository {
   final SupabaseClient _supabaseClient;
-  final UpdateCommandCenterUseCase _updateCommandCenter;
 
-  CommandCenterRepositoryImpl({
-    required SupabaseClient supabaseClient,
-    required UpdateCommandCenterUseCase updateCommandCenter,
-  }) : _supabaseClient = supabaseClient,
-       _updateCommandCenter = updateCommandCenter;
+  CommandCenterRepositoryImpl({required SupabaseClient supabaseClient})
+    : _supabaseClient = supabaseClient;
 
   @override
   Future<List<CommandCenter>> getAll() async {
@@ -51,7 +46,15 @@ class CommandCenterRepositoryImpl implements CommandCenterRepository {
   }
 
   @override
-  Future<void> update(CommandCenter center) {
-    return _updateCommandCenter.updateCommandCenter(center);
+  Future<void> update(CommandCenter center) async {
+    final result = await _supabaseClient
+        .from('command_centers')
+        .update(commandCenterToRemoteMap(center))
+        .eq('id', center.id)
+        .select();
+
+    if (result.isEmpty) {
+      throw Exception('Command center with id ${center.id} not found');
+    }
   }
 }

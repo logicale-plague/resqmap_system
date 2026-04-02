@@ -57,7 +57,10 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     }
     return [
       for (final row in rows)
-        _centerFromRemoteMap(Map<String, dynamic>.from(row as Map)),
+        _centerFromRemoteMap(
+          Map<String, dynamic>.from(row as Map),
+          commandCenterId,
+        ),
     ];
   }
 
@@ -97,11 +100,14 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     return [for (final map in maps) centerFromMap(map)];
   }
 
-  EvacuationCenter _centerFromRemoteMap(Map<String, dynamic> map) {
+  EvacuationCenter _centerFromRemoteMap(
+    Map<String, dynamic> map,
+    String commandCenterId,
+  ) {
     return centerFromMap({
       'id': map['id'],
       'name': map['name'],
-      'commandCenterId': map['command_center_id'] ?? 'default-command-center',
+      'commandCenterId': map['command_center_id'] ?? commandCenterId,
       'latitude': map['latitude'],
       'longitude': map['longitude'],
       'totalCapacity': map['total_capacity'],
