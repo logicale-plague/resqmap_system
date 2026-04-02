@@ -83,6 +83,11 @@ class SyncService {
       return;
     }
 
+    if (!_isOnline) {
+      debugPrint('Device is offline; skipping sync.');
+      return;
+    }
+
     final activeSyncFuture = _activeSyncFuture;
     if (activeSyncFuture != null) {
       debugPrint('Sync already in progress; joining active sync request.');
@@ -101,6 +106,7 @@ class SyncService {
 
   Future<void> _performSync() async {
     // _isSyncInProgress = true;
+    var hadEntityFailures = false;
 
     try {
       await _normalizeLegacyIds();
@@ -132,27 +138,45 @@ class SyncService {
       }
 
       if (unsyncedEvacuees.isNotEmpty) {
-        final payload = unsyncedEvacuees
-            .map((evacuee) => _evacueeToRemoteMap(evacuee))
-            .toList();
-        await _supabase.from('evacuees').upsert(payload);
+        final syncedEvacueeIds = <String>[];
+        for (final evacuee in unsyncedEvacuees) {
+          try {
+            await _supabase.from('evacuees').upsert([
+              _evacueeToRemoteMap(evacuee),
+            ]);
+            syncedEvacueeIds.add(evacuee.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Evacuee sync failed for id=${evacuee.id}: $e');
+          }
+        }
 
-        await _databaseService.markEvacueesSynced(
-          unsyncedEvacuees.map((evacuee) => evacuee.id).toList(),
-        );
+        await _databaseService.markEvacueesSynced(syncedEvacueeIds);
       }
 
       if (unsyncedSupplies.isNotEmpty) {
-        final payload = unsyncedSupplies
-            .map((supply) => _supplyToRemoteMap(supply))
-            .toList();
-        await _uploadSupplies(payload);
-        await _databaseService.markSuppliesSynced(
-          unsyncedSupplies.map((supply) => supply.id).toList(),
-        );
+        final syncedSupplyIds = <String>[];
+        for (final supply in unsyncedSupplies) {
+          try {
+            await _uploadSupplies([_supplyToRemoteMap(supply)]);
+            syncedSupplyIds.add(supply.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Supply sync failed for id=${supply.id}: $e');
+          }
+        }
+
+        await _databaseService.markSuppliesSynced(syncedSupplyIds);
       }
 
       await _pullAndMergeFromSupabase();
+
+      if (hadEntityFailures) {
+        _scheduleRetry();
+        throw StateError(
+          'Sync completed with partial failures. Check logs for failing records.',
+        );
+      }
 
       _lastSyncTime = DateTime.now();
       _retryAttempts = 0;
@@ -452,13 +476,12 @@ class SyncService {
   Map<String, dynamic> _evacueeToRemoteMap(Evacuee evacuee) {
     return {
       'id': evacuee.id,
-      'name': evacuee.name,
+      'name': evacuee.name?.trim() ?? '',
       'station_id': evacuee.stationId,
       'age_group': evacuee.ageGroup.index,
       'medical_condition': evacuee.medicalCondition.index,
       'registered_at': evacuee.registeredAt.toIso8601String(),
       'active': evacuee.active ? 1 : 0,
-      'synced': evacuee.synced ? 1 : 0,
     };
   }
 
@@ -470,7 +493,6 @@ class SyncService {
       'current_stock': supply.currentStock,
       'usage_rate_per_day': supply.usageRatePerDay,
       'last_restocked': supply.lastRestocked.toIso8601String(),
-      'synced': supply.synced ? 1 : 0,
     };
   }
 
@@ -482,7 +504,6 @@ class SyncService {
       'capacity': station.capacity,
       'allowed_age_group': station.allowedAgeGroup?.index,
       'allowed_medical_condition': station.allowedMedicalCondition?.index,
-      'synced': station.synced ? 1 : 0,
     };
   }
 

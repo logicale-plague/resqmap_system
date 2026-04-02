@@ -92,9 +92,10 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
           0,
           centers.length,
         );
-        final centerIds = centers.map((center) => center.id).toSet();
+        final centerIds = centers.map((center) => center.id).toList()..sort();
+        final centerIdsKey = centerIds.join('|');
         final shortagesAsync = ref.watch(
-          lowStockSuppliesForCenterIdsProvider(centerIds),
+          lowStockSuppliesForCenterIdsProvider(centerIdsKey),
         );
 
         return shortagesAsync.when(
@@ -217,9 +218,10 @@ class _SupplyShortagesList extends ConsumerWidget {
         final centersById = <String, EvacuationCenter>{
           for (final center in centers) center.id: center,
         };
-        final centerIds = centersById.keys.toSet();
+        final centerIds = centersById.keys.toList()..sort();
+        final centerIdsKey = centerIds.join('|');
         final shortagesAsync = ref.watch(
-          lowStockSuppliesForCenterIdsProvider(centerIds),
+          lowStockSuppliesForCenterIdsProvider(centerIdsKey),
         );
 
         return shortagesAsync.when(

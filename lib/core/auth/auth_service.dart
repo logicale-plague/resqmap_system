@@ -111,7 +111,7 @@ class AuthService {
     try {
       await _supabase.auth.signOut();
     } finally {
-      await _databaseService.clearCurrentUser();
+      // Keep cached local credentials for offline re-login.
       _ref.invalidate(currentUserProvider);
     }
   }

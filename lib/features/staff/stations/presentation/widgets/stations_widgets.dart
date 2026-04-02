@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/presentation/providers/evacuee_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/providers/station_providers.dart';
@@ -71,16 +72,28 @@ Future<void> openStationDialog(
 
     if (shouldSave != true) return;
 
-    await _saveStationChanges(
-      context,
-      localRef,
-      center,
-      station,
-      nameController,
-      capacityController,
-      selectedAgeGroup,
-      selectedMedical,
-    );
+    try {
+      await _saveStationChanges(
+        context,
+        localRef,
+        center,
+        station,
+        nameController,
+        capacityController,
+        selectedAgeGroup,
+        selectedMedical,
+      );
+    } on OfflineException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save station: $e')));
+    }
   } finally {
     nameController.dispose();
     capacityController.dispose();

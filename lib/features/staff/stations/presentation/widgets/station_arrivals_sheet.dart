@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_list_item_card.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/application/update_evacuee.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/presentation/providers/evacuee_providers.dart';
@@ -174,8 +175,19 @@ Future<void> _renameEvacueeAndRefresh(
     );
 
     ref.invalidate(unnamedEvacueesByStationProvider(station.id));
+    ref.invalidate(evacueesByCenterProvider(station.evacuationCenterId));
+    ref.invalidate(evacueeCountByCenterProvider(station.evacuationCenterId));
+    ref.invalidate(allEvacueesProvider);
+    ref.invalidate(evacueeCountProvider);
     final syncService = ref.read(syncServiceProvider);
-    unawaited(syncService.syncNow());
+    final isOnline = await ref.read(isOnlineProvider.future);
+    if (isOnline) {
+      unawaited(
+        syncService.syncNow().catchError((Object error, StackTrace stackTrace) {
+          debugPrint('Background sync after rename failed: $error');
+        }),
+      );
+    }
     editingIdNotifier.value = null;
   } catch (e, stackTrace) {
     debugPrint('Rename evacuee failed: $e\n$stackTrace');
