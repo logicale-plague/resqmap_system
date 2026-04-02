@@ -118,23 +118,37 @@ class SyncService {
       // final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
 
       if (unsyncedCenters.isNotEmpty) {
-        final payload = unsyncedCenters
-            .map((center) => _centerToRemoteMap(center))
-            .toList();
-        await _uploadCenters(payload);
-        await _databaseService.markCentersSynced(
-          unsyncedCenters.map((center) => center.id).toList(),
-        );
+        final syncedCenterIds = <String>[];
+        for (final center in unsyncedCenters) {
+          try {
+            await _supabase.from('evacuation_centers').upsert([
+              _centerToRemoteMap(center),
+            ]);
+            syncedCenterIds.add(center.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Center sync failed for id=${center.id}: $e');
+          }
+        }
+
+        await _databaseService.markCentersSynced(syncedCenterIds);
       }
 
       if (unsyncedStations.isNotEmpty) {
-        final payload = unsyncedStations
-            .map((station) => _stationToRemoteMap(station))
-            .toList();
-        await _supabase.from('stations').upsert(payload);
-        await _databaseService.markStationsSynced(
-          unsyncedStations.map((station) => station.id).toList(),
-        );
+        final syncedStationIds = <String>[];
+        for (final station in unsyncedStations) {
+          try {
+            await _supabase.from('stations').upsert([
+              _stationToRemoteMap(station),
+            ]);
+            syncedStationIds.add(station.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Station sync failed for id=${station.id}: $e');
+          }
+        }
+
+        await _databaseService.markStationsSynced(syncedStationIds);
       }
 
       if (unsyncedEvacuees.isNotEmpty) {
@@ -573,9 +587,9 @@ class SyncService {
     await _supabase.from('supplies').upsert(payload);
   }
 
-  Future<void> _uploadCenters(List<Map<String, dynamic>> payload) async {
-    await _supabase.from('evacuation_centers').upsert(payload);
-  }
+  // Future<void> _uploadCenters(List<Map<String, dynamic>> payload) async {
+  //   await _supabase.from('evacuation_centers').upsert(payload);
+  // }
 
   Future<String> _currentCenterIdOrDefault() async {
     final center = await _databaseService.getCurrentCenter();
