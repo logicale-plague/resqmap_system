@@ -1,12 +1,15 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
+// import 'package:kalig_onan_evac_system/core/providers/user_provider.dart' hide currentUserProvider;
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/features/staff/sync/application/sync_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
 
 class MapState {
   final MapboxMap? mapboxMap;
@@ -44,6 +47,7 @@ class MapState {
 
 class MapController extends Notifier<MapState> {
   bool _isAddingMarker = false;
+  PointAnnotation? _currentUserLocationAnnotation;
 
   @override
   MapState build() {
@@ -134,33 +138,6 @@ class MapController extends Notifier<MapState> {
     } finally {
       state = state.copyWith(isBusy: false);
     }
-  }
-
-  Future<void> loadMarkerToMap({
-    required Point point,
-    required String centerName,
-  }) async {
-    final manager = state.pointAnnotationManager;
-    if (manager == null) return;
-
-    final ByteData bytes = await rootBundle.load(
-      'assets/map_icons/shelter-icon.png',
-    );
-    final Uint8List imageData = bytes.buffer.asUint8List();
-
-    await manager.create(
-      PointAnnotationOptions(
-        geometry: point,
-        image: imageData,
-        iconSize: 0.08,
-        textField: centerName,
-        textColor: 0xFF07A439,
-        textOffset: [0.0, 1.6],
-        textSize: 14.0,
-        textHaloColor: 0xFFFFFFFF,
-        textHaloWidth: 2.0,
-      ),
-    );
   }
 
   Future<void> addMarkerToMap({
