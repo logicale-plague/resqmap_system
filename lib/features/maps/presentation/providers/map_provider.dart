@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
 // import 'package:kalig_onan_evac_system/core/providers/user_provider.dart' hide currentUserProvider;
@@ -140,15 +141,80 @@ class MapController extends Notifier<MapState> {
     }
   }
 
+  Future<void> addUserLocationToMap({
+    required Point point,
+    required String address,
+    required String postalCode,
+  }) async {
+    // Check online status before allowing location update
+    final syncService = ref.read(syncServiceProvider);
+    if (!syncService.isOnline) {
+      throw OfflineException('Cannot set location: No internet connection');
+    }
+
+    final manager = state.pointAnnotationManager;
+
+    // Guard against double-submit: return early if already in progress
+    if (_isAddingMarker) return;
+    _isAddingMarker = true;
+
+    try {
+      final currentUser = await ref.read(currentUserProvider.future);
+      if (currentUser == null) {
+        throw StateError('No current user found.');
+      }
+
+      final updatedUser = currentUser.copyWith(
+        latitude: point.coordinates.lat.toDouble(),
+        longitude: point.coordinates.lng.toDouble(),
+        fullAddress: address,
+        postalCode: postalCode,
+      );
+
+      final dbService = ref.read(databaseServiceProvider);
+      await dbService.replaceCurrentUser(updatedUser);
+      ref.invalidate(currentUserProvider);
+
+      if (manager != null) {
+        if (_currentUserLocationAnnotation != null) {
+          await manager.delete(_currentUserLocationAnnotation!);
+          _currentUserLocationAnnotation = null;
+        }
+
+        final ByteData bytes = await rootBundle.load(
+          'assets/map_icons/shelter-icon.png',
+        );
+        final Uint8List imageData = bytes.buffer.asUint8List();
+
+        final annotation = await manager.create(
+          PointAnnotationOptions(
+            geometry: point,
+            image: imageData,
+            iconSize: 0.07,
+            textField: 'My Location',
+            textColor: 0xFF1E88E5,
+            textOffset: [0.0, 1.6],
+            textSize: 13.0,
+            textHaloColor: 0xFFFFFFFF,
+            textHaloWidth: 2.0,
+          ),
+        );
+        _currentUserLocationAnnotation = annotation;
+      }
+    } finally {
+      _isAddingMarker = false;
+    }
+  }
+
   Future<void> addMarkerToMap({
     required Point point,
     required String centerName,
   }) async {
-    // // Check online status before allowing creation
+    // Check online status before allowing creation
     final syncService = ref.read(syncServiceProvider);
-    // if (!syncService.isOnline) {
-    //   throw Exception('Cannot create center: No internet connection');
-    // }
+    if (!syncService.isOnline) {
+      throw OfflineException('Cannot create center: No internet connection');
+    }
 
     final manager = state.pointAnnotationManager;
     if (manager == null) return;
@@ -199,21 +265,24 @@ class MapController extends Notifier<MapState> {
         evacDataMap: {...state.evacDataMap, annotation.id: newCenter},
       );
 
-      // Push directly to Supabase (not to local database)
+      // Persist the new center through the evacuation center repository.
+      // This delegates storage to repository.insert(newCenter) and then updates
+      // local UI state (sync flag/pending retry) based on the result.
       try {
-        await syncService.pushCenterToSupabase(newCenter);
+        final centerRepository = ref.read(evacuationCenterRepositoryProvider);
+        await centerRepository.insert(newCenter);
 
-        // Push succeeded: mark center as synced and clear any pending-retry flag
+        // Insert succeeded: mark center as synced and clear pending-retry state.
         final syncedCenter = newCenter.copyWith(synced: true);
         state = state.copyWith(
           evacDataMap: {...state.evacDataMap, annotation.id: syncedCenter},
           pendingRetryIds: state.pendingRetryIds.difference({annotation.id}),
         );
 
-        // Invalidate the provider to refresh centers list from Supabase
+        // Invalidate the provider to refresh centers list from local database
         ref.invalidate(allCentersProvider);
       } catch (e) {
-        // Push failed: keep the annotation and center in state so reconciliation
+        // Insert failed: keep the annotation and center in state so reconciliation
         // can retry; do NOT delete the annotation or remove from evacDataMap,
         // as that would orphan a potential remote row and discard local work.
         state = state.copyWith(
