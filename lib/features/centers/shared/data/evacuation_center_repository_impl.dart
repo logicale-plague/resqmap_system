@@ -114,8 +114,9 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
   }
 
   bool _asBool(dynamic value) {
+    if (value == null) return false;
     if (value is bool) return value;
     if (value is num) return value != 0;
-    return value?.toString().toLowerCase() == 'true';
+    return value.toString().toLowerCase() == 'true';
   }
 }

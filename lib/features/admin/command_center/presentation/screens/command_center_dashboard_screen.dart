@@ -95,7 +95,9 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
     return centersAsync.when(
       data: (centers) {
         if (centers.isEmpty) {
-          return const SizedBox.shrink();
+          return const _SectionPlaceholder(
+            message: 'Select a command center to view statistics.',
+          );
         }
 
         final overcrowdedCenters = centers.where(_isOvercrowdedCenter).length;
@@ -223,7 +225,9 @@ class _SupplyShortagesList extends ConsumerWidget {
     return centersAsync.when(
       data: (centers) {
         if (centers.isEmpty) {
-          return const SizedBox.shrink();
+          return const _SectionPlaceholder(
+            message: 'Select a command center to view shortage details.',
+          );
         }
 
         final centersById = <String, EvacuationCenter>{
@@ -237,7 +241,9 @@ class _SupplyShortagesList extends ConsumerWidget {
                 .where((entry) => centerIds.contains(entry.key))
                 .toList();
             if (entries.isEmpty) {
-              return const SizedBox.shrink();
+              return const _SectionPlaceholder(
+                message: 'No supply shortages for this command center.',
+              );
             }
 
             return ListView.builder(
@@ -283,7 +289,9 @@ class _OvercrowdedCentersSection extends ConsumerWidget {
     return centersAsync.when(
       data: (centers) {
         if (centers.isEmpty) {
-          return const SizedBox.shrink();
+          return const _SectionPlaceholder(
+            message: 'Select a command center to view overcrowded centers.',
+          );
         }
 
         final overcrowdedCenters = centers
@@ -305,7 +313,9 @@ class _OvercrowdedCentersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (overcrowdedCenters.isEmpty) {
-      return const SizedBox.shrink();
+      return const _SectionPlaceholder(
+        message: 'No overcrowded centers for this command center.',
+      );
     }
 
     return ListView.builder(
@@ -325,6 +335,26 @@ class _OvercrowdedCentersList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _SectionPlaceholder extends StatelessWidget {
+  final String message;
+
+  const _SectionPlaceholder({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
     );
   }
 }

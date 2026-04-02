@@ -32,7 +32,7 @@ class CommandCenterRepositoryImpl implements CommandCenterRepository {
       return null;
     }
 
-    return commandCenterFromRemoteMap(Map<String, dynamic>.from(rows.first));
+    return commandCenterFromRemoteMap(rows.first);
   }
 
   @override
@@ -47,7 +47,7 @@ class CommandCenterRepositoryImpl implements CommandCenterRepository {
       return null;
     }
 
-    return commandCenterFromRemoteMap(Map<String, dynamic>.from(rows.first));
+    return commandCenterFromRemoteMap(rows.first);
   }
 
   @override

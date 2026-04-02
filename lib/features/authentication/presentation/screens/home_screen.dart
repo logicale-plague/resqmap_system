@@ -10,14 +10,12 @@ class UserHomeScreen extends StatefulWidget {
 }
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
-  final List<WidgetBuilder> _pageBuilders = [
-    (_) => const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
-    (_) => MapsPage(),
-    (_) =>
-        const Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
-    (_) => ProfileScreen(),
+  late final List<Widget> _pages = [
+    const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
+    MapsPage(),
+    const Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
+    ProfileScreen(),
   ];
-  final Map<int, Widget> _pageCache = {};
 
   static const List<String> _pageTitles = [
     'Home',
@@ -28,10 +26,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   int _selectedIndex = 0;
 
-  Widget _getPage(int index) {
-    return _pageCache.putIfAbsent(index, () => _pageBuilders[index](context));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,10 +33,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         title: Text(_pageTitles[_selectedIndex]),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: List.generate(_pageBuilders.length, _getPage),
-      ),
+      // Render only the active page from _selectedIndex instead of using
+      // IndexedStack, so heavy pages like MapsPage are not kept mounted.
+      // If _pageBuilders/_getPage are reintroduced later, decide explicitly
+      // whether preserving tab state is worth the memory tradeoff.
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[
