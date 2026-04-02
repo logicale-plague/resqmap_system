@@ -53,5 +53,7 @@ final selectedCommandCenterCentersProvider =
         return [];
       }
 
-      return ref.watch(centersByCommandCenterProvider(commandCenter.id).future);
+      return await ref.watch(
+        centersByCommandCenterProvider(commandCenter.id).future,
+      );
     });
