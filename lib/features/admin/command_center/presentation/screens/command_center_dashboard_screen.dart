@@ -3,18 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
-final selectedCommandCenterCentersProvider =
-    FutureProvider<List<EvacuationCenter>>((ref) async {
-      final commandCenter = await ref.watch(
-        currentCommandCenterProvider.future,
-      );
-      if (commandCenter == null) {
-        return [];
-      }
-
-      return ref.watch(centersByCommandCenterProvider(commandCenter.id).future);
-    });
-
 class CommandCenterDashboardScreen extends ConsumerWidget {
   const CommandCenterDashboardScreen({super.key});
 
