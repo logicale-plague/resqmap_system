@@ -116,19 +116,30 @@ class AuthService {
     }
   }
 
-  Future<void> _fetchAndStoreUser(String userId, {String? password}) async {
+  Future<User?> ensureUserCachedLocally(
+    String userId, {
+    String? password,
+  }) async {
     final data = await _supabase
         .from('users')
         .select()
         .eq('id', userId)
         .maybeSingle();
-
     if (data == null) {
-      throw StateError('User profile not found for ID: $userId');
+      return null;
     }
 
     final user = userFromMap(data);
-    await _persistCurrentUserLocally(user, password: password);
+    await _databaseService.replaceCurrentUser(user, password: password);
+    _ref.invalidate(currentUserProvider);
+    return user;
+  }
+
+  Future<void> _fetchAndStoreUser(String userId, {String? password}) async {
+    final user = await ensureUserCachedLocally(userId, password: password);
+    if (user == null) {
+      throw StateError('User profile not found for ID: $userId');
+    }
   }
 
   Future<void> _persistCurrentUserLocally(User user, {String? password}) async {

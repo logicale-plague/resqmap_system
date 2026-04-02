@@ -3,9 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
-import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
-import 'package:kalig_onan_evac_system/features/authentication/data/user_dto.dart';
-import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
@@ -71,20 +68,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       var currentUser = await db.getUserByEmail(response.user!.email!);
 
       // Online login fallback: if user was not cached locally, fetch profile and cache it.
-      if (currentUser == null) {
-        final supabase = ref.read(supabaseProvider);
-        final profileData = await supabase
-            .from('users')
-            .select()
-            .eq('id', response.user!.id)
-            .maybeSingle();
-
-        if (profileData != null) {
-          final fetchedUser = userFromMap(profileData);
-          await db.replaceCurrentUser(fetchedUser, password: password);
-          currentUser = fetchedUser;
-        }
-      }
+      currentUser ??= await authService.ensureUserCachedLocally(
+        response.user!.id,
+        password: password,
+      );
 
       if (!mounted) return;
 
