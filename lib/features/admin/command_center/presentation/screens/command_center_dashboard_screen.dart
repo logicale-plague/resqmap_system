@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
-class CommandCenterDashboardScreen extends StatelessWidget {
+class CommandCenterDashboardScreen extends ConsumerWidget {
   const CommandCenterDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedCommandCenterAsync = ref.watch(currentCommandCenterProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -18,6 +19,30 @@ class CommandCenterDashboardScreen extends StatelessWidget {
           Text(
             'Overview Dashboard',
             style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          selectedCommandCenterAsync.when(
+            data: (commandCenter) {
+              if (commandCenter == null) {
+                return Text(
+                  'Select a command center in the Command Centers tab to view its dashboard.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                );
+              }
+
+              return Text(
+                'Command Center: ${commandCenter.name}',
+                style: Theme.of(context).textTheme.titleMedium,
+              );
+            },
+            loading: () => Text(
+              'Loading command center...',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            error: (_, __) => Text(
+              'Unable to resolve selected command center.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -52,19 +77,28 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centersAsync = ref.watch(allCentersProvider);
-    final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
+    final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
 
     return centersAsync.when(
       data: (centers) {
+        if (centers.isEmpty) {
+          return const _SectionPlaceholder(
+            message: 'Select a command center to view statistics.',
+          );
+        }
+
         final overcrowdedCenters = centers.where(_isOvercrowdedCenter).length;
         final normalCenters = (centers.length - overcrowdedCenters).clamp(
           0,
           centers.length,
         );
+        final centerIds = centers.map((center) => center.id).toSet();
+        final shortagesAsync = ref.watch(
+          lowStockSuppliesForCenterIdsProvider(centerIds),
+        );
 
         return shortagesAsync.when(
-          data: (shortagesByCenter) {
+          data: (selectedShortagesByCenter) {
             return GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 16,
@@ -86,7 +120,7 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
                 ),
                 _StatisticCard(
                   title: 'Supply Shortages',
-                  count: shortagesByCenter.length.toString(),
+                  count: selectedShortagesByCenter.length.toString(),
                   color: Colors.red,
                   icon: Icons.error,
                 ),
@@ -170,20 +204,31 @@ class _SupplyShortagesList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centersAsync = ref.watch(allCentersProvider);
-    final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
+    final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
 
     return centersAsync.when(
       data: (centers) {
+        if (centers.isEmpty) {
+          return const _SectionPlaceholder(
+            message: 'Select a command center to view shortage details.',
+          );
+        }
+
         final centersById = <String, EvacuationCenter>{
           for (final center in centers) center.id: center,
         };
+        final centerIds = centersById.keys.toSet();
+        final shortagesAsync = ref.watch(
+          lowStockSuppliesForCenterIdsProvider(centerIds),
+        );
 
         return shortagesAsync.when(
           data: (shortagesByCenter) {
             final entries = shortagesByCenter.entries.toList();
             if (entries.isEmpty) {
-              return const SizedBox.shrink();
+              return const _SectionPlaceholder(
+                message: 'No supply shortages for this command center.',
+              );
             }
 
             return ListView.builder(
@@ -224,10 +269,16 @@ class _OvercrowdedCentersSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centersAsync = ref.watch(allCentersProvider);
+    final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
 
     return centersAsync.when(
       data: (centers) {
+        if (centers.isEmpty) {
+          return const _SectionPlaceholder(
+            message: 'Select a command center to view overcrowded centers.',
+          );
+        }
+
         final overcrowdedCenters = centers
             .where(_isOvercrowdedCenter)
             .toList(growable: false);
@@ -247,7 +298,9 @@ class _OvercrowdedCentersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (overcrowdedCenters.isEmpty) {
-      return const SizedBox.shrink();
+      return const _SectionPlaceholder(
+        message: 'No overcrowded centers for this command center.',
+      );
     }
 
     return ListView.builder(
@@ -267,6 +320,26 @@ class _OvercrowdedCentersList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _SectionPlaceholder extends StatelessWidget {
+  final String message;
+
+  const _SectionPlaceholder({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
     );
   }
 }

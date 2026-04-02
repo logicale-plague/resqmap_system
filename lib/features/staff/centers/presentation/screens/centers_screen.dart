@@ -26,7 +26,6 @@ class CentersScreen extends ConsumerWidget {
     final centersAsync = ref.watch(allCentersProvider);
 
     return Scaffold(
-      // appBar: buildScreenAppBar(title: 'Evacuation Centers'),
       body: AsyncDataBuilder<List<EvacuationCenter>>(
         asyncValue: centersAsync,
         errorPrefix: 'Error loading centers',

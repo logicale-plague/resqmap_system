@@ -10,24 +10,33 @@ class UserHomeScreen extends StatefulWidget {
 }
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _pages = <Widget>[
-    Center(child: Text('Home', style: TextStyle(fontSize: 24))),
+  late final List<Widget> _pages = [
+    const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
     MapsPage(),
-    Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
+    const Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
     ProfileScreen(),
   ];
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  static const List<String> _pageTitles = [
+    'Home',
+    'Map',
+    'Settings',
+    'Profile',
+  ];
+
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(_pageTitles[_selectedIndex]),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+      // Render only the active page from _selectedIndex instead of using
+      // IndexedStack, so heavy pages like MapsPage are not kept mounted.
+      // If _pageBuilders/_getPage are reintroduced later, decide explicitly
+      // whether preserving tab state is worth the memory tradeoff.
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -41,7 +50,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

@@ -21,34 +21,6 @@ class CommandCenter {
     required this.updatedAt,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'region': region,
-      'address': address,
-      'contactNumber': contactNumber,
-      'email': email,
-      'isActive': isActive ? 1 : 0,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
-
-  factory CommandCenter.fromMap(Map<String, dynamic> map) {
-    return CommandCenter(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      region: map['region'] as String?,
-      address: map['address'] as String?,
-      contactNumber: map['contactNumber'] as String?,
-      email: map['email'] as String?,
-      isActive: (map['isActive'] as int? ?? 1) == 1,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
-    );
-  }
-
   CommandCenter copyWith({
     String? id,
     String? name,

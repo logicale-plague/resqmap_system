@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
 // import 'package:kalig_onan_evac_system/core/providers/user_provider.dart' hide currentUserProvider;
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
@@ -240,9 +241,12 @@ class MapController extends Notifier<MapState> {
     _isAddingMarker = true;
 
     try {
-      final currentCommandCenterId = await ref.read(
-        currentCommandCenterIdProvider.future,
-      );
+      final currentCommandCenterId = ref.read(selectedCommandCenterIdProvider);
+      if (currentCommandCenterId == null) {
+        throw StateError(
+          'No command center selected. Please select a command center before adding evacuation centers.',
+        );
+      }
 
       final ByteData bytes = await rootBundle.load(
         'assets/map_icons/shelter-icon.png',

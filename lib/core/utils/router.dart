@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_shell.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_cmd_center_shell.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
@@ -18,8 +19,15 @@ final router = GoRouter(
 
     // admin routes
     GoRoute(
+      path: '/admin-init',
+      builder: (context, state) => const AdminInitShell(),
+    ),
+    GoRoute(
       path: '/admin-shell',
-      builder: (context, state) => const AdminShell(),
+      builder: (context, state) {
+        final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+        return AdminShell(initialIndex: tab);
+      },
     ),
     GoRoute(
       path: '/command-center',
@@ -51,8 +59,21 @@ final router = GoRouter(
       builder: (context, state) {
         final center = state.extra as EvacuationCenter?;
         if (center == null) {
-          return const Scaffold(
-            body: Center(child: Text('No evacuation center selected')),
+          return Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('No center data provided'),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => context.go('/staff-shell?tab=0'),
+                    child: const Text('Back to Centers'),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 

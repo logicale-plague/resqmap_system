@@ -50,11 +50,6 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     return maps.isEmpty ? null : centerFromMap(maps.first);
   }
 
-  Future<String> getCurrentCommandCenterId() async {
-    final center = await getCurrentCenter();
-    return center?.commandCenterId ?? 'default-command-center';
-  }
-
   Future<void> upsertCenterFromRemote(EvacuationCenter center) async {
     final db = await database;
     await db.insert(

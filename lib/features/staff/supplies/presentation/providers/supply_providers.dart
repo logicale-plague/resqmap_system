@@ -75,3 +75,22 @@ final lowStockSuppliesByCenterProvider =
 
       return suppliesByCenter;
     });
+
+final lowStockSuppliesForCenterIdsProvider =
+    FutureProvider.family<Map<String, List<Supply>>, Set<String>>((
+      ref,
+      centerIds,
+    ) async {
+      if (centerIds.isEmpty) {
+        return {};
+      }
+
+      final shortagesByCenter = await ref.watch(
+        lowStockSuppliesByCenterProvider.future,
+      );
+
+      return {
+        for (final entry in shortagesByCenter.entries)
+          if (centerIds.contains(entry.key)) entry.key: entry.value,
+      };
+    });
