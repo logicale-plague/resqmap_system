@@ -17,10 +17,7 @@ class CommandCenterRepositoryImpl implements CommandCenterRepository {
   @override
   Future<List<CommandCenter>> getAll() async {
     final rows = await _supabaseClient.from('command_centers').select();
-    return [
-      for (final row in rows)
-        commandCenterFromRemoteMap(Map<String, dynamic>.from(row as Map)),
-    ];
+    return [for (final row in rows) commandCenterFromRemoteMap(row)];
   }
 
   @override

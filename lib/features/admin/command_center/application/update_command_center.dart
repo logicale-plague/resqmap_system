@@ -16,9 +16,13 @@ class UpdateCommandCenterUseCase {
     : _supabaseClient = supabaseClient;
 
   Future<void> updateCommandCenter(CommandCenter center) async {
-    await _supabaseClient
+    final result = await _supabaseClient
         .from('command_centers')
         .update(commandCenterToRemoteMap(center))
-        .eq('id', center.id);
+        .eq('id', center.id)
+        .select();
+    if (result.isEmpty) {
+      throw Exception('Command center with id ${center.id} not found');
+    }
   }
 }
