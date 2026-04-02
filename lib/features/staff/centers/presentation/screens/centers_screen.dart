@@ -2,20 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 
 class CentersScreen extends ConsumerWidget {
   const CentersScreen({super.key});
+
+  Future<void> _openDashboardForCenter(
+    BuildContext context,
+    WidgetRef ref,
+    EvacuationCenter center,
+  ) async {
+    final db = ref.read(databaseServiceProvider);
+    await db.setCurrentCenterId(center.id);
+    ref.invalidate(currentCenterProvider);
+
+    if (!context.mounted) return;
+    context.go('/dashboard', extra: center);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final centersAsync = ref.watch(allCentersProvider);
 
     return Scaffold(
-      appBar: buildScreenAppBar(title: 'Evacuation Centers'),
+      // appBar: buildScreenAppBar(title: 'Evacuation Centers'),
       body: AsyncDataBuilder<List<EvacuationCenter>>(
         asyncValue: centersAsync,
         errorPrefix: 'Error loading centers',
@@ -43,6 +54,7 @@ class CentersScreen extends ConsumerWidget {
                 margin: EdgeInsets.zero,
                 elevation: 1,
                 isThreeLine: true,
+                onTap: () => _openDashboardForCenter(context, ref, center),
                 leading: CircleAvatar(
                   backgroundColor: statusColor(center.status),
                   child: const Icon(Icons.apartment, color: Colors.white),

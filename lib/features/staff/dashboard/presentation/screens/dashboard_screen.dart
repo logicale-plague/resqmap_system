@@ -1,54 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-// import 'package:kalig_onan_evac_system/features/evacuees/application/remove_evacuee.dart';
 
 class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+  final EvacuationCenter center;
+
+  const DashboardScreen({super.key, required this.center});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centerAsync = ref.watch(currentCenterProvider);
-    final evacueeCountAsync = ref.watch(evacueeCountProvider);
+    final evacueeCountAsync = ref.watch(
+      evacueeCountByCenterProvider(center.id),
+    );
 
     return Scaffold(
-      appBar: buildScreenAppBar(
-        title: 'Dashboard',
+      appBar: AppBar(
+        title: Text(center.name),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              context.push('/centers');
-            },
+            icon: const Icon(Icons.list),
+            onPressed: () => context.push('/staff-shell'),
           ),
         ],
       ),
-      body: centerAsync.when(
-        data: (center) {
-          if (center == null) {
-            return const AppEmptyState(
-              icon: Icons.home_work_outlined,
-              message: 'No evacuation center assigned',
-            );
-          }
-          return evacueeCountAsync.when(
-            data: (count) => _buildDashboard(context, ref, center, count),
-            loading: () => const AppLoadingState(),
-            error: (err, stack) => AppErrorState(
-              error: err,
-              stackTrace: stack,
-              prefix: 'Error loading evacuee count',
-            ),
-          );
-        },
+      body: evacueeCountAsync.when(
+        data: (count) => _buildDashboard(context, ref, center, count),
         loading: () => const AppLoadingState(),
         error: (err, stack) => AppErrorState(
           error: err,
           stackTrace: stack,
-          prefix: 'Error loading center',
+          prefix: 'Error loading evacuee count',
         ),
       ),
     );
@@ -74,12 +58,12 @@ class DashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Center Name
-          Text(
-            center.name,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
+          // // Center Name
+          // Text(
+          //   center.name,
+          //   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          // ),
+          // const SizedBox(height: 20),
 
           // Status Badge
           Container(
@@ -115,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
               Expanded(
                 child: MetricCard(
                   title: 'Current Occupancy',
-                  value: evacueeCount.toString(),
+                  value: center.currentOccupancy.toString(),
                   icon: Icons.group,
                 ),
               ),
@@ -163,17 +147,10 @@ class DashboardScreen extends ConsumerWidget {
                 onPressed: () async {
                   final result = await context.push('/register');
                   if (result == true && context.mounted) {
-                    ref.invalidate(currentCenterProvider);
-                    ref.invalidate(evacueeCountProvider);
+                    ref.invalidate(evacueeCountByCenterProvider(center.id));
                   }
                 },
                 color: Colors.green,
-              ),
-              QuickActionButton(
-                icon: Icons.remove_circle_outline,
-                label: 'Remove Evacuee',
-                onPressed: () => _removeEvacuee(context, ref),
-                color: Colors.red,
               ),
               QuickActionButton(
                 icon: Icons.medical_services,
@@ -196,18 +173,9 @@ class DashboardScreen extends ConsumerWidget {
                 label: 'Evacuees',
                 onPressed: () async {
                   await context.push('/evacuees');
-                  ref.invalidate(currentCenterProvider);
-                  ref.invalidate(evacueeCountProvider);
+                  ref.invalidate(evacueeCountByCenterProvider(center.id));
                 },
                 color: Colors.purple,
-              ),
-              QuickActionButton(
-                icon: Icons.sync,
-                label: 'Sync',
-                onPressed: () {
-                  context.push('/sync');
-                },
-                color: Colors.teal,
               ),
             ],
           ),
@@ -244,40 +212,40 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _removeEvacuee(BuildContext context, WidgetRef ref) async {
-    // final db = ref.read(databaseServiceProvider);
-    final evacuees = await ref.read(allEvacueesProvider.future);
+  // Future<void> _removeEvacuee(BuildContext context, WidgetRef ref) async {
+  //   // final db = ref.read(databaseServiceProvider);
+  //   final evacuees = await ref.read(allEvacueesProvider.future);
 
-    if (evacuees.isEmpty) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No evacuees to remove')));
-      return;
-    }
+  //   if (evacuees.isEmpty) {
+  //     if (!context.mounted) return;
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text('No evacuees to remove')));
+  //     return;
+  //   }
 
-    if (!context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => ListView(
-        children: evacuees.map((evacuee) {
-          return ListTile(
-            title: Text(evacuee.name ?? 'ID: ${evacuee.id}'),
-            subtitle: Text('Age: ${evacuee.ageGroup.name}'),
-            trailing: const Icon(Icons.delete, color: Colors.red),
-            onTap: () async {
-              // await db.removeEvacuee(evacuee.id);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              ref.invalidate(allEvacueesProvider);
-              ref.invalidate(currentCenterProvider);
-              ref.invalidate(evacueeCountProvider);
-            },
-          );
-        }).toList(),
-      ),
-    );
-  }
+  //   if (!context.mounted) return;
+  //   showModalBottomSheet(
+  //     context: context,
+  //     builder: (context) => ListView(
+  //       children: evacuees.map((evacuee) {
+  //         return ListTile(
+  //           title: Text(evacuee.name ?? 'ID: ${evacuee.id}'),
+  //           subtitle: Text('Age: ${evacuee.ageGroup.name}'),
+  //           trailing: const Icon(Icons.delete, color: Colors.red),
+  //           onTap: () async {
+  //             // await db.removeEvacuee(evacuee.id);
+  //             if (!context.mounted) return;
+  //             Navigator.pop(context);
+  //             ref.invalidate(allEvacueesProvider);
+  //             ref.invalidate(currentCenterProvider);
+  //             ref.invalidate(evacueeCountProvider);
+  //           },
+  //         );
+  //       }).toList(),
+  //     ),
+  //   );
+  // }
 
   Color _getStatusColor(CenterStatus status) {
     switch (status) {

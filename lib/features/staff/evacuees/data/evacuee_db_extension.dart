@@ -27,6 +27,26 @@ extension EvacueeDatabaseExtensions on DatabaseService {
     return [for (final map in maps) evacueeFromRow(map)];
   }
 
+  Future<List<Evacuee>> getEvacueesByCenter(
+    String centerId, {
+    bool includeInactive = false,
+  }) async {
+    final db = await database;
+    final activeClause = includeInactive ? '' : ' AND e.active = 1';
+    final maps = await db.rawQuery(
+      '''
+      SELECT e.*
+      FROM evacuees e
+      JOIN stations s ON s.id = e.stationId
+      WHERE s.evacuationCenterId = ?$activeClause
+      ORDER BY e.registeredAt ASC
+      ''',
+      [centerId],
+    );
+
+    return [for (final map in maps) evacueeFromRow(map)];
+  }
+
   Future<List<Evacuee>> getAllEvacuees({bool includeInactive = false}) async {
     final db = await database;
     final maps = includeInactive
@@ -48,6 +68,24 @@ extension EvacueeDatabaseExtensions on DatabaseService {
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM evacuees WHERE stationId = ? AND active = 1',
       [stationId],
+    );
+    return int.parse(result.first['count'].toString());
+  }
+
+  Future<int> getEvacueeCountByCenter(
+    String centerId, {
+    bool includeInactive = false,
+  }) async {
+    final db = await database;
+    final activeClause = includeInactive ? '' : ' AND e.active = 1';
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count
+      FROM evacuees e
+      JOIN stations s ON s.id = e.stationId
+      WHERE s.evacuationCenterId = ?$activeClause
+      ''',
+      [centerId],
     );
     return int.parse(result.first['count'].toString());
   }

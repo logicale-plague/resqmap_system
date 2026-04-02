@@ -7,7 +7,8 @@ import 'package:kalig_onan_evac_system/features/authentication/presentation/prov
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/login_screen.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/screens/centers_screen.dart';
+// import 'package:kalig_onan_evac_system/features/staff/centers/presentation/screens/centers_screen.dart';
+import 'package:kalig_onan_evac_system/features/staff/dashboard/presentation/screens/staff_shell.dart';
 
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
@@ -41,7 +42,7 @@ class AuthGate extends ConsumerWidget {
                 case UserPermission.admin:
                   return const AdminShell();
                 case UserPermission.staff:
-                  return const CentersScreen();
+                  return const StaffShell();
                 case UserPermission.user:
                   return const UserHomeScreen();
               }

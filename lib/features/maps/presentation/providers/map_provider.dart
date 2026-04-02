@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
 // import 'package:kalig_onan_evac_system/core/providers/user_provider.dart' hide currentUserProvider;
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
@@ -173,6 +174,21 @@ class MapController extends Notifier<MapState> {
 
       final dbService = ref.read(databaseServiceProvider);
       await dbService.replaceCurrentUser(updatedUser);
+
+      final supabase = ref.read(supabaseProvider);
+      try {
+        await supabase
+            .from('users')
+            .update({
+              'latitude': updatedUser.latitude,
+              'longitude': updatedUser.longitude,
+              'full_address': updatedUser.fullAddress,
+              'postal_code': updatedUser.postalCode,
+            })
+            .eq('id', updatedUser.id);
+      } catch (e) {
+        rethrow;
+      }
       ref.invalidate(currentUserProvider);
 
       if (manager != null) {

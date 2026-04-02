@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
-import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
+import 'package:kalig_onan_evac_system/features/staff/dashboard/presentation/screens/staff_shell.dart';
 import '../indices/staff_screens_index.dart';
 import '../indices/admin_screens_index.dart';
 import '../indices/auth_screens_index.dart';
@@ -34,12 +36,28 @@ final router = GoRouter(
 
     // staff routes
     GoRoute(
+      path: '/staff-shell',
+      builder: (context, state) {
+        final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+        return StaffShell(initialIndex: tab);
+      },
+    ),
+    GoRoute(
       path: '/centers',
       builder: (context, state) => const CentersScreen(),
     ),
     GoRoute(
       path: '/dashboard',
-      builder: (context, state) => const DashboardScreen(),
+      builder: (context, state) {
+        final center = state.extra as EvacuationCenter?;
+        if (center == null) {
+          return const Scaffold(
+            body: Center(child: Text('No evacuation center selected')),
+          );
+        }
+
+        return DashboardScreen(center: center);
+      },
     ),
     GoRoute(
       path: '/register',
@@ -57,12 +75,8 @@ final router = GoRouter(
       path: '/supplies',
       builder: (context, state) => const SuppliesScreen(),
     ),
-    GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
+    GoRoute(path: '/sync', redirect: (context, state) => '/staff-shell?tab=1'),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
-    GoRoute(
-      path: '/profile',
-      builder: (context, state) => const ProfileScreen(),
-    ),
     GoRoute(
       path: '/userhome',
       builder: (context, state) => const UserHomeScreen(),
