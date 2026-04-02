@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_evac_center_screens.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
-import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
 class AdminShell extends StatefulWidget {
-  const AdminShell({super.key});
+  final int initialIndex;
+
+  const AdminShell({super.key, this.initialIndex = 0});
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -16,44 +18,54 @@ class _AdminShellState extends State<AdminShell> {
     'Command Center',
     'Evacuation Centers',
     'Map',
-    'Profile',
   ];
 
   static const List<Widget> screens = [
     CommandCenterDashboardScreen(),
     AdminEvacCenterScreens(), // Evacuation Centers Screen
     MapsPage(), // Map Screen
-    ProfileScreen(), // Profile Screen
   ];
 
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, screens.length - 1);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(titles[_currentIndex])),
+      appBar: AppBar(
+        title: Text(titles[_currentIndex]),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          IconButton(
+            onPressed: () => context.go('/admin-init'),
+            icon: Icon(Icons.home),
+          ),
+        ],
+      ),
       body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        items: [
+        items: const [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.dashboard),
+            icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home_work_outlined),
+            icon: Icon(Icons.home_work_outlined),
             label: 'Centers',
           ),
-          BottomNavigationBarItem(icon: const Icon(Icons.map), label: 'Map'),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
         ],
       ),
     );

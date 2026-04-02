@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
-import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_shell.dart';
+// import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_cmd_center_shell.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 // import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
@@ -40,7 +41,7 @@ class AuthGate extends ConsumerWidget {
               // User is authenticated and found in local DB, show the main app
               switch (user.role) {
                 case UserPermission.admin:
-                  return const AdminShell();
+                  return const AdminInitShell();
                 case UserPermission.staff:
                   return const StaffShell();
                 case UserPermission.user:

@@ -4,8 +4,8 @@ abstract interface class EvacuationCenterRepository {
   Future<EvacuationCenter?> getCurrent();
   Future<List<EvacuationCenter>> getAll();
   Future<List<EvacuationCenter>> getUnsynced();
+  Future<List<EvacuationCenter>> getByCommandCenterId(String commandCenterId);
   Future<EvacuationCenter?> getById(String id);
-  Future<String> getCurrentCommandCenterId();
 
   Future<void> insert(EvacuationCenter center);
   Future<void> upsertFromRemote(EvacuationCenter center);

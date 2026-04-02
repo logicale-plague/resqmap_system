@@ -240,9 +240,7 @@ class MapController extends Notifier<MapState> {
     _isAddingMarker = true;
 
     try {
-      final currentCommandCenterId = await ref.read(
-        currentCommandCenterIdProvider.future,
-      );
+      final currentCommandCenterId = 'ddd7cde1-e5e9-486f-88f8-86a40aecb508';
 
       final ByteData bytes = await rootBundle.load(
         'assets/map_icons/shelter-icon.png',

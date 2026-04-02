@@ -52,6 +52,7 @@ class _StaffShellState extends State<StaffShell> {
         children: List.generate(_pageBuilders.length, _getPage),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {

@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
-class CommandCenterDashboardScreen extends StatelessWidget {
+final selectedCommandCenterCentersProvider =
+    FutureProvider<List<EvacuationCenter>>((ref) async {
+      final commandCenter = await ref.watch(
+        currentCommandCenterProvider.future,
+      );
+      if (commandCenter == null) {
+        return [];
+      }
+
+      return ref.watch(centersByCommandCenterProvider(commandCenter.id).future);
+    });
+
+class CommandCenterDashboardScreen extends ConsumerWidget {
   const CommandCenterDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedCommandCenterAsync = ref.watch(currentCommandCenterProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -18,6 +31,27 @@ class CommandCenterDashboardScreen extends StatelessWidget {
           Text(
             'Overview Dashboard',
             style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          selectedCommandCenterAsync.when(
+            data: (commandCenter) {
+              if (commandCenter == null) {
+                return Text(
+                  'Select a command center in the Command Centers tab to view its dashboard.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                );
+              }
+
+              return Text(
+                'Command Center: ${commandCenter.name}',
+                style: Theme.of(context).textTheme.titleMedium,
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => Text(
+              'Unable to resolve selected command center.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -52,19 +86,29 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centersAsync = ref.watch(allCentersProvider);
+    final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
     final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
 
     return centersAsync.when(
       data: (centers) {
+        if (centers.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
         final overcrowdedCenters = centers.where(_isOvercrowdedCenter).length;
         final normalCenters = (centers.length - overcrowdedCenters).clamp(
           0,
           centers.length,
         );
+        final centerIds = centers.map((center) => center.id).toSet();
 
         return shortagesAsync.when(
           data: (shortagesByCenter) {
+            final selectedShortagesByCenter = {
+              for (final entry in shortagesByCenter.entries)
+                if (centerIds.contains(entry.key)) entry.key: entry.value,
+            };
+
             return GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 16,
@@ -86,7 +130,7 @@ class _OverviewStatisticsGrid extends ConsumerWidget {
                 ),
                 _StatisticCard(
                   title: 'Supply Shortages',
-                  count: shortagesByCenter.length.toString(),
+                  count: selectedShortagesByCenter.length.toString(),
                   color: Colors.red,
                   icon: Icons.error,
                 ),
@@ -170,18 +214,25 @@ class _SupplyShortagesList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centersAsync = ref.watch(allCentersProvider);
+    final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
     final shortagesAsync = ref.watch(lowStockSuppliesByCenterProvider);
 
     return centersAsync.when(
       data: (centers) {
+        if (centers.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
         final centersById = <String, EvacuationCenter>{
           for (final center in centers) center.id: center,
         };
+        final centerIds = centersById.keys.toSet();
 
         return shortagesAsync.when(
           data: (shortagesByCenter) {
-            final entries = shortagesByCenter.entries.toList();
+            final entries = shortagesByCenter.entries
+                .where((entry) => centerIds.contains(entry.key))
+                .toList();
             if (entries.isEmpty) {
               return const SizedBox.shrink();
             }
@@ -224,10 +275,14 @@ class _OvercrowdedCentersSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final centersAsync = ref.watch(allCentersProvider);
+    final centersAsync = ref.watch(selectedCommandCenterCentersProvider);
 
     return centersAsync.when(
       data: (centers) {
+        if (centers.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
         final overcrowdedCenters = centers
             .where(_isOvercrowdedCenter)
             .toList(growable: false);

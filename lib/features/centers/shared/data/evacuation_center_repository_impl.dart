@@ -2,19 +2,24 @@ import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/application/register_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/application/update_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/data/evacuation_center_db_extension.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/data/evacuation_center_dto.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
   final DatabaseService _databaseService;
+  final SupabaseClient _supabaseClient;
   final RegisterCenterUseCase _registerCenter;
   final UpdateCenterUseCase _updateCenterCapacity;
 
   EvacuationCenterRepositoryImpl(
     this._databaseService, {
+    required SupabaseClient supabaseClient,
     required RegisterCenterUseCase registerCenter,
     required UpdateCenterUseCase updateCenterCapacity,
-  }) : _registerCenter = registerCenter,
+  }) : _supabaseClient = supabaseClient,
+       _registerCenter = registerCenter,
        _updateCenterCapacity = updateCenterCapacity;
 
   @override
@@ -32,8 +37,23 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
       _databaseService.getCenterById(id);
 
   @override
-  Future<String> getCurrentCommandCenterId() =>
-      _databaseService.getCurrentCommandCenterId();
+  Future<List<EvacuationCenter>> getByCommandCenterId(
+    String commandCenterId,
+  ) async {
+    try {
+      final rows = await _supabaseClient
+          .from('evacuation_centers')
+          .select()
+          .eq('command_center_id', commandCenterId);
+
+      return [
+        for (final row in rows)
+          _centerFromRemoteMap(Map<String, dynamic>.from(row as Map)),
+      ];
+    } catch (_) {
+      return _getByCommandCenterIdFromLocal(commandCenterId);
+    }
+  }
 
   @override
   Future<void> insert(EvacuationCenter center) =>
@@ -57,5 +77,39 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     if (!updated) {
       throw StateError('Failed to update center with id=${center.id}.');
     }
+  }
+
+  Future<List<EvacuationCenter>> _getByCommandCenterIdFromLocal(
+    String commandCenterId,
+  ) async {
+    final db = await _databaseService.database;
+    final maps = await db.query(
+      'evacuation_centers',
+      where: 'commandCenterId = ?',
+      whereArgs: [commandCenterId],
+    );
+    return [for (final map in maps) centerFromMap(map)];
+  }
+
+  EvacuationCenter _centerFromRemoteMap(Map<String, dynamic> map) {
+    return centerFromMap({
+      'id': map['id'],
+      'name': map['name'],
+      'commandCenterId': map['command_center_id'] ?? 'default-command-center',
+      'latitude': map['latitude'],
+      'longitude': map['longitude'],
+      'totalCapacity': map['total_capacity'],
+      'currentOccupancy': map['current_occupancy'],
+      'status': map['status'],
+      'medicalAvailable': _asBool(map['medical_available']) ? 1 : 0,
+      'lastUpdated': map['last_updated'],
+      'synced': _asBool(map['synced']) ? 1 : 0,
+    });
+  }
+
+  bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    return value?.toString().toLowerCase() == 'true';
   }
 }

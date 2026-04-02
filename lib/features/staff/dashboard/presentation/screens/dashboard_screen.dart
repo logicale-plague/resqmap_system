@@ -22,7 +22,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
-            onPressed: () => context.push('/staff-shell'),
+            onPressed: () => context.go('/staff-shell'),
           ),
         ],
       ),
@@ -99,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
               Expanded(
                 child: MetricCard(
                   title: 'Current Occupancy',
-                  value: center.currentOccupancy.toString(),
+                  value: evacueeCount.toString(),
                   icon: Icons.group,
                 ),
               ),

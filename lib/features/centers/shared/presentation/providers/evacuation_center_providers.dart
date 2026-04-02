@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/application/register_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/application/update_center.dart';
@@ -9,10 +10,12 @@ import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation
 final evacuationCenterRepositoryProvider = Provider<EvacuationCenterRepository>(
   (ref) {
     final db = ref.watch(databaseServiceProvider);
+    final supabase = ref.watch(supabaseProvider);
     final registerCenter = ref.watch(registerCenterProvider);
     final updateCenter = ref.watch(updateCenterCapacityProvider);
     return EvacuationCenterRepositoryImpl(
       db,
+      supabaseClient: supabase,
       registerCenter: registerCenter,
       updateCenterCapacity: updateCenter,
     );
@@ -22,11 +25,6 @@ final evacuationCenterRepositoryProvider = Provider<EvacuationCenterRepository>(
 final currentCenterProvider = FutureProvider<EvacuationCenter?>((ref) async {
   final repository = ref.watch(evacuationCenterRepositoryProvider);
   return repository.getCurrent();
-});
-
-final currentCommandCenterIdProvider = FutureProvider<String>((ref) async {
-  final repository = ref.watch(evacuationCenterRepositoryProvider);
-  return repository.getCurrentCommandCenterId();
 });
 
 final allCentersProvider = FutureProvider<List<EvacuationCenter>>((ref) async {
@@ -48,3 +46,12 @@ final centerProvider = FutureProvider.family<EvacuationCenter?, String>((
   final repository = ref.watch(evacuationCenterRepositoryProvider);
   return repository.getById(id);
 });
+
+final centersByCommandCenterProvider =
+    FutureProvider.family<List<EvacuationCenter>, String>((
+      ref,
+      commandCenterId,
+    ) async {
+      final repository = ref.watch(evacuationCenterRepositoryProvider);
+      return repository.getByCommandCenterId(commandCenterId);
+    });
