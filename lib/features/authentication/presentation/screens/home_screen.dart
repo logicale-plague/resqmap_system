@@ -10,25 +10,39 @@ class UserHomeScreen extends StatefulWidget {
 }
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
-  int _selectedIndex = 0;
+  final List<WidgetBuilder> _pageBuilders = [
+    (_) => const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
+    (_) => MapsPage(),
+    (_) =>
+        const Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
+    (_) => ProfileScreen(),
+  ];
+  final Map<int, Widget> _pageCache = {};
 
-  static const List<Widget> _pages = <Widget>[
-    Center(child: Text('Home', style: TextStyle(fontSize: 24))),
-    MapsPage(),
-    Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
-    ProfileScreen(),
+  static const List<String> _pageTitles = [
+    'Home',
+    'Map',
+    'Settings',
+    'Profile',
   ];
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  int _selectedIndex = 0;
+
+  Widget _getPage(int index) {
+    return _pageCache.putIfAbsent(index, () => _pageBuilders[index](context));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      appBar: AppBar(
+        title: Text(_pageTitles[_selectedIndex]),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: List.generate(_pageBuilders.length, _getPage),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[
@@ -41,7 +55,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

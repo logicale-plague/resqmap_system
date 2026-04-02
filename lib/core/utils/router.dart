@@ -63,8 +63,9 @@ final router = GoRouter(
             appBar: AppBar(title: const Text('Error')),
             body: Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('No center data provided'),
+                  const Text('No center data provided'),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () => context.go('/staff-shell?tab=0'),

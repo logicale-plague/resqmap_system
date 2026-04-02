@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/application/register_center.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/application/update_center.dart';
@@ -40,19 +41,24 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
   Future<List<EvacuationCenter>> getByCommandCenterId(
     String commandCenterId,
   ) async {
+    List<dynamic> rows;
     try {
-      final rows = await _supabaseClient
+      rows = await _supabaseClient
           .from('evacuation_centers')
           .select()
           .eq('command_center_id', commandCenterId);
-
-      return [
-        for (final row in rows)
-          _centerFromRemoteMap(Map<String, dynamic>.from(row as Map)),
-      ];
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Log the error and stack trace for debugging
+      if (kDebugMode) {
+        print('Error fetching centers from Supabase: $error');
+        print('Stack trace: $stackTrace');
+      }
       return _getByCommandCenterIdFromLocal(commandCenterId);
     }
+    return [
+      for (final row in rows)
+        _centerFromRemoteMap(Map<String, dynamic>.from(row as Map)),
+    ];
   }
 
   @override

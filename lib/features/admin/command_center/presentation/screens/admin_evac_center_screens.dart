@@ -41,7 +41,7 @@ class AdminEvacCenterScreens extends ConsumerWidget {
                 icon: Icons.home_work_outlined,
                 message: 'No evacuation centers yet',
                 action: ElevatedButton.icon(
-                  onPressed: () => context.go('/admin-shell?tab=3'),
+                  onPressed: () => context.go('/admin-shell?tab=2'),
                   icon: const Icon(Icons.map_outlined),
                   label: const Text('View Map'),
                 ),

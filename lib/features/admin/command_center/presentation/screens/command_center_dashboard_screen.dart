@@ -47,7 +47,10 @@ class CommandCenterDashboardScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               );
             },
-            loading: () => const SizedBox.shrink(),
+            loading: () => Text(
+              'Loading command center...',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             error: (_, __) => Text(
               'Unable to resolve selected command center.',
               style: Theme.of(context).textTheme.bodyMedium,

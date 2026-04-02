@@ -37,8 +37,10 @@ CommandCenter commandCenterFromMap(Map<String, dynamic> map) {
     contactNumber: map['contactNumber'] as String?,
     email: map['email'] as String?,
     isActive: (map['isActive'] as int? ?? 1) == 1,
-    createdAt: DateTime.parse(map['createdAt'] as String),
-    updatedAt: DateTime.parse(map['updatedAt'] as String),
+    createdAt:
+        DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+    updatedAt:
+        DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
   );
 }
 
@@ -51,8 +53,10 @@ CommandCenter commandCenterFromRemoteMap(Map<String, dynamic> map) {
     contactNumber: map['contact_number'] as String?,
     email: map['email'] as String?,
     isActive: _parseBool(map['is_active']),
-    createdAt: DateTime.parse(map['created_at'] as String),
-    updatedAt: DateTime.parse(map['updated_at'] as String),
+    createdAt:
+        DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now(),
+    updatedAt:
+        DateTime.tryParse(map['updated_at'] as String? ?? '') ?? DateTime.now(),
   );
 }
 
@@ -63,5 +67,5 @@ bool _parseBool(dynamic value) {
     final normalized = value.toLowerCase();
     return normalized == 'true' || normalized == '1' || normalized == 't';
   }
-  return true;
+  return false;
 }

@@ -9,7 +9,7 @@ final commandCenterRepositoryProvider = Provider<CommandCenterRepository>((
   ref,
 ) {
   final supabase = ref.watch(supabaseProvider);
-  final updateCommandCenter = ref.watch(updateCommandCenterProvider);
+  final updateCommandCenter = ref.read(updateCommandCenterProvider);
   return CommandCenterRepositoryImpl(
     supabaseClient: supabase,
     updateCommandCenter: updateCommandCenter,
