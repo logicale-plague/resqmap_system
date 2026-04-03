@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
-class UserHomeScreen extends StatefulWidget {
-  const UserHomeScreen({super.key});
+class UserShell extends StatefulWidget {
+  const UserShell({super.key});
 
   @override
-  State<UserHomeScreen> createState() => _UserHomeScreenState();
+  State<UserShell> createState() => _UserShellState();
 }
 
-class _UserHomeScreenState extends State<UserHomeScreen> {
+class _UserShellState extends State<UserShell> {
   late final List<Widget> _pages = [
     const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
     MapsPage(),
