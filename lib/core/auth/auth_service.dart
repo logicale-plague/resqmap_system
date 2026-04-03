@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/user_provider.dart'
@@ -107,13 +108,20 @@ class AuthService {
     return response;
   }
 
-  Future<void> signOut() async {
+  Future<bool> signOut() async {
+    var remoteLogoutSucceeded = true;
     try {
-      await _supabase.auth.signOut();
+      try {
+        await _supabase.auth.signOut();
+      } catch (e) {
+        remoteLogoutSucceeded = false;
+        debugPrint('Supabase signOut failed; continuing with local logout: $e');
+      }
     } finally {
       // Keep cached local credentials for offline re-login.
       _ref.invalidate(currentUserProvider);
     }
+    return remoteLogoutSucceeded;
   }
 
   Future<User?> ensureUserCachedLocally(

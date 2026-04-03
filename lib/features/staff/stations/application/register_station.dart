@@ -35,7 +35,7 @@ class RegisterStationUseCase {
        _ref = ref;
 
   Future<void> registerStation(Station station) async {
-    final isOnline = await _ref.refresh(isOnlineProvider.future);
+    final isOnline = await _ref.read(isOnlineProvider.future);
 
     if (!isOnline) {
       throw OfflineException(
