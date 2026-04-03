@@ -68,10 +68,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       var currentUser = await db.getUserByEmail(response.user!.email!);
 
       // Online login fallback: if user was not cached locally, fetch profile and cache it.
-      currentUser ??= await authService.ensureUserCachedLocally(
-        response.user!.id,
-        password: password,
-      );
+      if (currentUser == null) {
+        try {
+          currentUser = await authService.ensureUserCachedLocally(
+            response.user!.id,
+            password: password,
+          );
+        } catch (_) {
+          await authService.signOut();
+          rethrow;
+        }
+      }
 
       if (!mounted) return;
 

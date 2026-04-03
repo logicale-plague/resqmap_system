@@ -3,5 +3,10 @@ import 'package:kalig_onan_evac_system/features/staff/sync/application/sync_serv
 
 final syncStatusProvider = StreamProvider<bool>((ref) {
   final syncService = ref.watch(syncServiceProvider);
-  return syncService.syncStatusStream;
+  return () async* {
+    // Provide an immediate first value so consumers don't stay in loading
+    // while waiting for connectivity/bootstrap events.
+    yield syncService.isOnline;
+    yield* syncService.syncStatusStream;
+  }();
 });

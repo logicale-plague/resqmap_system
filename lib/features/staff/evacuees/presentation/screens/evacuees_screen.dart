@@ -102,8 +102,14 @@ class EvacueesScreen extends ConsumerWidget {
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.edit),
-                  tooltip: 'Edit not implemented',
-                  onPressed: null,
+                  tooltip: 'Edit evacuee',
+                  onPressed: () => openEvacueeDetailsDialog(
+                    context,
+                    ref,
+                    evacuee,
+                    stationsAsync.value ?? const <Station>[],
+                    currentCenter?.id,
+                  ),
                 ),
               );
             },
