@@ -1,4 +1,5 @@
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/data/evacuation_center_dto.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:sqflite/sqflite.dart';
@@ -37,6 +38,29 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     final db = await database;
     final maps = await db.query('evacuation_centers');
     return [for (final map in maps) centerFromMap(map)];
+  }
+
+  Future<List<EvacuationCenter>> getAllCentersViaPostal() async {
+    final db = await database;
+    final userInfo = await getCurrentUser();
+    final postalCode = userInfo?.postalCode;
+
+    if (postalCode == null) {
+      return [];
+    }
+    final List<Map<String, dynamic>> centers = await db.query(
+      'evacuation_centers',
+      where: 'postalCode = ?',
+      whereArgs: [postalCode],
+    );
+
+    final allData = await db.query('evacuation_centers');
+    print('Total rows in evacuation_centers: ${allData.length}');
+    print('Sample row: ${allData.isNotEmpty ? allData : "Table is empty"}');
+
+    print('// // // // // / // // // ::::: ${centers.length}');
+
+    return [for (final center in centers) centerFromMap(center)];
   }
 
   Future<EvacuationCenter?> getCenterById(String id) async {

@@ -6,6 +6,8 @@ class EvacuationCenter {
   final String commandCenterId;
   final double latitude;
   final double longitude;
+  final String fullAddress;
+  final String postalCode;
   final int totalCapacity;
   final int currentOccupancy;
   final CenterStatus status;
@@ -19,6 +21,8 @@ class EvacuationCenter {
     required this.commandCenterId,
     required this.latitude,
     required this.longitude,
+    required this.fullAddress,
+    required this.postalCode,
     required this.totalCapacity,
     required this.currentOccupancy,
     required this.status,
@@ -45,6 +49,8 @@ class EvacuationCenter {
     String? commandCenterId,
     double? latitude,
     double? longitude,
+    String? fullAddress,
+    String? postalCode,
     int? totalCapacity,
     int? currentOccupancy,
     CenterStatus? status,
@@ -58,6 +64,8 @@ class EvacuationCenter {
       commandCenterId: commandCenterId ?? this.commandCenterId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      fullAddress: fullAddress ?? this.fullAddress,
+      postalCode: postalCode ?? this.postalCode,
       totalCapacity: totalCapacity ?? this.totalCapacity,
       currentOccupancy: currentOccupancy ?? this.currentOccupancy,
       status: status ?? this.status,

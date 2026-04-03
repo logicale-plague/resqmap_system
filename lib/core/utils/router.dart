@@ -12,6 +12,7 @@ import '../indices/auth_screens_index.dart';
 
 final router = GoRouter(
   initialLocation: '/login',
+
   routes: [
     // auth routes
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),

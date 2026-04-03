@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
@@ -13,6 +17,15 @@ import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
+
+// diri lang ni danay kay tamadan ko mag ukay sang heirarchy sang evac center
+final relatedCentersProvider = FutureProvider<List<EvacuationCenter>>((
+  ref,
+) async {
+  final user = await ref.watch(currentUserProvider.future);
+  if (user == null) return [];
+  return ref.read(evacuationCenterRepositoryProvider).getAllViaPostal();
+});
 
 class MapState {
   final MapboxMap? mapboxMap;
@@ -143,6 +156,65 @@ class MapController extends Notifier<MapState> {
     }
   }
 
+  // // // // FETCH SOMETHING VIA COORDINATES // // // //
+  Future<Map<String, dynamic>> getAddressFromCoords(
+    double lat,
+    double lng,
+  ) async {
+    final accessToken = dotenv.env["MAPBOX_ACCESS_TOKEN"] ?? "";
+    final url =
+        'https://api.mapbox.com/search/geocode/v6/reverse?longitude=$lng&latitude=$lat&access_token=$accessToken&limit=1';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['features'][0];
+      } else {
+        return {"error": "Something went wrong"};
+      }
+    } catch (e) {
+      return {"error": "Something went wrong"};
+    }
+  }
+
+  Future<void> addMarkerToMap({
+    required Point point,
+    required String label,
+    String? iconPath,
+  }) async {
+    final manager = state.pointAnnotationManager;
+
+    // Guard against double-submit: return early if already in progress
+    if (_isAddingMarker) return;
+    _isAddingMarker = true;
+
+    if (manager != null) {
+      try {
+        final ByteData bytes = await rootBundle.load(
+          iconPath ?? 'assets/map_icons/shelter-icon.png',
+        );
+        final Uint8List imageData = bytes.buffer.asUint8List();
+
+        await manager.create(
+          PointAnnotationOptions(
+            geometry: point,
+            image: imageData,
+            iconSize: 0.07,
+            textField: label,
+            textColor: 0xFF1E88E5,
+            textOffset: [0.0, 1.6],
+            textSize: 13.0,
+            textHaloColor: 0xFFFFFFFF,
+            textHaloWidth: 2.0,
+          ),
+        );
+      } finally {
+        _isAddingMarker = false;
+      }
+    }
+  }
+
   Future<void> addUserLocationToMap({
     required Point point,
     required String address,
@@ -223,9 +295,11 @@ class MapController extends Notifier<MapState> {
     }
   }
 
-  Future<void> addMarkerToMap({
+  Future<void> addEvacCenterToMap({
     required Point point,
     required String centerName,
+    required String fullAddress,
+    required String postalCode,
   }) async {
     // Check online status before allowing creation
     final syncService = ref.read(syncServiceProvider);
@@ -273,6 +347,8 @@ class MapController extends Notifier<MapState> {
         commandCenterId: currentCommandCenterId,
         latitude: point.coordinates.lat.toDouble(),
         longitude: point.coordinates.lng.toDouble(),
+        fullAddress: fullAddress,
+        postalCode: postalCode,
         totalCapacity: 0,
         currentOccupancy: 0,
         status: CenterStatus.operational,

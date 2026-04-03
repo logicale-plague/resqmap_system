@@ -6,7 +6,14 @@ import 'package:kalig_onan_evac_system/features/maps/presentation/providers/map_
 
 class AddEvacSheet extends ConsumerStatefulWidget {
   final Point point;
-  const AddEvacSheet({super.key, required this.point});
+  final String fullAddress;
+  final String postalCode;
+  const AddEvacSheet({
+    super.key,
+    required this.point,
+    required this.postalCode,
+    required this.fullAddress,
+  });
 
   @override
   ConsumerState<AddEvacSheet> createState() => _AddEvacSheetState();
@@ -16,12 +23,14 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
   final TextEditingController _centerNameController = TextEditingController();
   final TextEditingController _latController = TextEditingController();
   final TextEditingController _lngController = TextEditingController();
+  final TextEditingController _postalCodeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _latController.text = widget.point.coordinates.lat.toStringAsFixed(6);
     _lngController.text = widget.point.coordinates.lng.toStringAsFixed(6);
+    _postalCodeController.text = widget.postalCode;
   }
 
   @override
@@ -42,7 +51,12 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
     try {
       await ref
           .read(mapControllerProvider.notifier)
-          .addMarkerToMap(point: widget.point, centerName: centerName);
+          .addEvacCenterToMap(
+            point: widget.point,
+            centerName: centerName,
+            fullAddress: widget.fullAddress,
+            postalCode: widget.postalCode,
+          );
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -79,6 +93,11 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
           _buildTextField(
             controller: _centerNameController,
             label: "Center Name",
+          ),
+          _buildTextField(
+            controller: _postalCodeController,
+            label: "Postal Code",
+            enabled: false,
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
