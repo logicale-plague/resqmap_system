@@ -107,6 +107,7 @@ class SyncService {
   Future<void> _performSync() async {
     // _isSyncInProgress = true;
     var hadEntityFailures = false;
+    var hadStationFailures = false;
 
     try {
       await _normalizeLegacyIds();
@@ -144,6 +145,7 @@ class SyncService {
             syncedStationIds.add(station.id);
           } catch (e) {
             hadEntityFailures = true;
+            hadStationFailures = true;
             debugPrint('Station sync failed for id=${station.id}: $e');
           }
         }
@@ -183,7 +185,7 @@ class SyncService {
         await _databaseService.markSuppliesSynced(syncedSupplyIds);
       }
 
-      await _pullAndMergeFromSupabase();
+      await _pullAndMergeFromSupabase(skipStations: hadStationFailures);
 
       if (hadEntityFailures) {
         _scheduleRetry();
@@ -289,15 +291,17 @@ class SyncService {
 
   bool _isUuid(String value) => _uuidPattern.hasMatch(value);
 
-  Future<void> _pullAndMergeFromSupabase() async {
+  Future<void> _pullAndMergeFromSupabase({bool skipStations = false}) async {
     final centerRows = await _supabase.from('evacuation_centers').select();
     for (final row in centerRows) {
       await _mergeCenter(_asMap(row));
     }
 
-    final stationRows = await _supabase.from('stations').select();
-    for (final row in stationRows) {
-      await _mergeStation(_asMap(row));
+    if (!skipStations) {
+      final stationRows = await _supabase.from('stations').select();
+      for (final row in stationRows) {
+        await _mergeStation(_asMap(row));
+      }
     }
 
     final evacueeRows = await _supabase.from('evacuees').select();
