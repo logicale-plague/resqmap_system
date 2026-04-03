@@ -193,9 +193,22 @@ class ProfileScreen extends ConsumerWidget {
                                           ElevatedButton(
                                             onPressed: () async {
                                               Navigator.of(dialogContext).pop();
-                                              await ref
-                                                  .read(authServiceProvider)
-                                                  .signOut();
+                                              final remoteLogoutSucceeded =
+                                                  await ref
+                                                      .read(authServiceProvider)
+                                                      .signOut();
+                                              if (!remoteLogoutSucceeded &&
+                                                  context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'You were signed out locally. Remote logout will complete when you reconnect.',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
                                               if (context.mounted) {
                                                 context.go('/login');
                                               }

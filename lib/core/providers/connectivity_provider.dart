@@ -30,7 +30,7 @@ final connectivityProvider = StreamProvider<bool>((ref) async* {
 });
 
 final isOnlineProvider = FutureProvider<bool>((ref) async {
-  final connectivity = Connectivity();
-  final result = await connectivity.checkConnectivity();
-  return result != ConnectivityResult.none && await _verifyInternetAccess();
+  // Reuse the authoritative connectivity stream so callers get updated
+  // online/offline state after reconnection without forcing manual refresh.
+  return ref.watch(connectivityProvider.future);
 });

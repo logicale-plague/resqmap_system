@@ -77,11 +77,19 @@ final lowStockSuppliesByCenterProvider =
     });
 
 final lowStockSuppliesForCenterIdsProvider =
-    FutureProvider.family<Map<String, List<Supply>>, Set<String>>((
+    FutureProvider.family<Map<String, List<Supply>>, String>((
       ref,
-      centerIds,
+      centerIdsKey,
     ) async {
-      if (centerIds.isEmpty) {
+      if (centerIdsKey.isEmpty) {
+        return {};
+      }
+
+      final centerIdSet = centerIdsKey
+          .split('|')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      if (centerIdSet.isEmpty) {
         return {};
       }
 
@@ -91,6 +99,6 @@ final lowStockSuppliesForCenterIdsProvider =
 
       return {
         for (final entry in shortagesByCenter.entries)
-          if (centerIds.contains(entry.key)) entry.key: entry.value,
+          if (centerIdSet.contains(entry.key)) entry.key: entry.value,
       };
     });

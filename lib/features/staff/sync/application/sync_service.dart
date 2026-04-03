@@ -83,6 +83,11 @@ class SyncService {
       return;
     }
 
+    if (!_isOnline) {
+      debugPrint('Device is offline; skipping sync.');
+      return;
+    }
+
     final activeSyncFuture = _activeSyncFuture;
     if (activeSyncFuture != null) {
       debugPrint('Sync already in progress; joining active sync request.');
@@ -101,6 +106,8 @@ class SyncService {
 
   Future<void> _performSync() async {
     // _isSyncInProgress = true;
+    var hadEntityFailures = false;
+    var hadStationFailures = false;
 
     try {
       await _normalizeLegacyIds();
@@ -112,47 +119,80 @@ class SyncService {
       // final unsyncedAlerts = await _databaseService.getUnsyncedAlerts();
 
       if (unsyncedCenters.isNotEmpty) {
-        final payload = unsyncedCenters
-            .map((center) => _centerToRemoteMap(center))
-            .toList();
-        await _uploadCenters(payload);
-        await _databaseService.markCentersSynced(
-          unsyncedCenters.map((center) => center.id).toList(),
-        );
+        final syncedCenterIds = <String>[];
+        for (final center in unsyncedCenters) {
+          try {
+            await _supabase.from('evacuation_centers').upsert([
+              _centerToRemoteMap(center),
+            ]);
+            syncedCenterIds.add(center.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Center sync failed for id=${center.id}: $e');
+          }
+        }
+
+        await _databaseService.markCentersSynced(syncedCenterIds);
       }
 
       if (unsyncedStations.isNotEmpty) {
-        final payload = unsyncedStations
-            .map((station) => _stationToRemoteMap(station))
-            .toList();
-        await _supabase.from('stations').upsert(payload);
-        await _databaseService.markStationsSynced(
-          unsyncedStations.map((station) => station.id).toList(),
-        );
+        final syncedStationIds = <String>[];
+        for (final station in unsyncedStations) {
+          try {
+            await _supabase.from('stations').upsert([
+              _stationToRemoteMap(station),
+            ]);
+            syncedStationIds.add(station.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            hadStationFailures = true;
+            debugPrint('Station sync failed for id=${station.id}: $e');
+          }
+        }
+
+        await _databaseService.markStationsSynced(syncedStationIds);
       }
 
       if (unsyncedEvacuees.isNotEmpty) {
-        final payload = unsyncedEvacuees
-            .map((evacuee) => _evacueeToRemoteMap(evacuee))
-            .toList();
-        await _supabase.from('evacuees').upsert(payload);
+        final syncedEvacueeIds = <String>[];
+        for (final evacuee in unsyncedEvacuees) {
+          try {
+            await _supabase.from('evacuees').upsert([
+              _evacueeToRemoteMap(evacuee),
+            ]);
+            syncedEvacueeIds.add(evacuee.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Evacuee sync failed for id=${evacuee.id}: $e');
+          }
+        }
 
-        await _databaseService.markEvacueesSynced(
-          unsyncedEvacuees.map((evacuee) => evacuee.id).toList(),
-        );
+        await _databaseService.markEvacueesSynced(syncedEvacueeIds);
       }
 
       if (unsyncedSupplies.isNotEmpty) {
-        final payload = unsyncedSupplies
-            .map((supply) => _supplyToRemoteMap(supply))
-            .toList();
-        await _uploadSupplies(payload);
-        await _databaseService.markSuppliesSynced(
-          unsyncedSupplies.map((supply) => supply.id).toList(),
-        );
+        final syncedSupplyIds = <String>[];
+        for (final supply in unsyncedSupplies) {
+          try {
+            await _uploadSupplies([_supplyToRemoteMap(supply)]);
+            syncedSupplyIds.add(supply.id);
+          } catch (e) {
+            hadEntityFailures = true;
+            debugPrint('Supply sync failed for id=${supply.id}: $e');
+          }
+        }
+
+        await _databaseService.markSuppliesSynced(syncedSupplyIds);
       }
 
-      await _pullAndMergeFromSupabase();
+      await _pullAndMergeFromSupabase(skipStations: hadStationFailures);
+
+      if (hadEntityFailures) {
+        _scheduleRetry();
+        throw StateError(
+          'Sync completed with partial failures. Check logs for failing records.',
+        );
+      }
 
       _lastSyncTime = DateTime.now();
       _retryAttempts = 0;
@@ -251,15 +291,17 @@ class SyncService {
 
   bool _isUuid(String value) => _uuidPattern.hasMatch(value);
 
-  Future<void> _pullAndMergeFromSupabase() async {
+  Future<void> _pullAndMergeFromSupabase({bool skipStations = false}) async {
     final centerRows = await _supabase.from('evacuation_centers').select();
     for (final row in centerRows) {
       await _mergeCenter(_asMap(row));
     }
 
-    final stationRows = await _supabase.from('stations').select();
-    for (final row in stationRows) {
-      await _mergeStation(_asMap(row));
+    if (!skipStations) {
+      final stationRows = await _supabase.from('stations').select();
+      for (final row in stationRows) {
+        await _mergeStation(_asMap(row));
+      }
     }
 
     final evacueeRows = await _supabase.from('evacuees').select();
@@ -452,13 +494,12 @@ class SyncService {
   Map<String, dynamic> _evacueeToRemoteMap(Evacuee evacuee) {
     return {
       'id': evacuee.id,
-      'name': evacuee.name,
+      'name': evacuee.name?.trim() ?? '',
       'station_id': evacuee.stationId,
       'age_group': evacuee.ageGroup.index,
       'medical_condition': evacuee.medicalCondition.index,
       'registered_at': evacuee.registeredAt.toIso8601String(),
       'active': evacuee.active ? 1 : 0,
-      'synced': evacuee.synced ? 1 : 0,
     };
   }
 
@@ -470,7 +511,6 @@ class SyncService {
       'current_stock': supply.currentStock,
       'usage_rate_per_day': supply.usageRatePerDay,
       'last_restocked': supply.lastRestocked.toIso8601String(),
-      'synced': supply.synced ? 1 : 0,
     };
   }
 
@@ -482,7 +522,6 @@ class SyncService {
       'capacity': station.capacity,
       'allowed_age_group': station.allowedAgeGroup?.index,
       'allowed_medical_condition': station.allowedMedicalCondition?.index,
-      'synced': station.synced ? 1 : 0,
     };
   }
 
@@ -552,9 +591,9 @@ class SyncService {
     await _supabase.from('supplies').upsert(payload);
   }
 
-  Future<void> _uploadCenters(List<Map<String, dynamic>> payload) async {
-    await _supabase.from('evacuation_centers').upsert(payload);
-  }
+  // Future<void> _uploadCenters(List<Map<String, dynamic>> payload) async {
+  //   await _supabase.from('evacuation_centers').upsert(payload);
+  // }
 
   Future<String> _currentCenterIdOrDefault() async {
     final center = await _databaseService.getCurrentCenter();

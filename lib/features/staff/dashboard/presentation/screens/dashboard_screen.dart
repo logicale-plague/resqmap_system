@@ -11,13 +11,19 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentCenterAsync = ref.watch(currentCenterProvider);
+    final liveCenter = currentCenterAsync.asData?.value;
+    final displayCenter = liveCenter != null && liveCenter.id == center.id
+        ? liveCenter
+        : center;
+
     final evacueeCountAsync = ref.watch(
-      evacueeCountByCenterProvider(center.id),
+      evacueeCountByCenterProvider(displayCenter.id),
     );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(center.name),
+        title: Text(displayCenter.name),
         backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           IconButton(
@@ -27,7 +33,7 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       body: evacueeCountAsync.when(
-        data: (count) => _buildDashboard(context, ref, center, count),
+        data: (count) => _buildDashboard(context, ref, displayCenter, count),
         loading: () => const AppLoadingState(),
         error: (err, stack) => AppErrorState(
           error: err,
@@ -148,6 +154,7 @@ class DashboardScreen extends ConsumerWidget {
                   final result = await context.push('/register');
                   if (result == true && context.mounted) {
                     ref.invalidate(evacueeCountByCenterProvider(center.id));
+                    ref.invalidate(currentCenterProvider);
                   }
                 },
                 color: Colors.green,
@@ -174,6 +181,7 @@ class DashboardScreen extends ConsumerWidget {
                 onPressed: () async {
                   await context.push('/evacuees');
                   ref.invalidate(evacueeCountByCenterProvider(center.id));
+                  ref.invalidate(currentCenterProvider);
                 },
                 color: Colors.purple,
               ),
