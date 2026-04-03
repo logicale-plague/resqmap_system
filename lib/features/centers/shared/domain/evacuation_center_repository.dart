@@ -3,6 +3,7 @@ import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation
 abstract interface class EvacuationCenterRepository {
   Future<EvacuationCenter?> getCurrent();
   Future<List<EvacuationCenter>> getAll();
+  Future<List<EvacuationCenter>> getAllViaPostal();
   Future<List<EvacuationCenter>> getUnsynced();
   Future<EvacuationCenter?> getById(String id);
   Future<String> getCurrentCommandCenterId();

@@ -24,6 +24,10 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
   Future<List<EvacuationCenter>> getAll() => _databaseService.getAllCenters();
 
   @override
+  Future<List<EvacuationCenter>> getAllViaPostal() =>
+      _databaseService.getAllCentersViaPostal();
+
+  @override
   Future<List<EvacuationCenter>> getUnsynced() =>
       _databaseService.getUnsyncedCenters();
 

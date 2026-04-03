@@ -2,19 +2,24 @@ import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
-import 'package:kalig_onan_evac_system/core/indices/admin_screens_index.dart';
-import 'package:kalig_onan_evac_system/core/indices/staff_screens_index.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
+import '../indices/staff_screens_index.dart';
+import '../indices/admin_screens_index.dart';
 import '../indices/auth_screens_index.dart';
 
 final router = GoRouter(
-  initialLocation: '/centers',
+  initialLocation: '/login',
+
   routes: [
     // auth routes
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
 
     // admin routes
+    GoRoute(
+      path: '/admin-shell',
+      builder: (context, state) => const AdminShell(),
+    ),
     GoRoute(
       path: '/command-center',
       builder: (context, state) => const CommandCenterDashboardScreen(),

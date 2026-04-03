@@ -63,6 +63,7 @@ class MainApp extends ConsumerWidget {
         useMaterial3: true,
         appBarTheme: const AppBarTheme(
           elevation: 0,
+          scrolledUnderElevation: 0,
           titleSpacing: 0,
           iconTheme: IconThemeData(color: Colors.white, size: 28),
           centerTitle: true,

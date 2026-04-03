@@ -294,6 +294,8 @@ class SyncService {
           'default-command-center',
       latitude: _readNum(row, 'latitude').toDouble(),
       longitude: _readNum(row, 'longitude').toDouble(),
+      fullAddress: _readString(row, 'full_address'),
+      postalCode: _readString(row, 'postal_code'),
       totalCapacity: _readNum(row, 'total_capacity').toInt(),
       currentOccupancy: _readNum(row, 'current_occupancy').toInt(),
       status: CenterStatus.values[_readNum(row, 'status').toInt()],
