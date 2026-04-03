@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_cmd_center_shell.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
-import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/user_shell.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 import 'package:kalig_onan_evac_system/features/staff/dashboard/presentation/screens/staff_shell.dart';
@@ -98,9 +98,6 @@ final router = GoRouter(
     ),
     GoRoute(path: '/sync', redirect: (context, state) => '/staff-shell?tab=1'),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
-    GoRoute(
-      path: '/userhome',
-      builder: (context, state) => const UserHomeScreen(),
-    ),
+    GoRoute(path: '/userhome', builder: (context, state) => const UserShell()),
   ],
 );

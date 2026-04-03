@@ -4,7 +4,7 @@ import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
-import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/user_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/login_screen.dart';
 import 'package:kalig_onan_evac_system/features/staff/dashboard/presentation/screens/staff_shell.dart';
 
@@ -42,7 +42,7 @@ class AuthGate extends ConsumerWidget {
                 case UserPermission.staff:
                   return const StaffShell();
                 case UserPermission.user:
-                  return const UserHomeScreen();
+                  return const UserShell();
               }
             },
             loading: () => const Scaffold(
