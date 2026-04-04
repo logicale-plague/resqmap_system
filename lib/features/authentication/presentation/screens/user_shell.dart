@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
@@ -11,7 +12,7 @@ class UserShell extends StatefulWidget {
 
 class _UserShellState extends State<UserShell> {
   late final List<Widget> _pages = [
-    const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
+    const HomeScreen(),
     MapsPage(),
     const Center(child: Text('Settings', style: TextStyle(fontSize: 24))),
     ProfileScreen(),
