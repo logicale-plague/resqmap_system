@@ -102,9 +102,5 @@ final router = GoRouter(
     GoRoute(path: '/sync', redirect: (context, state) => '/staff-shell?tab=1'),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
     GoRoute(path: '/userhome', builder: (context, state) => const UserShell()),
-    GoRoute(
-      path: '/homescreen',
-      builder: (context, state) => const HomeScreen(),
-    ),
   ],
 );
