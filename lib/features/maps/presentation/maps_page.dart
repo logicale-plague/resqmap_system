@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
@@ -16,24 +18,104 @@ class MapsPage extends ConsumerStatefulWidget {
 }
 
 class _MapsPageState extends ConsumerState<MapsPage> {
+  User? currentUser;
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentUser();
+  }
+
+  void _getCurrentUser() async {
+    final user = await ref.read(currentUserProvider.future);
+    if (!mounted) return;
+    setState(() {
+      currentUser = user;
+    });
+  }
+
   void _onMapCreated(MapboxMap mapboxMap) async {
+    final centers = await ref.read(relatedCentersProvider.future);
     final controller = ref.read(mapControllerProvider.notifier);
     await controller.configureMap(mapboxMap);
+    controller.cacheCenters(centers);
     ref
         .read(mapControllerProvider)
         .pointAnnotationManager
         ?.tapEvents(
-          onTap: (p0) {
-            _handleMarkerTap(p0);
+          onTap: (annotation) {
+            final centerId = _extractCenterId(annotation.customData);
+            if (centerId != null) {
+              final center = controller.findCenterById(centerId);
+              if (center != null) {
+                _handleMarkerTap(center);
+              }
+            }
             return true;
           },
         );
+
+    // // // Load/pinpoint user homelocation in map if available
+    if (currentUser?.latitude != null && currentUser?.longitude != null) {
+      await controller.addMarkerToMap(
+        point: Point(
+          coordinates: Position(
+            num.parse(currentUser!.longitude.toString()),
+            num.parse(currentUser!.latitude.toString()),
+          ),
+        ),
+        label: "My Home",
+      );
+
+      // // // THIs will load all the centers that are in teh same postal as the user
+      if (centers.isNotEmpty) {
+        debugPrint('Adding ${centers.length} centers to map...');
+        for (final center in centers) {
+          await controller.addMarkerToMap(
+            point: Point(
+              coordinates: Position(center.longitude, center.latitude),
+            ),
+            label: center.name,
+            annotationId: center.id,
+          );
+        }
+      }
+    }
+  }
+
+  String? _extractCenterId(Object? rawCustomData) {
+    if (rawCustomData is Map) {
+      final dynamic id = rawCustomData['id'];
+      return id?.toString();
+    }
+
+    if (rawCustomData is String && rawCustomData.isNotEmpty) {
+      try {
+        final decoded = rawCustomData.startsWith('{')
+            ? Map<String, dynamic>.from(
+                Map<Object?, Object?>.from(jsonDecode(rawCustomData)),
+              )
+            : null;
+        return decoded?['id']?.toString();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   Future<void> _onMapLongPressed(MapContentGestureContext mapContext) async {
-    User? currentUser;
+    Map<String, dynamic> data; // location data dictionary from Geolocator
+
     try {
       currentUser = await ref.read(currentUserProvider.future);
+      // // // // DEBUG  DEBUG DEBUG // // // //
+      data = await ref
+          .read(mapControllerProvider.notifier)
+          .getAddressFromCoords(
+            double.parse(mapContext.point.coordinates.lat.toString()),
+            double.parse(mapContext.point.coordinates.lng.toString()),
+          );
     } catch (e, stackTrace) {
       debugPrint('Failed to load current user for map long press: $e');
       debugPrintStack(stackTrace: stackTrace);
@@ -44,10 +126,10 @@ class _MapsPageState extends ConsumerState<MapsPage> {
       }
       rethrow;
     }
-
     if (!mounted) return;
 
     final point = mapContext.point;
+
     switch (currentUser?.role) {
       case UserPermission.admin:
         await showModalBottomSheet(
@@ -58,7 +140,11 @@ class _MapsPageState extends ConsumerState<MapsPage> {
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: AddEvacSheet(point: point),
+              child: AddEvacSheet(
+                point: point,
+                fullAddress: data['properties']['full_address'],
+                postalCode: data['properties']['context']['postcode']['name'],
+              ),
             );
           },
         );
@@ -86,7 +172,11 @@ class _MapsPageState extends ConsumerState<MapsPage> {
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: AddUserLocation(point: point),
+              child: AddUserLocation(
+                point: point,
+                fullAddress: data['properties']['full_address'],
+                postalCode: data['properties']['context']['postcode']['name'],
+              ),
             );
           },
         );
@@ -101,10 +191,11 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     }
   }
 
-  void _handleMarkerTap(PointAnnotation annotation) {
+  void _handleMarkerTap(EvacuationCenter evacuationCenter) {
+    debugPrint('Marker tapped for center ${evacuationCenter.id}');
     final center = ref
         .read(mapControllerProvider.notifier)
-        .findCenterByAnnotationId(annotation.id);
+        .findCenterById(evacuationCenter.id);
 
     if (center != null) {
       showModalBottomSheet(
@@ -148,6 +239,8 @@ class _MapsPageState extends ConsumerState<MapsPage> {
           ),
         ),
       );
+    } else {
+      debugPrint('Tapped marker did not resolve to a cached center.');
     }
   }
 
@@ -157,42 +250,68 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     final mapProvider = ref.watch(mapControllerProvider.notifier);
 
     return Scaffold(
-      // appBar: AppBar(
-      //   backgroundColor: Colors.black26,
-      //   elevation: 0,
-      //   title: Column(
-      //     crossAxisAlignment: CrossAxisAlignment.start,
-      //     children: [
-      //       const Text(
-      //         "Iloilo Crisis Map",
-      //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      //       ),
-      //       Text(
-      //         "Scope: Brgy. San Jose",
-      //         style: TextStyle(fontSize: 12, color: Colors.white70),
-      //       ),
-      //     ],
-      //   ),
-      //   actions: [
-      //     IconButton(
-      //       icon: const Icon(
-      //         Icons.cloud_done_outlined,
-      //         color: Colors.greenAccent,
-      //       ),
-      //       onPressed: () {},
-      //     ),
-      //     IconButton(icon: const Icon(Icons.layers_outlined), onPressed: () {}),
-      //     IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-      //   ],
-      // ),
-      // extendBodyBehindAppBar: true,
+      appBar: currentUser?.role == UserPermission.user
+          ? AppBar(
+              backgroundColor: Colors.white60,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(
+                  shadows: [
+                    BoxShadow(
+                      color: Colors.black,
+                      blurRadius: 5,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                  Icons.cloud_done_outlined,
+                  color: Color.fromARGB(255, 0, 255, 132),
+                ),
+                onPressed: () {},
+              ),
+              titleSpacing: 0,
+              centerTitle: false,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Postal: ${currentUser?.postalCode ?? "N/A"}",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    currentUser?.fullAddress ?? "N/A",
+                    style: TextStyle(fontSize: 12, color: Colors.black),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.question_mark, color: Colors.black),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search, color: Colors.black),
+                  onPressed: () {},
+                ),
+              ],
+            )
+          : null,
+      extendBodyBehindAppBar: true,
       body: MapWidget(
         key: const ValueKey("mapWidget"),
         onMapCreated: _onMapCreated,
         onLongTapListener: (context) => _onMapLongPressed(context),
         cameraOptions: CameraOptions(
-          center: Point(coordinates: Position(121.7740, 12.8797)),
-          zoom: 5.0,
+          center: Point(
+            coordinates: Position(
+              currentUser?.longitude ?? 121.7740,
+              currentUser?.latitude ?? 12.8797,
+            ),
+          ),
+          zoom: (currentUser?.fullAddress != null) ? 16.0 : 5.0,
           bearing: 0,
           pitch: 0,
         ),

@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
@@ -13,6 +17,15 @@ import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
+
+// diri lang ni danay kay tamadan ko mag ukay sang heirarchy sang evac center
+final relatedCentersProvider = FutureProvider<List<EvacuationCenter>>((
+  ref,
+) async {
+  final user = await ref.watch(currentUserProvider.future);
+  if (user == null) return [];
+  return ref.read(evacuationCenterRepositoryProvider).getAllViaPostal();
+});
 
 class MapState {
   final MapboxMap? mapboxMap;
@@ -143,6 +156,76 @@ class MapController extends Notifier<MapState> {
     }
   }
 
+  // // // // FETCH SOMETHING VIA COORDINATES // // // //
+  Future<Map<String, dynamic>> getAddressFromCoords(
+    double lat,
+    double lng,
+  ) async {
+    final accessToken = dotenv.env["MAPBOX_ACCESS_TOKEN"] ?? "";
+    final url =
+        'https://api.mapbox.com/search/geocode/v6/reverse?longitude=$lng&latitude=$lat&access_token=$accessToken&limit=1';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['features'][0];
+      } else {
+        return {"error": "Something went wrong"};
+      }
+    } catch (e) {
+      return {"error": "Something went wrong"};
+    }
+  }
+
+  Future<void> addMarkerToMap({
+    required Point point,
+    required String label,
+    String? iconPath,
+    String? annotationId,
+  }) async {
+    final manager = state.pointAnnotationManager;
+
+    // Guard against double-submit: return early if already in progress
+    if (_isAddingMarker) return;
+    _isAddingMarker = true;
+
+    if (manager != null) {
+      try {
+        final ByteData bytes = await rootBundle.load(
+          iconPath ?? 'assets/map_icons/shelter-icon.png',
+        );
+        final Uint8List imageData = bytes.buffer.asUint8List();
+
+        await manager.create(
+          PointAnnotationOptions(
+            geometry: point,
+            image: imageData,
+            iconSize: 0.07,
+            textField: label,
+            textColor: 0xFF1E88E5,
+            textOffset: [0.0, 1.6],
+            textSize: 13.0,
+            textHaloColor: 0xFFFFFFFF,
+            textHaloWidth: 2.0,
+            customData: annotationId != null ? {'id': annotationId} : null,
+          ),
+        );
+      } finally {
+        _isAddingMarker = false;
+      }
+    }
+  }
+
+  void cacheCenters(List<EvacuationCenter> centers) {
+    if (centers.isEmpty) return;
+    final cachedCenters = {for (final center in centers) center.id: center};
+
+    state = state.copyWith(
+      evacDataMap: {...state.evacDataMap, ...cachedCenters},
+    );
+  }
+
   Future<void> addUserLocationToMap({
     required Point point,
     required String address,
@@ -223,16 +306,17 @@ class MapController extends Notifier<MapState> {
     }
   }
 
-  Future<void> addMarkerToMap({
+  Future<void> addEvacCenterToMap({
     required Point point,
     required String centerName,
+    required String fullAddress,
+    required String postalCode,
   }) async {
     // Check online status before allowing creation
     final syncService = ref.read(syncServiceProvider);
     if (!syncService.isOnline) {
       throw OfflineException('Cannot create center: No internet connection');
     }
-
     final manager = state.pointAnnotationManager;
     if (manager == null) return;
 
@@ -248,12 +332,28 @@ class MapController extends Notifier<MapState> {
         );
       }
 
+      final newCenterId = IdService.newId();
+      final newCenter = EvacuationCenter(
+        id: newCenterId,
+        name: centerName,
+        commandCenterId: currentCommandCenterId,
+        latitude: point.coordinates.lat.toDouble(),
+        longitude: point.coordinates.lng.toDouble(),
+        fullAddress: fullAddress,
+        postalCode: postalCode,
+        totalCapacity: 0,
+        currentOccupancy: 0,
+        status: CenterStatus.operational,
+        lastUpdated: DateTime.now(),
+        synced: false, // Default to false until sync succeeds
+      );
+
       final ByteData bytes = await rootBundle.load(
         'assets/map_icons/shelter-icon.png',
       );
       final Uint8List imageData = bytes.buffer.asUint8List();
 
-      final annotation = await manager.create(
+      await manager.create(
         PointAnnotationOptions(
           geometry: point,
           image: imageData,
@@ -264,59 +364,43 @@ class MapController extends Notifier<MapState> {
           textSize: 14.0,
           textHaloColor: 0xFFFFFFFF,
           textHaloWidth: 2.0,
+          customData: {'id': newCenterId},
         ),
-      );
-
-      final newCenter = EvacuationCenter(
-        id: IdService.newId(),
-        name: centerName,
-        commandCenterId: currentCommandCenterId,
-        latitude: point.coordinates.lat.toDouble(),
-        longitude: point.coordinates.lng.toDouble(),
-        totalCapacity: 0,
-        currentOccupancy: 0,
-        status: CenterStatus.operational,
-        lastUpdated: DateTime.now(),
-        synced: false,
       );
 
       // Store center in local state for UI display
       state = state.copyWith(
-        evacDataMap: {...state.evacDataMap, annotation.id: newCenter},
+        evacDataMap: {...state.evacDataMap, newCenterId: newCenter},
       );
 
-      // Persist the new center through the evacuation center repository.
-      // This delegates storage to repository.insert(newCenter) and then updates
-      // local UI state (sync flag/pending retry) based on the result.
       try {
         final centerRepository = ref.read(evacuationCenterRepositoryProvider);
+        // The repository should handle saving to local SQLite/Isar FIRST,
+        // then attempt the Supabase push.
         await centerRepository.insert(newCenter);
 
-        // Insert succeeded: mark center as synced and clear pending-retry state.
+        // Insert succeeded remotely: mark center as synced and clear pending-retry state.
         final syncedCenter = newCenter.copyWith(synced: true);
         state = state.copyWith(
-          evacDataMap: {...state.evacDataMap, annotation.id: syncedCenter},
-          pendingRetryIds: state.pendingRetryIds.difference({annotation.id}),
+          evacDataMap: {...state.evacDataMap, newCenterId: syncedCenter},
+          pendingRetryIds: state.pendingRetryIds.difference({newCenterId}),
         );
 
-        // Invalidate the provider to refresh centers list from local database
         ref.invalidate(allCentersProvider);
       } catch (e) {
-        // Insert failed: keep the annotation and center in state so reconciliation
-        // can retry; do NOT delete the annotation or remove from evacDataMap,
-        // as that would orphan a potential remote row and discard local work.
+        // Insert failed remotely (e.g. offline).
+        // Keep it in state, keep the annotation, but flag it for retry.
         state = state.copyWith(
-          pendingRetryIds: {...state.pendingRetryIds, annotation.id},
+          pendingRetryIds: {...state.pendingRetryIds, newCenterId},
         );
-        rethrow;
       }
     } finally {
       _isAddingMarker = false;
     }
   }
 
-  EvacuationCenter? findCenterByAnnotationId(String annotationId) {
-    return state.evacDataMap[annotationId];
+  EvacuationCenter? findCenterById(String id) {
+    return state.evacDataMap[id];
   }
 }
 

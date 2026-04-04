@@ -32,6 +32,13 @@ final allCentersProvider = FutureProvider<List<EvacuationCenter>>((ref) async {
   return repository.getAll();
 });
 
+final allCenterViaPostalProvider = FutureProvider<List<EvacuationCenter>>((
+  ref,
+) async {
+  final repository = ref.watch(evacuationCenterRepositoryProvider);
+  return repository.getAllViaPostal();
+});
+
 final unsyncedCentersProvider = FutureProvider<List<EvacuationCenter>>((
   ref,
 ) async {
