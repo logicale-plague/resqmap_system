@@ -17,7 +17,6 @@ class VisualAnalyticsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Visual Analytics'), elevation: 0),
       body: isOnline
           ? SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),

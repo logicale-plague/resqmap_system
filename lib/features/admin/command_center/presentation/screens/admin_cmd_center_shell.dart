@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_evac_center_screens.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/resource_monitoring_screen.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/visual_analytics_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
 class AdminShell extends StatefulWidget {
@@ -16,12 +18,16 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   static const List<String> titles = [
     'Command Center',
+    'Visual Analytics',
+    'Resource Monitoring',
     'Evacuation Centers',
     'Map',
   ];
 
   static const List<Widget> screens = [
     CommandCenterDashboardScreen(),
+    VisualAnalyticsScreen(), // Visual Analytics Screen
+    ResourceMonitoringScreen(), // Resource Monitoring Screen
     AdminEvacCenterScreens(), // Evacuation Centers Screen
     MapsPage(), // Map Screen
   ];
@@ -60,6 +66,14 @@ class _AdminShellState extends State<AdminShell> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: 'Analytics',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monitor_heart),
+            label: 'Monitoring',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home_work_outlined),

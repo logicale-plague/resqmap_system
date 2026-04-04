@@ -22,7 +22,6 @@ class _ResourceMonitoringScreenState
     final suppliesAsync = ref.watch(allCenterSuppliesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Resource Monitoring'), elevation: 0),
       body: centersAsync.when(
         data: (centers) {
           return suppliesAsync.when(
