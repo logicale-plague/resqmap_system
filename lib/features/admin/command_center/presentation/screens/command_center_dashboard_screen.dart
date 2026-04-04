@@ -3,11 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
-class CommandCenterDashboardScreen extends ConsumerWidget {
+class CommandCenterDashboardScreen extends ConsumerStatefulWidget {
   const CommandCenterDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommandCenterDashboardScreen> createState() =>
+      _CommandCenterDashboardScreenState();
+}
+
+class _CommandCenterDashboardScreenState
+    extends ConsumerState<CommandCenterDashboardScreen> {
+  @override
+  Widget build(BuildContext context) {
     final selectedCommandCenterAsync = ref.watch(currentCommandCenterProvider);
 
     return SingleChildScrollView(

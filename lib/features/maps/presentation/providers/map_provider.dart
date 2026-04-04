@@ -387,6 +387,8 @@ class MapController extends Notifier<MapState> {
         );
 
         ref.invalidate(allCentersProvider);
+        ref.invalidate(centersByCommandCenterProvider(currentCommandCenterId));
+        ref.invalidate(selectedCommandCenterCentersProvider);
       } catch (e) {
         // Insert failed remotely (e.g. offline).
         // Keep it in state, keep the annotation, but flag it for retry.

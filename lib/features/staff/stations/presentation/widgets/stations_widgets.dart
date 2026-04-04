@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/presentation/providers/evacuation_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/presentation/providers/evacuee_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/providers/station_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/widgets/station_arrivals_sheet.dart';
@@ -46,119 +47,132 @@ Future<void> openStationDialog(
   EvacuationCenter center, {
   Station? station,
 }) async {
-  final nameController = TextEditingController(text: station?.name ?? '');
-  final capacityController = TextEditingController(
-    text: (station?.capacity ?? 0).toString(),
-  );
-  AgeGroup? selectedAgeGroup = station?.allowedAgeGroup;
-  MedicalCondition? selectedMedical = station?.allowedMedicalCondition;
   final localRef = ref;
 
+  final stationInput = await _showStationDialog(context, station);
+  if (stationInput == null) return;
+
   try {
-    final shouldSave = await _showStationDialog(
+    await _saveStationChanges(
       context,
+      localRef,
+      center,
       station,
-      nameController,
-      capacityController,
-      selectedAgeGroup: selectedAgeGroup,
-      selectedMedical: selectedMedical,
-      onAgeGroupChanged: (value) {
-        selectedAgeGroup = value;
-      },
-      onMedicalChanged: (value) {
-        selectedMedical = value;
-      },
+      stationInput.name,
+      stationInput.capacity,
+      stationInput.selectedAgeGroup,
+      stationInput.selectedMedical,
     );
-
-    if (shouldSave != true) return;
-
-    try {
-      await _saveStationChanges(
-        context,
-        localRef,
-        center,
-        station,
-        nameController,
-        capacityController,
-        selectedAgeGroup,
-        selectedMedical,
-      );
-    } on OfflineException catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save station: $e')));
-    }
-  } finally {
-    nameController.dispose();
-    capacityController.dispose();
+  } on OfflineException catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(e.message)));
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Failed to save station: $e')));
   }
 }
 
-Future<bool?> _showStationDialog(
+Future<_StationDialogResult?> _showStationDialog(
   BuildContext context,
   Station? station,
-  TextEditingController nameController,
-  TextEditingController capacityController, {
-  required AgeGroup? selectedAgeGroup,
-  required MedicalCondition? selectedMedical,
-  required ValueChanged<AgeGroup?> onAgeGroupChanged,
-  required ValueChanged<MedicalCondition?> onMedicalChanged,
-}) {
-  return showDialog<bool>(
+) {
+  return showDialog<_StationDialogResult>(
     context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (dialogContext, setDialogState) {
-          return AlertDialog(
-            title: Text(station == null ? 'Add Station' : 'Edit Station'),
-            content: _buildStationDialogForm(
-              nameController,
-              capacityController,
-              selectedAgeGroup,
-              selectedMedical,
-              (value) {
-                setDialogState(() {
-                  selectedAgeGroup = value;
-                });
-                onAgeGroupChanged(value);
-              },
-              (value) {
-                setDialogState(() {
-                  selectedMedical = value;
-                });
-                onMedicalChanged(value);
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (!_validateStationForm(
-                    context,
-                    nameController,
-                    capacityController,
-                  )) {
-                    return;
-                  }
-                  Navigator.pop(dialogContext, true);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      );
-    },
+    builder: (dialogContext) => _StationDialog(station: station),
   );
+}
+
+class _StationDialogResult {
+  const _StationDialogResult({
+    required this.name,
+    required this.capacity,
+    required this.selectedAgeGroup,
+    required this.selectedMedical,
+  });
+
+  final String name;
+  final int capacity;
+  final AgeGroup? selectedAgeGroup;
+  final MedicalCondition? selectedMedical;
+}
+
+class _StationDialog extends StatefulWidget {
+  const _StationDialog({required this.station});
+
+  final Station? station;
+
+  @override
+  State<_StationDialog> createState() => _StationDialogState();
+}
+
+class _StationDialogState extends State<_StationDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _capacityController;
+  AgeGroup? _selectedAgeGroup;
+  MedicalCondition? _selectedMedical;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.station?.name ?? '');
+    _capacityController = TextEditingController(
+      text: (widget.station?.capacity ?? 0).toString(),
+    );
+    _selectedAgeGroup = widget.station?.allowedAgeGroup;
+    _selectedMedical = widget.station?.allowedMedicalCondition;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _capacityController.dispose();
+    super.dispose();
+  }
+
+  void _onSavePressed() {
+    final parsed = _validateStationForm(
+      context,
+      _nameController,
+      _capacityController,
+    );
+    if (parsed == null) return;
+
+    Navigator.pop(
+      context,
+      _StationDialogResult(
+        name: _nameController.text.trim(),
+        capacity: parsed,
+        selectedAgeGroup: _selectedAgeGroup,
+        selectedMedical: _selectedMedical,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.station == null ? 'Add Station' : 'Edit Station'),
+      content: _buildStationDialogForm(
+        _nameController,
+        _capacityController,
+        _selectedAgeGroup,
+        _selectedMedical,
+        (value) => setState(() => _selectedAgeGroup = value),
+        (value) => setState(() => _selectedMedical = value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(onPressed: _onSavePressed, child: const Text('Save')),
+      ],
+    );
+  }
 }
 
 Widget _buildStationDialogForm(
@@ -236,7 +250,7 @@ Widget _buildStationDialogForm(
   );
 }
 
-bool _validateStationForm(
+int? _validateStationForm(
   BuildContext context,
   TextEditingController nameController,
   TextEditingController capacityController,
@@ -245,7 +259,7 @@ bool _validateStationForm(
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Please enter a station name')),
     );
-    return false;
+    return null;
   }
 
   final parsedCapacity = int.tryParse(capacityController.text.trim());
@@ -253,10 +267,10 @@ bool _validateStationForm(
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Capacity must be a non-negative number')),
     );
-    return false;
+    return null;
   }
 
-  return true;
+  return parsedCapacity;
 }
 
 Future<void> _saveStationChanges(
@@ -264,20 +278,18 @@ Future<void> _saveStationChanges(
   WidgetRef ref,
   EvacuationCenter center,
   Station? station,
-  TextEditingController nameController,
-  TextEditingController capacityController,
+  String stationName,
+  int stationCapacity,
   AgeGroup? selectedAgeGroup,
   MedicalCondition? selectedMedical,
 ) async {
   final stationRepository = ref.read(stationRepositoryProvider);
-  final trimmedName = nameController.text.trim();
-  final parsedCapacity = int.tryParse(capacityController.text.trim()) ?? 0;
 
   final stationToSave = _buildStationToSave(
     station,
     center,
-    trimmedName,
-    parsedCapacity,
+    stationName,
+    stationCapacity,
     selectedAgeGroup,
     selectedMedical,
   );
@@ -293,7 +305,7 @@ Future<void> _saveStationChanges(
   }
 
   ref.invalidate(stationsByCenterProvider(center.id));
-  // ref.invalidate(currentCenterProvider);
+  ref.invalidate(currentCenterProvider);
   ref.invalidate(eligibleStationsProvider);
 }
 
