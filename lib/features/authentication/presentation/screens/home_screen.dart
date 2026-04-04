@@ -27,40 +27,41 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,
-      body: Column(
-        children: [
-          const SizedBox(height: 23),
-          TabBar(
-            controller: _tabController,
-            indicatorColor: const Color(0xFF00ff00),
-            unselectedLabelColor: const Color.fromARGB(255, 255, 255, 255),
-            labelColor: const Color(0xFF00ff00),
-            tabs: const [
-              Tab(text: 'Tips'),
-              Tab(text: 'News'),
-              Tab(text: 'NOAH'),
-              Tab(text: 'USGS'),
-              Tab(text: 'About'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
+      body: SafeArea(
+        child: Column(
+          children: [
+            TabBar(
               controller: _tabController,
-              children: [
-                // Tips Tab
-                _buildTipsTab(),
-                // News Tab
-                _buildPlaceholderTab('News'),
-                // NOAH Tab
-                _buildPlaceholderTab('NOAH'),
-                // USGS Tab
-                _buildPlaceholderTab('USGS'),
-                // About Tab
-                _buildPlaceholderTab('About'),
+              indicatorColor: const Color(0xFF00ff00),
+              unselectedLabelColor: const Color.fromARGB(255, 255, 255, 255),
+              labelColor: const Color(0xFF00ff00),
+              tabs: const [
+                Tab(text: 'Tips'),
+                Tab(text: 'News'),
+                Tab(text: 'NOAH'),
+                Tab(text: 'USGS'),
+                Tab(text: 'About'),
               ],
             ),
-          ),
-        ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Tips Tab
+                  _buildTipsTab(),
+                  // News Tab
+                  _buildPlaceholderTab('News'),
+                  // NOAH Tab
+                  _buildPlaceholderTab('NOAH'),
+                  // USGS Tab
+                  _buildPlaceholderTab('USGS'),
+                  // About Tab
+                  _buildPlaceholderTab('About'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
