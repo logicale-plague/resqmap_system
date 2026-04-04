@@ -35,6 +35,7 @@ class _MapsPageState extends ConsumerState<MapsPage> {
 
   void _onMapCreated(MapboxMap mapboxMap) async {
     final centers = await ref.read(relatedCentersProvider.future);
+    if (!mounted) return;
     final controller = ref.read(mapControllerProvider.notifier);
     await controller.configureMap(mapboxMap);
     controller.cacheCenters(centers);
