@@ -42,12 +42,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         throw Exception('No evacuation center assigned');
       }
 
-      final eligibleStations = await ref.read(
-        eligibleStationsProvider((
-          centerId: center.id,
-          ageGroup: _selectedAgeGroup!,
-          medicalCondition: _selectedMedicalCondition!,
-        )).future,
+      final eligibilityParams = (
+        centerId: center.id,
+        ageGroup: _selectedAgeGroup!,
+        medicalCondition: _selectedMedicalCondition!,
+      );
+
+      final eligibleStations = await ref.refresh(
+        eligibleStationsProvider(eligibilityParams).future,
       );
 
       if (eligibleStations.isEmpty) {
@@ -85,6 +87,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       ref.invalidate(evacueeCountByCenterProvider(center.id));
       ref.invalidate(currentCenterProvider);
       ref.invalidate(unnamedEvacueesByStationProvider(assignedStation.id));
+      ref.invalidate(eligibleStationsProvider(eligibilityParams));
 
       Navigator.pop(context, true);
     } catch (e) {

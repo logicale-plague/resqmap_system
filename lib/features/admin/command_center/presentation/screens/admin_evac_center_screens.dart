@@ -6,11 +6,18 @@ import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
 import '../../../../../core/widgets/index.dart';
 
-class AdminEvacCenterScreens extends ConsumerWidget {
+class AdminEvacCenterScreens extends ConsumerStatefulWidget {
   const AdminEvacCenterScreens({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminEvacCenterScreens> createState() =>
+      _AdminEvacCenterScreensState();
+}
+
+class _AdminEvacCenterScreensState
+    extends ConsumerState<AdminEvacCenterScreens> {
+  @override
+  Widget build(BuildContext context) {
     final currentCommandCenterAsync = ref.watch(currentCommandCenterProvider);
 
     return currentCommandCenterAsync.when(

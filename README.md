@@ -314,6 +314,18 @@ flowchart TB
 ### User
 - Create Account (online)
 
+---
+
+
+
+
+
+========== TEXTS ABOVE THIS WILL BE ERASED PRIOR TO RELEASE ==================
+
+
+
+
+
 
 ---
 
@@ -330,11 +342,12 @@ The app is built with a disaster-response focus, prioritizing speed and simplici
 ## Technology Stack
 
 <p>
-	<img alt="Flutter" src="https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white"/>
-	<img alt="Dart" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white"/>
-	<img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white"/>
-	<img alt="SQLite" src="https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white"/>
-	<img alt="Mapbox" src="https://img.shields.io/badge/-Mapbox-000000?style=flat&logo=mapbox&logoColor=white"/>
+	<img alt="Flutter" src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white"/>
+	<img alt="Dart" src="https://camo.githubusercontent.com/39a1b2892a1bc54eabc495681cdcff675dd25e97d747a980ba8042d5fb20e5a9/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f446172742d3031373543323f7374796c653d666f722d7468652d6261646765266c6f676f3d64617274266c6f676f436f6c6f723d7768697465"/>
+	<img alt="PostgreSQL" src="https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white"/>
+	<img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white">
+	<img alt="SQLite" src="https://img.shields.io/badge/-SQLite-323330?style=for-the-badge&logo=sqlite&logoColor=003B57"/>
+	<img alt="Mapbox" src="https://img.shields.io/badge/Mapbox-000000?style=for-the-badge&logo=mapbox&logoColor=white"/>
 </p>
 
 ### Frontend & Framework
@@ -371,7 +384,7 @@ The app is built with a disaster-response focus, prioritizing speed and simplici
 - **Center Tracking** — Real-time tracking of center status (Operational, Near Capacity, At Capacity)
 
 ### Evacuee Management (Staff)
-- **Two-Step Registration System** — Register evacuees with age group (Child/Adult/Elderly), and medical condition (None/Minor/Serious). Evacuee details such as name can be edited later
+- **Two-Step Registration System** — Log evacuee arrival with their age group (Child/Adult/Elderly), and medical condition (None/Minor/Serious). Evacuee details such as name can be edited later
 - **Evacuee List View** — Display all registered evacuees with details and search capability
 - **Offline Registration** — Complete registration workflow without internet connectivity
 
@@ -397,19 +410,35 @@ The app is built with a disaster-response focus, prioritizing speed and simplici
 - **Manual Sync Trigger** — Staff can manually initiate data synchronization
 
 ### Offline Maps (Public User - Limited)
-- ✅ **Mapbox Integration** — Offline map rendering
-- ✅ **GPS Location Tracking** — Display user's current location
-- ✅ **Map Display** — Show evacuation center locations on map
+- **Mapbox Integration** — Offline map rendering
+- **GPS Location Tracking** — Display user's current location
+- **Map Display** — Show evacuation center locations on map
 
 ### User Interface
-- ✅ **Material 3 Design** — Modern, accessibility-focused UI
-- ✅ **Responsive Layout** — Adapts to various screen sizes
-- ✅ **Large Touch Targets** — Buttons optimized for quick interaction during emergencies
-- ✅ **Dark Mode Support** — System theme preference support
-- ✅ **Color-Coded Status Indicators** — Visual identification of critical information
+- **Material 3 Design** — Modern, accessibility-focused UI
+- **Responsive Layout** — Adapts to various screen sizes
+- **Large Touch Targets** — Buttons optimized for quick interaction during emergencies
+- **Dark Mode Support** — System theme preference support
+- **Color-Coded Status Indicators** — Visual identification of critical information
 
 ### Platform Support
-- ✅ **Android** — Full support with native Android 
+- **Android** — Full support with native Android 
+
+---
+
+## Software Architecture and Development Methodology
+
+### Software Architecture
+- **Feature-first modular structure** — The app is organized by capability under `lib/features/` rather than by shared screen type.
+- **Layered feature design** — Each feature follows a layered structure with `presentation`, `application`, `domain`, and `data` folders where applicable.
+- **Shared core layer** — Cross-cutting concerns, utilities, and shared services live under `lib/core/`.
+- **Offline-first data flow** — Operational data is stored locally in SQLite first, then synchronized to Supabase when connectivity returns.
+- **Separation of concerns** — UI rendering, business rules, and persistence are separated so each layer can evolve independently.
+
+### Development Methodology
+- **Risk-Based Incremental Delivery with Stage-Gate Verification** — Features are implemented by priority, validated continuously, and promoted only after successful integration and system-level testing.
+- **Priority-driven delivery** — The project starts with the highest-impact disaster response features such as locator, capacity tracking, registration, offline storage, and sync.
+- **Verification at each gate** — Each increment is checked before moving to the next priority level to reduce integration risk and keep the app stable during development.
 
 ---
 
@@ -427,8 +456,8 @@ To evaluate different roles and features of the application, use the following t
 
 ### Getting Started
 
-1. Install the app on your test device (Android or iOS)
-2. Check your connection. The first login should be online
+1. Install the app on your test device (Android only)
+2. Check your connection. The first login should be online. The subsequent login can then be done offline
 3. Launch the app and tap **Login** (or **Create Account** if you need to add a test account)
 4. Enter the appropriate test email and password from the table above
 5. Once logged in, the app will initialize and display the role-specific interface
@@ -443,7 +472,7 @@ The admin account provides system-wide oversight and monitoring capabilities.
 
 ### Dashboard Screen
 1. After login, you'll see the **Overview Page**. For now, it is a placeholder for future developments
-2. At the bottom screen are the buttons **Overview**, **Command Centers**, and **Profile**
+2. At the bottom screen are the buttons **Overview**, **Centers**, and **Profile**
 3. In the **Command Centers Page**, you'll see a list of command centers
 4. Tap on a command center. You will be redirected to the dashboard of that command center
 5. View and test:
@@ -473,8 +502,10 @@ The admin account provides system-wide oversight and monitoring capabilities.
 The staff account simulates real-world evacuation center operations. This is the primary interface tested during deployment.
 
 #### Dashboard Screen
-1. After login, you'll see the **Main Dashboard**
-2. View and test:
+1. Try the offline feature. Make sure you logged in online at least once prior to this
+2. After offline login, you'll see the **Main Dashboard**
+3. Tap on one of the evacuation centers
+4. View and test:
    - **Total Capacity** — Maximum evacuees the center can accommodate
    - **Current Occupancy** — Number of registered evacuees
    - **Occupancy Rate** — Percentage of capacity used
@@ -494,8 +525,7 @@ The staff account simulates real-world evacuation center operations. This is the
 #### Testing Evacuee Management
 1. Tap **View Evacuees** button
 2. Verify all registered evacuees are listed with:
-   - Unique ID (auto-generated UUID)
-   - Name (if provided) or just ID (if unnamed)
+   - Name (if not provided, it is blank)
    - Age group and medical condition
    - Registration timestamp
 3. You can choose to edit an evacuee
@@ -505,16 +535,17 @@ The staff account simulates real-world evacuation center operations. This is the
 
 #### Testing Station/Room Management
 1. Tap **Stations** button
-2. Test adding a new station:
+2. Try adding station online and offline. It should warn you if you are offline
+3. Test adding a new station:
    - Tap **Add Station**
    - Enter station name (e.g., "Main Hall", "Gymnasium", "Cafeteria")
    - Enter station capacity
    - Tap **Save**
-3. Test viewing station details:
+4. Test viewing station details:
    - Tap on any station
    - View current occupancy and capacity
    - See list of evacuees assigned to that station
-4. Repeat to create multiple stations and distribute evacuees
+5. Repeat to create multiple stations and distribute evacuees
 
 #### Testing Medical Supply Tracking
 1. Tap **View Supplies** button
@@ -618,8 +649,9 @@ The public user account simulates evacuees or citizens seeking shelter informati
 
 ## Contributors
 
-<p>
-	<img src="https://contrib.rocks/image?repo=logicale-plague/kalig_onan_system" />
-</p>
+- logicale-plague (fullstack, QA)
+- Maruuu1101110 (backend, services)
+- way2donatt, Ozanii (frontend)
+- banm1do (documentation)
 
 ---

@@ -377,6 +377,8 @@ class MapController extends Notifier<MapState> {
 
         // Invalidate the provider to refresh centers list from local database
         ref.invalidate(allCentersProvider);
+        ref.invalidate(centersByCommandCenterProvider(currentCommandCenterId));
+        ref.invalidate(selectedCommandCenterCentersProvider);
       } catch (e) {
         // Insert failed: keep the annotation and center in state so reconciliation
         // can retry; do NOT delete the annotation or remove from evacDataMap,

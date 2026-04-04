@@ -5,11 +5,16 @@ import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
-class CmdCentersScreen extends ConsumerWidget {
+class CmdCentersScreen extends ConsumerStatefulWidget {
   const CmdCentersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CmdCentersScreen> createState() => _CmdCentersScreenState();
+}
+
+class _CmdCentersScreenState extends ConsumerState<CmdCentersScreen> {
+  @override
+  Widget build(BuildContext context) {
     final cmdCentersAsync = ref.watch(allCommandCentersProvider);
     final selectedCommandCenterId = ref.watch(selectedCommandCenterIdProvider);
 
