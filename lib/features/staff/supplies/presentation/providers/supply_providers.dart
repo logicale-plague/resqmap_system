@@ -7,7 +7,7 @@ import 'package:kalig_onan_evac_system/features/staff/supplies/data/supply_repos
 import 'package:kalig_onan_evac_system/features/staff/supplies/domain/supply.dart';
 import 'package:kalig_onan_evac_system/features/staff/supplies/domain/supply_repository.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
 final supplyRepositoryProvider = Provider<SupplyRepository>((ref) {
   final db = ref.watch(databaseServiceProvider);
@@ -74,4 +74,31 @@ final lowStockSuppliesByCenterProvider =
       }
 
       return suppliesByCenter;
+    });
+
+final lowStockSuppliesForCenterIdsProvider =
+    FutureProvider.family<Map<String, List<Supply>>, String>((
+      ref,
+      centerIdsKey,
+    ) async {
+      if (centerIdsKey.isEmpty) {
+        return {};
+      }
+
+      final centerIdSet = centerIdsKey
+          .split('|')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      if (centerIdSet.isEmpty) {
+        return {};
+      }
+
+      final shortagesByCenter = await ref.watch(
+        lowStockSuppliesByCenterProvider.future,
+      );
+
+      return {
+        for (final entry in shortagesByCenter.entries)
+          if (centerIdSet.contains(entry.key)) entry.key: entry.value,
+      };
     });

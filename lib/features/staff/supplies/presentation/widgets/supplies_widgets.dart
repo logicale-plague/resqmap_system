@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/features/staff/supplies/domain/supply.dart';
 import 'package:kalig_onan_evac_system/features/staff/supplies/presentation/providers/supply_providers.dart';
 

@@ -13,6 +13,17 @@ Map<String, dynamic> evacueeToRow(Evacuee evacuee) {
   };
 }
 
+Map<String, Object?> evacueeToPartialRow(Evacuee evacuee) {
+  return {
+    'name': evacuee.name,
+    'stationId': evacuee.stationId,
+    'ageGroup': evacuee.ageGroup.index,
+    'medicalCondition': evacuee.medicalCondition.index,
+    'synced': evacuee.synced ? 1 : 0,
+    'active': evacuee.active ? 1 : 0,
+  };
+}
+
 Evacuee evacueeFromRow(Map<String, dynamic> row) {
   return Evacuee(
     id: row['id'] as String,

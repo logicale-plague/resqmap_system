@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -18,6 +19,10 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
+    if (kDebugMode) {
+      Sqflite.devSetDebugModeOn(true);
+    }
+
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'kalig_onan_evac.db');
 

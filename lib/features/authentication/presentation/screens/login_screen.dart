@@ -65,15 +65,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final db = ref.read(databaseServiceProvider);
-      final currentUser = await db.getCurrentUser();
+      var currentUser = await db.getUserByEmail(response.user!.email!);
+
+      // Online login fallback: if user was not cached locally, fetch profile and cache it.
+      if (currentUser == null) {
+        try {
+          currentUser = await authService.ensureUserCachedLocally(
+            response.user!.id,
+            password: password,
+          );
+        } catch (_) {
+          await authService.signOut();
+          rethrow;
+        }
+      }
 
       if (!mounted) return;
 
-      final destination = switch (currentUser?.role) {
-        UserPermission.admin => '/command-center',
-        UserPermission.staff => '/dashboard',
-        UserPermission.user => '/map',
-        null => '/dashboard',
+      if (currentUser == null) {
+        await authService.signOut();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Login succeeded but profile sync failed. Please try again.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final destination = switch (currentUser.role) {
+        UserPermission.admin => '/admin-init',
+        UserPermission.staff => '/staff-shell',
+        UserPermission.user => '/userhome',
       };
       context.go(destination);
     } catch (e) {
@@ -154,9 +179,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
       final destination = switch (user.role) {
-        UserPermission.admin => '/command-center',
-        UserPermission.staff => '/dashboard',
-        UserPermission.user => '/map',
+        UserPermission.admin => '/admin-init',
+        UserPermission.staff => '/staff-shell',
+        UserPermission.user => '/userhome',
       };
       context.go(destination);
     } catch (e) {

@@ -1,13 +1,18 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
-import 'package:kalig_onan_evac_system/features/staff/centers/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
+import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
+// import 'package:kalig_onan_evac_system/core/providers/user_provider.dart' hide currentUserProvider;
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 import 'package:kalig_onan_evac_system/features/staff/sync/application/sync_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
 import 'package:geolocator/geolocator.dart' as geo;
-import 'package:kalig_onan_evac_system/features/staff/centers/domain/evacuation_center.dart';
 
 class MapState {
   final MapboxMap? mapboxMap;
@@ -45,6 +50,7 @@ class MapState {
 
 class MapController extends Notifier<MapState> {
   bool _isAddingMarker = false;
+  PointAnnotation? _currentUserLocationAnnotation;
 
   @override
   MapState build() {
@@ -137,6 +143,86 @@ class MapController extends Notifier<MapState> {
     }
   }
 
+  Future<void> addUserLocationToMap({
+    required Point point,
+    required String address,
+    required String postalCode,
+  }) async {
+    // Check online status before allowing location update
+    final syncService = ref.read(syncServiceProvider);
+    if (!syncService.isOnline) {
+      throw OfflineException('Cannot set location: No internet connection');
+    }
+
+    final manager = state.pointAnnotationManager;
+
+    // Guard against double-submit: return early if already in progress
+    if (_isAddingMarker) return;
+    _isAddingMarker = true;
+
+    try {
+      final currentUser = await ref.read(currentUserProvider.future);
+      if (currentUser == null) {
+        throw StateError('No current user found.');
+      }
+
+      final updatedUser = currentUser.copyWith(
+        latitude: point.coordinates.lat.toDouble(),
+        longitude: point.coordinates.lng.toDouble(),
+        fullAddress: address,
+        postalCode: postalCode,
+      );
+
+      final dbService = ref.read(databaseServiceProvider);
+      await dbService.replaceCurrentUser(updatedUser);
+
+      final supabase = ref.read(supabaseProvider);
+      try {
+        await supabase
+            .from('users')
+            .update({
+              'latitude': updatedUser.latitude,
+              'longitude': updatedUser.longitude,
+              'full_address': updatedUser.fullAddress,
+              'postal_code': updatedUser.postalCode,
+            })
+            .eq('id', updatedUser.id);
+      } catch (e) {
+        rethrow;
+      }
+      ref.invalidate(currentUserProvider);
+
+      if (manager != null) {
+        if (_currentUserLocationAnnotation != null) {
+          await manager.delete(_currentUserLocationAnnotation!);
+          _currentUserLocationAnnotation = null;
+        }
+
+        final ByteData bytes = await rootBundle.load(
+          'assets/map_icons/shelter-icon.png',
+        );
+        final Uint8List imageData = bytes.buffer.asUint8List();
+
+        final annotation = await manager.create(
+          PointAnnotationOptions(
+            geometry: point,
+            image: imageData,
+            iconSize: 0.07,
+            textField: 'My Location',
+            textColor: 0xFF1E88E5,
+            textOffset: [0.0, 1.6],
+            textSize: 13.0,
+            textHaloColor: 0xFFFFFFFF,
+            textHaloWidth: 2.0,
+          ),
+        );
+        _currentUserLocationAnnotation = annotation;
+      }
+    } finally {
+      _isAddingMarker = false;
+    }
+  }
+
   Future<void> addMarkerToMap({
     required Point point,
     required String centerName,
@@ -155,9 +241,12 @@ class MapController extends Notifier<MapState> {
     _isAddingMarker = true;
 
     try {
-      final currentCommandCenterId = await ref.read(
-        currentCommandCenterIdProvider.future,
-      );
+      final currentCommandCenterId = ref.read(selectedCommandCenterIdProvider);
+      if (currentCommandCenterId == null) {
+        throw StateError(
+          'No command center selected. Please select a command center before adding evacuation centers.',
+        );
+      }
 
       final ByteData bytes = await rootBundle.load(
         'assets/map_icons/shelter-icon.png',

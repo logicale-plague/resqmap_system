@@ -81,6 +81,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       // Refresh the providers
       ref.invalidate(allEvacueesProvider);
       ref.invalidate(evacueeCountProvider);
+      ref.invalidate(evacueesByCenterProvider(center.id));
+      ref.invalidate(evacueeCountByCenterProvider(center.id));
+      ref.invalidate(currentCenterProvider);
       ref.invalidate(unnamedEvacueesByStationProvider(assignedStation.id));
 
       Navigator.pop(context, true);

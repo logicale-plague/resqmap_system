@@ -25,9 +25,25 @@ final allEvacueesProvider = FutureProvider<List<Evacuee>>((ref) async {
   return db.getAllEvacuees();
 });
 
+final evacueesByCenterProvider = FutureProvider.family<List<Evacuee>, String>((
+  ref,
+  centerId,
+) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getEvacueesByCenter(centerId);
+});
+
 final evacueeCountProvider = FutureProvider<int>((ref) async {
   final db = ref.watch(databaseServiceProvider);
   return db.getEvacueeCount();
+});
+
+final evacueeCountByCenterProvider = FutureProvider.family<int, String>((
+  ref,
+  centerId,
+) async {
+  final db = ref.watch(databaseServiceProvider);
+  return db.getEvacueeCountByCenter(centerId);
 });
 
 final unsyncedEvacueesProvider = FutureProvider<List<Evacuee>>((ref) async {
