@@ -192,25 +192,6 @@ Future<void> openEvacueeDetailsDialog(
                     },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<bool>(
-                    initialValue: isActive,
-                    decoration: const InputDecoration(labelText: 'Record'),
-                    items: const [
-                      DropdownMenuItem<bool>(
-                        value: true,
-                        child: Text('Active'),
-                      ),
-                      DropdownMenuItem<bool>(
-                        value: false,
-                        child: Text('Inactive'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setDialogState(() => isActive = value);
-                    },
-                  ),
-                  const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
                     initialValue: selectedStationId,
                     decoration: const InputDecoration(
