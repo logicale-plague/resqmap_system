@@ -317,7 +317,7 @@ The public user account simulates evacuees or citizens seeking shelter informati
 
 ## Contributors
 
-- logicale-plague (fullstack, QA)
+- logicale-plague (backend, QA)
 - Maruuu1101110 (backend, services)
 - way2donatt, Ozanii (frontend)
 - banm1do (documentation)
