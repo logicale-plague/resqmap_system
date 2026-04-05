@@ -23,16 +23,11 @@ class AddUserLocation extends ConsumerStatefulWidget {
 class _AddUserLocationState extends ConsumerState<AddUserLocation> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _postalCodeController = TextEditingController();
-  final TextEditingController _latController = TextEditingController();
-  final TextEditingController _lngController = TextEditingController();
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-
-    _latController.text = widget.point.coordinates.lat.toStringAsFixed(6);
-    _lngController.text = widget.point.coordinates.lng.toStringAsFixed(6);
     _addressController.text = widget.fullAddress;
     _postalCodeController.text = widget.postalCode;
   }
@@ -41,8 +36,6 @@ class _AddUserLocationState extends ConsumerState<AddUserLocation> {
   void dispose() {
     _addressController.dispose();
     _postalCodeController.dispose();
-    _latController.dispose();
-    _lngController.dispose();
     super.dispose();
   }
 
@@ -105,56 +98,133 @@ class _AddUserLocationState extends ConsumerState<AddUserLocation> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final lat = widget.point.coordinates.lat.toStringAsFixed(5);
+    final lng = widget.point.coordinates.lng.toStringAsFixed(5);
+
     return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Set User Location',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            '${widget.point.coordinates.lat.toStringAsFixed(4)}, ${widget.point.coordinates.lng.toStringAsFixed(4)}',
-          ),
-          _buildTextField(controller: _addressController, label: 'Address'),
-          _buildTextField(
-            controller: _postalCodeController,
-            label: 'Postal Code',
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _latController,
-                  label: 'Latitude',
-                  enabled: false,
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 24,
+        right: 24,
+        top: 12,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Expanded(
-                child: _buildTextField(
-                  controller: _lngController,
-                  label: 'Longitude',
-                  enabled: false,
+            ),
+
+            // Header
+            Row(
+              children: [
+                Icon(Icons.my_location_rounded, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Confirm Location',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withAlpha(50),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isSubmitting ? null : _submit,
-            child: _isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Set Location'),
-          ),
-        ],
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.satellite_alt_rounded,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Lat: $lat  •  Lng: $lng',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Inputs
+            _buildTextField(
+              controller: _addressController,
+              label: 'Full Address',
+              icon: Icons.home_work_outlined,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _postalCodeController,
+              label: 'Postal Code',
+              icon: Icons.markunread_mailbox_outlined,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+            ),
+            const SizedBox(height: 32),
+
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: _isSubmitting
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.check_circle_outline),
+                label: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Set Location',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -162,17 +232,26 @@ class _AddUserLocationState extends ConsumerState<AddUserLocation> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
-    bool enabled = true,
+    required IconData icon,
     TextInputType? keyboardType,
     TextInputAction textInputAction = TextInputAction.next,
   }) {
-    return TextField(
-      enabled: enabled,
+    return TextFormField(
       controller: controller,
-      decoration: InputDecoration(labelText: label),
       keyboardType: keyboardType,
       textInputAction: textInputAction,
-      onSubmitted: (_) {
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surface,
+      ),
+      onFieldSubmitted: (_) {
         if (textInputAction == TextInputAction.done) {
           _submit();
         }

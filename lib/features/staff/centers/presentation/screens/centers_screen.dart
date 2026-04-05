@@ -18,7 +18,7 @@ class CentersScreen extends ConsumerWidget {
     ref.invalidate(currentCenterProvider);
 
     if (!context.mounted) return;
-    context.go('/dashboard', extra: center);
+    context.push('/dashboard', extra: center);
   }
 
   @override

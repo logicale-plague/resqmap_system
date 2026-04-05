@@ -484,6 +484,8 @@ class SyncService {
       'command_center_id': center.commandCenterId,
       'latitude': center.latitude,
       'longitude': center.longitude,
+      'full_address': center.fullAddress,
+      'postal_code': center.postalCode,
       'total_capacity': center.totalCapacity,
       'current_occupancy': center.currentOccupancy,
       'status': center.status.index,

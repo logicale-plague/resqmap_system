@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_cmd_center_shell.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/splash_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/user_shell.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
@@ -10,10 +11,11 @@ import '../indices/staff_screens_index.dart';
 import '../indices/auth_screens_index.dart';
 
 final router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/',
 
   routes: [
     // auth routes
+    GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
 

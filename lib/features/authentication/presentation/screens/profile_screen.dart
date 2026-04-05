@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -151,79 +152,118 @@ class ProfileScreen extends ConsumerWidget {
                       // Logout Button
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton(
+                        height: 52, // Matched height with your other buttons
+                        child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            // Use the error color to subtly indicate this is a destructive/exit action
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
+                            side: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.error.withAlpha(50),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder: (dialogContext) => Dialog(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text(
-                                        'Confirm Logout',
+                              builder: (dialogContext) {
+                                final theme = Theme.of(dialogContext);
+                                return AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  icon: Icon(
+                                    Icons.logout_rounded,
+                                    color: theme.colorScheme.error,
+                                    size: 32,
+                                  ),
+                                  title: const Text('Confirm Logout'),
+                                  content: const Text(
+                                    'Are you sure you want to log out of your Kalig-onan account?',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  actionsAlignment: MainAxisAlignment.center,
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(),
+                                      child: Text(
+                                        'Cancel',
                                         style: TextStyle(
-                                          fontSize: 18,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'Are you sure you want to logout?',
-                                      ),
-                                      const SizedBox(height: 24),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(
-                                              dialogContext,
-                                            ).pop(),
-                                            child: const Text('Cancel'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor:
+                                            theme.colorScheme.error,
+                                        foregroundColor:
+                                            theme.colorScheme.onError,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
-                                          const SizedBox(width: 8),
-                                          ElevatedButton(
-                                            onPressed: () async {
-                                              Navigator.of(dialogContext).pop();
-                                              final remoteLogoutSucceeded =
-                                                  await ref
-                                                      .read(authServiceProvider)
-                                                      .signOut();
-                                              if (!remoteLogoutSucceeded &&
-                                                  context.mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'You were signed out locally. Remote logout will complete when you reconnect.',
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                              if (context.mounted) {
-                                                context.go('/login');
-                                              }
-                                            },
-                                            child: const Text('Logout'),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                                      onPressed: () async {
+                                        Navigator.of(dialogContext).pop();
+
+                                        final remoteLogoutSucceeded = await ref
+                                            .read(authServiceProvider)
+                                            .signOut();
+
+                                        final prefs =
+                                            await SharedPreferences.getInstance();
+                                        await prefs.remove('offline_user_id');
+
+                                        if (!remoteLogoutSucceeded &&
+                                            context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'You were signed out locally. Remote logout will complete when you reconnect.',
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        // 4. Send them back to the login screen
+                                        if (context.mounted) {
+                                          context.go('/login');
+                                        }
+                                      },
+                                      child: const Text(
+                                        'Logout',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
                           },
-                          child: const Text('Logout'),
+                          icon: const Icon(Icons.logout_rounded),
+                          label: const Text(
+                            'Logout',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],

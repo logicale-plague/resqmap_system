@@ -22,9 +22,6 @@ void main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '',
   );
 
-  // Initialize sample data if needed
-  // await _initializeSampleData();
-
   /// Maruuu1101110:
   // Initialize MapBox access
   MapboxOptions.setAccessToken(dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '');
@@ -33,9 +30,9 @@ void main() async {
   await Permission.locationWhenInUse.request();
 
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
-      statusBarColor: Colors.black12,
-      statusBarIconBrightness: Brightness.dark,
+    const SystemUiOverlayStyle(
+      statusBarColor: Color.fromARGB(255, 49, 121, 124),
+      statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: Colors.white,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
@@ -71,13 +68,23 @@ class MainApp extends ConsumerWidget {
           titleTextStyle: TextStyle(color: Colors.white, fontSize: 24),
         ),
       ),
+      // Dark theme seems broken right now
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
+          seedColor: Color.fromARGB(255, 49, 121, 124),
           secondary: Color.fromRGBO(50, 50, 50, 1),
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          titleSpacing: 0,
+          iconTheme: IconThemeData(color: Colors.black, size: 28),
+          centerTitle: true,
+          backgroundColor: Color.fromARGB(255, 49, 121, 124),
+          titleTextStyle: TextStyle(color: Colors.black, fontSize: 24),
+        ),
       ),
       themeMode: ThemeMode.light,
       routerConfig: router,

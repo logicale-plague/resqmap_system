@@ -8,6 +8,7 @@ class AddEvacSheet extends ConsumerStatefulWidget {
   final Point point;
   final String fullAddress;
   final String postalCode;
+
   const AddEvacSheet({
     super.key,
     required this.point,
@@ -21,17 +22,7 @@ class AddEvacSheet extends ConsumerStatefulWidget {
 
 class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
   final TextEditingController _centerNameController = TextEditingController();
-  final TextEditingController _latController = TextEditingController();
-  final TextEditingController _lngController = TextEditingController();
-  final TextEditingController _postalCodeController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _latController.text = widget.point.coordinates.lat.toStringAsFixed(6);
-    _lngController.text = widget.point.coordinates.lng.toStringAsFixed(6);
-    _postalCodeController.text = widget.postalCode;
-  }
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -40,6 +31,8 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
+
     final centerName = _centerNameController.text.trim();
     if (centerName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,6 +40,10 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
       );
       return;
     }
+
+    setState(() {
+      _isSubmitting = true;
+    });
 
     try {
       await ref
@@ -73,73 +70,206 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            "Setup Evacuation Center",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            '${widget.point.coordinates.lat.toStringAsFixed(4)}, ${widget.point.coordinates.lng.toStringAsFixed(4)}',
-          ),
-          _buildTextField(
-            controller: _centerNameController,
-            label: "Center Name",
-          ),
-          _buildTextField(
-            controller: _postalCodeController,
-            label: "Postal Code",
-            enabled: false,
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _latController,
-                  label: "Latitude",
-                  enabled: false,
-                ),
-              ),
-              Expanded(
-                child: _buildTextField(
-                  controller: _lngController,
-                  label: "Longitude",
-                  enabled: false,
-                ),
-              ),
-            ],
-          ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _submit,
-            child: const Text("Establish Center"),
-          ),
-        ],
+    final lat = widget.point.coordinates.lat.toStringAsFixed(5);
+    final lng = widget.point.coordinates.lng.toStringAsFixed(5);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 24,
+        right: 24,
+        top: 12,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.add_home_work_rounded,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "Establish Center",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Read-Only Location Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withOpacity(0.5),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.fullAddress.isNotEmpty
+                              ? widget.fullAddress
+                              : "Address not available",
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildDetailItem(context, 'Postal', widget.postalCode),
+                      _buildDetailItem(context, 'Lat', lat),
+                      _buildDetailItem(context, 'Lng', lng),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            TextFormField(
+              controller: _centerNameController,
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: "Evacuation Center Name",
+                hintText: "e.g. Passi City Gym",
+                prefixIcon: const Icon(Icons.shield_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                filled: true,
+                fillColor: colorScheme.surface,
+              ),
+              onFieldSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 32),
+
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: _isSubmitting
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.add_moderator_outlined),
+                label: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        "Establish Center",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    bool? enabled,
-  }) {
-    return TextField(
-      enabled: enabled ?? true,
-      controller: controller,
-      decoration: InputDecoration(labelText: label),
-      textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _submit(),
+  // Helper for the little info columns in the card
+  Widget _buildDetailItem(BuildContext context, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }
