@@ -6,6 +6,7 @@ import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final String? message;
@@ -177,6 +178,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       );
 
+      // Saves local session for offline logins
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('offline_user_id', user.id);
+
       if (!mounted) return;
       final destination = switch (user.role) {
         UserPermission.admin => '/admin-init',
@@ -211,46 +216,93 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    // --- Logo Area ---
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colorScheme.primary.withAlpha(30),
+                        ),
+                        child: Image.asset(
+                          'assets/app_icons/official-icon.png',
+                          height: 130,
+                          width: 130,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // --- Headers ---
+                    Text(
                       'Welcome back',
-                      style: TextStyle(
-                        fontSize: 28,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.message ?? 'Sign in to continue.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      widget.message ?? 'Sign in to continue to Kalig-onan.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 40),
+
+                    // --- Email Field ---
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       validator: _validateEmail,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: 'Email Address',
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withAlpha(230),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: Colors.transparent),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+
+                    // --- Password Field ---
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -261,7 +313,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _isLoading ? null : _handleLogin(),
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withAlpha(230),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: Colors.transparent),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -270,29 +340,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           },
                           icon: Icon(
                             _obscurePassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: _isLoading ? null : _handleLogin,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Login'),
+                    const SizedBox(height: 40),
+
+                    // --- Login Button ---
+                    SizedBox(
+                      height: 56, // Tall, tap-friendly button
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _handleLogin,
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Login',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
+
+                    // --- Sign Up Link ---
                     TextButton(
                       onPressed: _isLoading
                           ? null
                           : () => context.go('/signup'),
-                      child: const Text("Don't have an account? Sign up"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.onSurfaceVariant,
+                      ),
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Don't have an account? ",
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                          children: [
+                            TextSpan(
+                              text: 'Sign up',
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),

@@ -29,6 +29,8 @@ class AuthService {
        _supabase = supabase,
        _databaseService = databaseService;
 
+  Session? get currentSession => _supabase.auth.currentSession;
+
   Future<AuthResponse> signUp(User user, String password) async {
     final response = await _supabase.auth.signUp(
       email: user.email,

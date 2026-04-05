@@ -44,6 +44,44 @@ class LocalCredentialVerificationResult {
 }
 
 extension UserDatabaseExtensions on DatabaseService {
+  Future<User?> getUserById(String id) async {
+    final db = await database;
+    final maps = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    final raw = maps.first;
+    final piiCipher = UserPiiCipher.instance();
+    final hasLegacyPlaintext =
+        !_isEncryptedOrNull(raw['email'], piiCipher) ||
+        !_isEncryptedOrNull(raw['dateOfBirth'], piiCipher) ||
+        !_isEncryptedOrNull(raw['postalCode'], piiCipher) ||
+        !_isEncryptedOrNull(raw['fullAddress'], piiCipher);
+
+    if (hasLegacyPlaintext) {
+      final encryptedMap = await rotateLocalUserPiiFields(
+        raw,
+        cipher: piiCipher,
+      );
+      await db.update(
+        'users',
+        encryptedMap,
+        where: 'id = ?',
+        whereArgs: [raw['id']],
+      );
+      return userFromLocalDbMap(encryptedMap, cipher: piiCipher);
+    }
+
+    return userFromLocalDbMap(raw, cipher: piiCipher);
+  }
+
   Future<User?> getCurrentUser() async {
     final db = await database;
     final maps = await db.query('users', limit: 1);

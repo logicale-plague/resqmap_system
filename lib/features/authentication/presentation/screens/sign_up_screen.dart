@@ -43,6 +43,16 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       initialDate: initialDate,
       firstDate: DateTime(1900),
       lastDate: now,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (selectedDate != null) {
@@ -121,135 +131,270 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return null;
   }
 
+  // Helper method to build consistent text fields
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData prefixIcon,
+    TextInputType? keyboardType,
+    TextInputAction textInputAction = TextInputAction.next,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+    void Function(String)? onFieldSubmitted,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      obscureText: obscureText,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      validator: validator,
+      onFieldSubmitted: onFieldSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(prefixIcon),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withAlpha(250),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.transparent),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final dobText = _dateOfBirth == null
         ? 'Select date of birth'
         : DateFormat.yMd().format(_dateOfBirth!);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign Up')),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    // --- Logo Area ---
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colorScheme.primaryContainer.withAlpha(30),
+                        ),
+                        child: Image.asset(
+                          'assets/app_icons/official-icon.png',
+                          height:
+                              60, // Slightly smaller than login to save space
+                          width: 60,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- Headers ---
+                    Text(
                       'Create account',
-                      style: TextStyle(
-                        fontSize: 28,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.message ?? 'Fill in your details to sign up.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      widget.message ??
+                          'Join Kalig-onan to stay safe and informed.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    TextFormField(
+                    const SizedBox(height: 32),
+
+                    // --- Form Fields ---
+                    _buildTextField(
                       controller: _usernameController,
-                      textInputAction: TextInputAction.next,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (value) =>
-                          _validateRequired(value, 'Username'),
-                      decoration: const InputDecoration(
-                        labelText: 'Username',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Full Name', // Changed from Username for better UX
+                      prefixIcon: Icons.person_outline_rounded,
+                      validator: (value) => _validateRequired(value, 'Name'),
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+
+                    _buildTextField(
                       controller: _emailController,
+                      label: 'Email Address',
+                      prefixIcon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       validator: _validateEmail,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
                     ),
                     const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: _isLoading ? null : _pickDateOfBirth,
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(dobText),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.next,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: _validatePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+
+                    // --- Date of Birth Selector (Styled like a TextField) ---
+                    InkWell(
+                      onTap: _isLoading ? null : _pickDateOfBirth,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withAlpha(
+                            30,
                           ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color:
+                                _dateOfBirth == null &&
+                                    _formKey.currentState?.validate() == false
+                                ? theme.colorScheme.error
+                                : Colors.transparent,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              dobText,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: _dateOfBirth == null
+                                    ? colorScheme.onSurfaceVariant
+                                    : colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+
+                    _buildTextField(
+                      controller: _passwordController,
+                      label: 'Password',
+                      prefixIcon: Icons.lock_outline_rounded,
+                      obscureText: _obscurePassword,
+                      validator: _validatePassword,
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildTextField(
                       controller: _confirmPasswordController,
+                      label: 'Confirm Password',
+                      prefixIcon: Icons.lock_outline_rounded,
                       obscureText: _obscureConfirmPassword,
                       textInputAction: TextInputAction.done,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       validator: _validateConfirmPassword,
                       onFieldSubmitted: (_) =>
                           _isLoading ? null : _handleSignUp(),
-                      decoration: InputDecoration(
-                        labelText: 'Confirm Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
-                          },
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _obscureConfirmPassword =
+                              !_obscureConfirmPassword,
+                        ),
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: _isLoading ? null : _handleSignUp,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Create Account'),
+                    const SizedBox(height: 32),
+
+                    // --- Sign Up Button ---
+                    SizedBox(
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _handleSignUp,
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+
+                    // --- Login Link ---
                     TextButton(
                       onPressed: _isLoading ? null : () => context.go('/login'),
-                      child: const Text('Already have an account? Login'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.onSurfaceVariant,
+                      ),
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Already have an account? ",
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                          children: [
+                            TextSpan(
+                              text: 'Login',
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
