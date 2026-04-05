@@ -9,6 +9,7 @@ import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
+import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 // import 'package:kalig_onan_evac_system/core/providers/user_provider.dart' hide currentUserProvider;
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
@@ -112,6 +113,27 @@ class MapController extends Notifier<MapState> {
     setPointAnnotationManager(manager);
   }
 
+  Future<void> clearAllMarkers() async {
+    final manager = state.pointAnnotationManager;
+    if (manager == null) return;
+
+    try {
+      final existingAnnotations = await manager.getAnnotations();
+
+      if (existingAnnotations.isNotEmpty) {
+        await manager.deleteAll();
+      }
+
+      _currentUserLocationAnnotation = null;
+
+      state = state.copyWith(evacDataMap: {}, pendingRetryIds: {});
+    } catch (e) {
+      try {
+        await manager.deleteAll();
+      } catch (innerError) {}
+    }
+  }
+
   Future<void> focusOnUser() async {
     try {
       state = state.copyWith(isBusy: true);
@@ -178,43 +200,93 @@ class MapController extends Notifier<MapState> {
     }
   }
 
-  Future<void> addMarkerToMap({
+  Future<PointAnnotation?> addMarkerToMap({
     required Point point,
     required String label,
     String? iconPath,
     String? annotationId,
+    int textColor = 0xFF1E88E5,
   }) async {
     final manager = state.pointAnnotationManager;
+    if (manager == null) return null;
 
-    // Guard against double-submit: return early if already in progress
-    if (_isAddingMarker) return;
-    _isAddingMarker = true;
+    final ByteData bytes = await rootBundle.load(
+      iconPath ?? 'assets/map_icons/shelter-icon.png',
+    );
+    final Uint8List imageData = bytes.buffer.asUint8List();
 
-    if (manager != null) {
-      try {
-        final ByteData bytes = await rootBundle.load(
-          iconPath ?? 'assets/map_icons/shelter-icon.png',
-        );
-        final Uint8List imageData = bytes.buffer.asUint8List();
+    return await manager.create(
+      PointAnnotationOptions(
+        geometry: point,
+        image: imageData,
+        iconSize: 0.08,
+        textField: label,
+        textColor: textColor,
+        textOffset: [0.0, 1.6],
+        textSize: 13.0,
+        textHaloColor: 0xFFFFFFFF,
+        textHaloWidth: 2.0,
+        customData: annotationId != null ? {'id': annotationId} : null,
+      ),
+    );
+  }
 
-        await manager.create(
-          PointAnnotationOptions(
-            geometry: point,
-            image: imageData,
-            iconSize: 0.07,
-            textField: label,
-            textColor: 0xFF1E88E5,
-            textOffset: [0.0, 1.6],
-            textSize: 13.0,
-            textHaloColor: 0xFFFFFFFF,
-            textHaloWidth: 2.0,
-            customData: annotationId != null ? {'id': annotationId} : null,
+  Future<void> upsertUserHomeMarker({required Point point}) async {
+    final manager = state.pointAnnotationManager;
+    if (manager == null) return;
+
+    if (_currentUserLocationAnnotation != null) {
+      await manager.delete(_currentUserLocationAnnotation!);
+      _currentUserLocationAnnotation = null;
+    }
+
+    _currentUserLocationAnnotation = await addMarkerToMap(
+      point: point,
+      label: 'My Home',
+      iconPath: 'assets/map_icons/home-icon.png',
+    );
+  }
+
+  Future<void> renderAnnotationsForMap({
+    required User? user,
+    required List<EvacuationCenter> centers,
+  }) async {
+    if (user?.latitude != null && user?.longitude != null) {
+      await upsertUserHomeMarker(
+        point: Point(
+          coordinates: Position(
+            num.parse(user!.longitude.toString()),
+            num.parse(user.latitude.toString()),
           ),
+        ),
+      );
+    }
+
+    if (centers.isNotEmpty) {
+      for (final center in centers) {
+        await addMarkerToMap(
+          point: Point(
+            coordinates: Position(center.longitude, center.latitude),
+          ),
+          label: center.name,
+          annotationId: center.id,
         );
-      } finally {
-        _isAddingMarker = false;
       }
     }
+  }
+
+  Future<User?> refreshMapData() async {
+    ref.invalidate(relatedCentersProvider);
+    ref.invalidate(currentUserProvider);
+
+    final freshCenters = await ref.read(relatedCentersProvider.future);
+    final freshUser = await ref.read(currentUserProvider.future);
+
+    await clearAllMarkers();
+    cacheCenters(freshCenters);
+    await renderAnnotationsForMap(user: freshUser, centers: freshCenters);
+
+    return freshUser;
   }
 
   void cacheCenters(List<EvacuationCenter> centers) {
@@ -231,23 +303,16 @@ class MapController extends Notifier<MapState> {
     required String address,
     required String postalCode,
   }) async {
-    // Check online status before allowing location update
-    final syncService = ref.read(syncServiceProvider);
-    if (!syncService.isOnline) {
+    if (!ref.read(syncServiceProvider).isOnline) {
       throw OfflineException('Cannot set location: No internet connection');
     }
 
-    final manager = state.pointAnnotationManager;
-
-    // Guard against double-submit: return early if already in progress
     if (_isAddingMarker) return;
     _isAddingMarker = true;
 
     try {
       final currentUser = await ref.read(currentUserProvider.future);
-      if (currentUser == null) {
-        throw StateError('No current user found.');
-      }
+      if (currentUser == null) throw StateError('No user found');
 
       final updatedUser = currentUser.copyWith(
         latitude: point.coordinates.lat.toDouble(),
@@ -256,51 +321,23 @@ class MapController extends Notifier<MapState> {
         postalCode: postalCode,
       );
 
-      final dbService = ref.read(databaseServiceProvider);
-      await dbService.replaceCurrentUser(updatedUser);
+      // --- DATA LOGIC ---
+      await ref.read(databaseServiceProvider).replaceCurrentUser(updatedUser);
+      await ref
+          .read(supabaseProvider)
+          .from('users')
+          .update({
+            'latitude': updatedUser.latitude,
+            'longitude': updatedUser.longitude,
+            'full_address': updatedUser.fullAddress,
+            'postal_code': updatedUser.postalCode,
+          })
+          .eq('id', updatedUser.id);
 
-      final supabase = ref.read(supabaseProvider);
-      try {
-        await supabase
-            .from('users')
-            .update({
-              'latitude': updatedUser.latitude,
-              'longitude': updatedUser.longitude,
-              'full_address': updatedUser.fullAddress,
-              'postal_code': updatedUser.postalCode,
-            })
-            .eq('id', updatedUser.id);
-      } catch (e) {
-        rethrow;
-      }
       ref.invalidate(currentUserProvider);
 
-      if (manager != null) {
-        if (_currentUserLocationAnnotation != null) {
-          await manager.delete(_currentUserLocationAnnotation!);
-          _currentUserLocationAnnotation = null;
-        }
-
-        final ByteData bytes = await rootBundle.load(
-          'assets/map_icons/shelter-icon.png',
-        );
-        final Uint8List imageData = bytes.buffer.asUint8List();
-
-        final annotation = await manager.create(
-          PointAnnotationOptions(
-            geometry: point,
-            image: imageData,
-            iconSize: 0.07,
-            textField: 'My Location',
-            textColor: 0xFF1E88E5,
-            textOffset: [0.0, 1.6],
-            textSize: 13.0,
-            textHaloColor: 0xFFFFFFFF,
-            textHaloWidth: 2.0,
-          ),
-        );
-        _currentUserLocationAnnotation = annotation;
-      }
+      // --- MAP LOGIC ---
+      await upsertUserHomeMarker(point: point);
     } finally {
       _isAddingMarker = false;
     }
@@ -345,27 +382,14 @@ class MapController extends Notifier<MapState> {
         currentOccupancy: 0,
         status: CenterStatus.operational,
         lastUpdated: DateTime.now(),
-        synced: false, // Default to false until sync succeeds
+        synced: false,
       );
 
-      final ByteData bytes = await rootBundle.load(
-        'assets/map_icons/shelter-icon.png',
-      );
-      final Uint8List imageData = bytes.buffer.asUint8List();
-
-      await manager.create(
-        PointAnnotationOptions(
-          geometry: point,
-          image: imageData,
-          iconSize: 0.08,
-          textField: centerName,
-          textColor: 0xFF07A439,
-          textOffset: [0.0, 1.6],
-          textSize: 14.0,
-          textHaloColor: 0xFFFFFFFF,
-          textHaloWidth: 2.0,
-          customData: {'id': newCenterId},
-        ),
+      await addMarkerToMap(
+        point: point,
+        label: centerName,
+        annotationId: newCenterId,
+        textColor: 0xFF07A439,
       );
 
       // Store center in local state for UI display
