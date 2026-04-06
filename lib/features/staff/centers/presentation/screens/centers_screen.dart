@@ -18,7 +18,7 @@ class CentersScreen extends ConsumerWidget {
     ref.invalidate(currentCenterProvider);
 
     if (!context.mounted) return;
-    context.push('/dashboard', extra: center);
+    context.go('/dashboard', extra: center);
   }
 
   @override
@@ -35,7 +35,7 @@ class CentersScreen extends ConsumerWidget {
               icon: Icons.home_work_outlined,
               message: 'No evacuation centers yet',
               action: ElevatedButton.icon(
-                onPressed: () => context.push('/map'),
+                onPressed: () => context.go('/staff-shell?tab=2'),
                 icon: const Icon(Icons.map_outlined),
                 label: const Text('View Map'),
               ),

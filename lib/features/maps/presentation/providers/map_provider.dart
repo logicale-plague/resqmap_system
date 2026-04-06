@@ -25,6 +25,18 @@ final relatedCentersProvider = FutureProvider<List<EvacuationCenter>>((
 ) async {
   final user = await ref.watch(currentUserProvider.future);
   if (user == null) return [];
+
+  if (user.role == UserPermission.admin) {
+    final selectedCommandCenterId = ref.watch(selectedCommandCenterIdProvider);
+    if (selectedCommandCenterId == null || selectedCommandCenterId.isEmpty) {
+      return [];
+    }
+
+    return ref.watch(
+      centersByCommandCenterProvider(selectedCommandCenterId).future,
+    );
+  }
+
   return ref.read(evacuationCenterRepositoryProvider).getAllViaPostal();
 });
 
@@ -251,15 +263,21 @@ class MapController extends Notifier<MapState> {
     required User? user,
     required List<EvacuationCenter> centers,
   }) async {
-    if (user?.latitude != null && user?.longitude != null) {
-      await upsertUserHomeMarker(
-        point: Point(
-          coordinates: Position(
-            num.parse(user!.longitude.toString()),
-            num.parse(user.latitude.toString()),
-          ),
-        ),
-      );
+    switch (user!.role) {
+      case UserPermission.admin:
+      case UserPermission.staff:
+        break;
+      case UserPermission.user:
+        if (user.latitude != null && user.longitude != null) {
+          await upsertUserHomeMarker(
+            point: Point(
+              coordinates: Position(
+                num.parse(user.longitude.toString()),
+                num.parse(user.latitude.toString()),
+              ),
+            ),
+          );
+        }
     }
 
     if (centers.isNotEmpty) {

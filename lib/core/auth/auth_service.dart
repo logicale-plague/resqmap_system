@@ -140,7 +140,23 @@ class AuthService {
     }
 
     final user = userFromMap(data);
+    List<Map<String, dynamic>>? accessRows;
+    try {
+      final rawRows = await _supabase
+          .from('user_cmd_centers')
+          .select()
+          .eq('user_id', userId);
+      accessRows = [
+        for (final row in rawRows) Map<String, dynamic>.from(row as Map),
+      ];
+    } catch (e) {
+      debugPrint('Failed to refresh user_cmd_centers for $userId: $e');
+    }
+
     await _databaseService.replaceCurrentUser(user, password: password);
+    if (accessRows != null) {
+      await _databaseService.replaceUserCommandCenterAccess(userId, accessRows);
+    }
     _ref.invalidate(currentUserProvider);
     return user;
   }

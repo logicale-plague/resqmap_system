@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/core/widgets/app_state/app_error_state.dart';
+import 'package:kalig_onan_evac_system/core/widgets/app_state/app_loading_state.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
 class ResourceMonitoringScreen extends ConsumerStatefulWidget {
@@ -20,11 +22,30 @@ class _ResourceMonitoringScreenState
   @override
   Widget build(BuildContext context) {
     final currentCenter = ref.watch(currentCommandCenterProvider);
-    final centersAsync = ref.watch(
-      centersByCommandCenterProvider(currentCenter.asData?.value!.id ?? ''),
-    );
     final suppliesAsync = ref.watch(allCenterSuppliesProvider);
 
+    return currentCenter.when(
+      data: (commandCenter) {
+        if (commandCenter == null) {
+          return const Scaffold(
+            body: Center(child: Text('No command center selected.')),
+          );
+        }
+        final centerAsync = ref.watch(
+          centersByCommandCenterProvider(commandCenter.id),
+        );
+        return _buildContent(context, centerAsync, suppliesAsync);
+      },
+      loading: () => const AppLoadingState(),
+      error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    AsyncValue<List<EvacuationCenter>> centersAsync,
+    AsyncValue<List<Supply>> suppliesAsync,
+  ) {
     return Scaffold(
       body: centersAsync.when(
         data: (centers) {

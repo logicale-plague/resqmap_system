@@ -71,4 +71,71 @@ extension UserPersistenceExtensions on DatabaseService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<void> replaceUserCommandCenterAccess(
+    String userId,
+    List<Map<String, dynamic>> accessRows, {
+    DatabaseExecutor? executor,
+  }) async {
+    if (executor != null) {
+      await _replaceUserCommandCenterAccessOnExecutor(
+        executor,
+        userId,
+        accessRows,
+      );
+      return;
+    }
+
+    final db = await database;
+    await db.transaction((txn) async {
+      await _replaceUserCommandCenterAccessOnExecutor(txn, userId, accessRows);
+    });
+  }
+
+  Future<void> _replaceUserCommandCenterAccessOnExecutor(
+    DatabaseExecutor db,
+    String userId,
+    List<Map<String, dynamic>> accessRows,
+  ) async {
+    await db.delete(
+      'user_cmd_centers',
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    for (final row in accessRows) {
+      final mappedUserId = (row['userId'] ?? row['user_id'] ?? userId)
+          .toString();
+      final commandCenterId =
+          (row['commandCenterId'] ?? row['command_center_id'])?.toString();
+      if (commandCenterId == null || commandCenterId.isEmpty) {
+        continue;
+      }
+
+      final mappingId =
+          (row['id'] ?? row['mapping_id'])?.toString() ??
+          '$mappedUserId::$commandCenterId';
+
+      await db.insert('user_cmd_centers', {
+        'id': mappingId,
+        'userId': mappedUserId,
+        'commandCenterId': commandCenterId,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+  }
+
+  Future<List<String>> getUserCommandCenterIds(String userId) async {
+    final db = await database;
+    final rows = await db.query(
+      'user_cmd_centers',
+      columns: ['commandCenterId'],
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+    return rows
+        .map((row) => row['commandCenterId']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+  }
 }

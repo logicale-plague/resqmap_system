@@ -10,6 +10,7 @@ import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
@@ -292,6 +293,8 @@ class SyncService {
   bool _isUuid(String value) => _uuidPattern.hasMatch(value);
 
   Future<void> _pullAndMergeFromSupabase({bool skipStations = false}) async {
+    await _refreshCurrentUserCommandCenterAccess();
+
     final centerRows = await _supabase.from('evacuation_centers').select();
     for (final row in centerRows) {
       await _mergeCenter(_asMap(row));
@@ -325,6 +328,26 @@ class SyncService {
     // for (final row in alertRows) {
     //   await _mergeAlert(_asMap(row));
     // }
+  }
+
+  Future<void> _refreshCurrentUserCommandCenterAccess() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    try {
+      final rawRows = await _supabase
+          .from('user_cmd_centers')
+          .select()
+          .eq('user_id', userId);
+      final accessRows = [
+        for (final row in rawRows) Map<String, dynamic>.from(row as Map),
+      ];
+      await _databaseService.replaceUserCommandCenterAccess(userId, accessRows);
+    } catch (e) {
+      debugPrint('Failed to pull user_cmd_centers for user=$userId: $e');
+    }
   }
 
   Future<void> _mergeCenter(Map<String, dynamic> row) async {

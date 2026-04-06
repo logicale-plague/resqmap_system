@@ -261,7 +261,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.message ?? 'Sign in to continue to Kalig-onan.',
+                      widget.message ?? 'Sign in to continue to ResQMap.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
