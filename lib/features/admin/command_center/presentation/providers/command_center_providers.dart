@@ -13,7 +13,9 @@ final commandCenterRepositoryProvider = Provider<CommandCenterRepository>((
   return CommandCenterRepositoryImpl(supabaseClient: supabase);
 });
 
-final allCommandCentersProvider = FutureProvider((ref) async {
+final allCommandCentersProvider = FutureProvider<List<CommandCenter>>((
+  ref,
+) async {
   final repository = ref.watch(commandCenterRepositoryProvider);
   return repository.getAll();
 });

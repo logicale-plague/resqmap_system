@@ -8,6 +8,7 @@ class CommandCenter {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String postalCode;
 
   const CommandCenter({
     required this.id,
@@ -19,6 +20,7 @@ class CommandCenter {
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
+    required this.postalCode,
   });
 
   CommandCenter copyWith({
@@ -31,6 +33,7 @@ class CommandCenter {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? postalCode,
   }) {
     return CommandCenter(
       id: id ?? this.id,
@@ -42,9 +45,11 @@ class CommandCenter {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      postalCode: postalCode ?? this.postalCode,
     );
   }
 
   @override
-  String toString() => 'CommandCenter(id: $id, name: $name, region: $region)';
+  String toString() =>
+      'CommandCenter(id: $id, name: $name, region: $region, postalCode: $postalCode)';
 }

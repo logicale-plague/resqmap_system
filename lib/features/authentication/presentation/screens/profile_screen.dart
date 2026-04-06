@@ -184,7 +184,7 @@ class ProfileScreen extends ConsumerWidget {
                                   ),
                                   title: const Text('Confirm Logout'),
                                   content: const Text(
-                                    'Are you sure you want to log out of your Kalig-onan account?',
+                                    'Are you sure you want to log out of your ResQMap account?',
                                     textAlign: TextAlign.center,
                                   ),
                                   actionsAlignment: MainAxisAlignment.center,

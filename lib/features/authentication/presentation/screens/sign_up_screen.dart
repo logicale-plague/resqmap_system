@@ -228,7 +228,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 8),
                     Text(
                       widget.message ??
-                          'Join Kalig-onan to stay safe and informed.',
+                          'Join ResQMap to stay safe and informed.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,

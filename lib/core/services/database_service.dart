@@ -28,7 +28,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 6,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -132,6 +132,8 @@ class DatabaseService {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_users_emailHash ON users(emailHash)',
     );
+
+    await _createUserCommandCentersTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -300,6 +302,44 @@ class DatabaseService {
         'CREATE INDEX IF NOT EXISTS idx_users_emailHash ON users(emailHash)',
       );
     }
+
+    if (oldVersion < 7) {
+      // Add postalCode to command_centers table
+      final centerTableExists = await _tableExists(db, 'command_centers');
+      if (centerTableExists) {
+        final hasPostalCode = await _columnExists(
+          db,
+          table: 'command_centers',
+          column: 'postalCode',
+        );
+        if (!hasPostalCode) {
+          await db.execute(
+            'ALTER TABLE command_centers ADD COLUMN postalCode TEXT',
+          );
+        }
+      }
+    }
+
+    if (oldVersion < 8) {
+      await _createUserCommandCentersTable(db);
+    }
+  }
+
+  Future<void> _createUserCommandCentersTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS user_cmd_centers(
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        commandCenterId TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_user_cmd_centers_userId ON user_cmd_centers(userId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_user_cmd_centers_commandCenterId ON user_cmd_centers(commandCenterId)',
+    );
   }
 
   Future<bool> _tableExists(Database db, String table) async {

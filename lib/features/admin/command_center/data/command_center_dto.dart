@@ -11,6 +11,7 @@ Map<String, dynamic> commandCenterToMap(CommandCenter center) {
     'isActive': center.isActive ? 1 : 0,
     'createdAt': center.createdAt.toIso8601String(),
     'updatedAt': center.updatedAt.toIso8601String(),
+    'postalCode': center.postalCode,
   };
 }
 
@@ -25,6 +26,7 @@ Map<String, dynamic> commandCenterToRemoteMap(CommandCenter center) {
     'is_active': center.isActive ? 1 : 0,
     'created_at': center.createdAt.toIso8601String(),
     'updated_at': center.updatedAt.toIso8601String(),
+    'postal_code': center.postalCode,
   };
 }
 
@@ -41,6 +43,7 @@ CommandCenter commandCenterFromMap(Map<String, dynamic> map) {
         DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
     updatedAt:
         DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
+    postalCode: (map['postalCode'] as String? ?? ''),
   );
 }
 
@@ -57,6 +60,7 @@ CommandCenter commandCenterFromRemoteMap(Map<String, dynamic> map) {
         DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now(),
     updatedAt:
         DateTime.tryParse(map['updated_at'] as String? ?? '') ?? DateTime.now(),
+    postalCode: (map['postal_code'] as String? ?? ''),
   );
 }
 

@@ -1,4 +1,6 @@
 import 'package:kalig_onan_evac_system/core/services/database_service.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_persistence_extensions.dart';
+import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/data/evacuation_center_dto.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
@@ -43,24 +45,60 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
   Future<List<EvacuationCenter>> getAllCentersViaPostal() async {
     final db = await database;
     final userInfo = await getCurrentUser();
-    final postalCode = userInfo?.postalCode;
+    List<String> postalCodes = const [];
 
-    if (postalCode == null) {
+    switch (userInfo?.role) {
+      case UserPermission.admin:
+        if (userInfo == null) {
+          return [];
+        }
+        postalCodes = await _getAdminCommandCenterPostalCodes(userInfo.id);
+        break;
+      case UserPermission.user:
+        final userPostalCode = userInfo?.postalCode;
+        if (userPostalCode != null && userPostalCode.isNotEmpty) {
+          postalCodes = [userPostalCode];
+        }
+        break;
+      default:
+        postalCodes = const [];
+    }
+
+    if (postalCodes.isEmpty) {
       return [];
     }
+
+    final placeholders = List.filled(postalCodes.length, '?').join(', ');
     final List<Map<String, dynamic>> centers = await db.query(
       'evacuation_centers',
-      where: 'postalCode = ?',
-      whereArgs: [postalCode],
+      where: 'postalCode IN ($placeholders)',
+      whereArgs: postalCodes,
     );
 
-    final allData = await db.query('evacuation_centers');
-    print('Total rows in evacuation_centers: ${allData.length}');
-    print('Sample row: ${allData.isNotEmpty ? allData : "Table is empty"}');
-
-    print('// // // // // / // // // ::::: ${centers.length}');
-
     return [for (final center in centers) centerFromMap(center)];
+  }
+
+  Future<List<String>> _getAdminCommandCenterPostalCodes(String userId) async {
+    final db = await database;
+    final commandCenterIds = await getUserCommandCenterIds(userId);
+    if (commandCenterIds.isEmpty) {
+      return const [];
+    }
+
+    final placeholders = List.filled(commandCenterIds.length, '?').join(', ');
+    final rows = await db.query(
+      'evacuation_centers',
+      columns: ['postalCode'],
+      where:
+          'commandCenterId IN ($placeholders) AND postalCode IS NOT NULL AND postalCode != ?',
+      whereArgs: [...commandCenterIds, ''],
+      distinct: true,
+    );
+
+    return rows
+        .map((row) => row['postalCode']?.toString())
+        .whereType<String>()
+        .toList(growable: false);
   }
 
   Future<EvacuationCenter?> getCenterById(String id) async {

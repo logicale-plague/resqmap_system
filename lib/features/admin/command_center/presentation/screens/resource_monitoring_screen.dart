@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kalig_onan_evac_system/core/indices/models_index.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/core/widgets/app_state/app_error_state.dart';
+import 'package:kalig_onan_evac_system/core/widgets/app_state/app_loading_state.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 
 class ResourceMonitoringScreen extends ConsumerStatefulWidget {
   const ResourceMonitoringScreen({super.key});
@@ -18,9 +21,31 @@ class _ResourceMonitoringScreenState
 
   @override
   Widget build(BuildContext context) {
-    final centersAsync = ref.watch(allCentersProvider);
+    final currentCenter = ref.watch(currentCommandCenterProvider);
     final suppliesAsync = ref.watch(allCenterSuppliesProvider);
 
+    return currentCenter.when(
+      data: (commandCenter) {
+        if (commandCenter == null) {
+          return const Scaffold(
+            body: Center(child: Text('No command center selected.')),
+          );
+        }
+        final centerAsync = ref.watch(
+          centersByCommandCenterProvider(commandCenter.id),
+        );
+        return _buildContent(context, centerAsync, suppliesAsync);
+      },
+      loading: () => const AppLoadingState(),
+      error: (err, stack) => AppErrorState(error: err, stackTrace: stack),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    AsyncValue<List<EvacuationCenter>> centersAsync,
+    AsyncValue<List<Supply>> suppliesAsync,
+  ) {
     return Scaffold(
       body: centersAsync.when(
         data: (centers) {
@@ -67,7 +92,7 @@ class _ResourceMonitoringScreenState
                               resource: resource,
                               onDetailsPressed: () =>
                                   _openResourceDetails(context, resource),
-                              onTransferPressed: () =>
+                              onSupplyListPressed: () =>
                                   _openTransferDialog(context, resource),
                             ),
                         ],
@@ -245,30 +270,120 @@ class _ResourceMonitoringScreenState
     BuildContext context,
     _CenterResourceViewModel resource,
   ) async {
-    final confirmed = await showDialog<bool>(
+    await showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Transfer Supplies'),
-        content: Text(
-          'Initiate a supply transfer to ${resource.center.name}?\n'
-          'Current medicine status: ${resource.medicineStatus}.',
+        title: Text('${resource.center.name} Supplies'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Medicine status: ${resource.medicineStatus} '
+                  '(${(resource.medicineLevel * 100).toStringAsFixed(0)}%)',
+                ),
+                const SizedBox(height: 8),
+                Text('Total supplies tracked: ${resource.supplies.length}'),
+                const SizedBox(height: 16),
+                if (resource.supplies.isEmpty)
+                  Text(
+                    'No supplies recorded for this evacuation center.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  )
+                else
+                  Column(
+                    children: [
+                      for (final supply in resource.supplies)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  supply.name,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text('Current stock: ${supply.currentStock}'),
+                                Text(
+                                  'Usage rate: ${supply.usageRatePerDay} per day',
+                                ),
+                                Text(
+                                  'Days remaining: ${supply.daysRemaining == null ? 'Not in use' : '${supply.daysRemaining} day(s)'}',
+                                ),
+                                Text(
+                                  'Last restocked: ${_formatDate(supply.lastRestocked)}',
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Chip(
+                                    label: Text(
+                                      _supplyStatusLabel(supply.daysRemaining),
+                                    ),
+                                    backgroundColor: _supplyStatusColor(
+                                      supply.daysRemaining,
+                                    ).withAlpha(25),
+                                    labelStyle: TextStyle(
+                                      color: _supplyStatusColor(
+                                        supply.daysRemaining,
+                                      ),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirm'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
           ),
         ],
       ),
     );
+  }
 
-    if (confirmed == true && mounted) {
-      setState(() {});
-    }
+  String _formatDate(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    return '${dateTime.year}-$month-$day';
+  }
+
+  String _supplyStatusLabel(int? daysRemaining) {
+    if (daysRemaining == null) return 'Not in use';
+    if (daysRemaining <= 2) return 'Critical';
+    if (daysRemaining <= 7) return 'Low';
+    if (daysRemaining <= 14) return 'Medium';
+    return 'Adequate';
+  }
+
+  Color _supplyStatusColor(int? daysRemaining) {
+    if (daysRemaining == null) return Colors.blueGrey;
+    if (daysRemaining <= 2) return Colors.red;
+    if (daysRemaining <= 7) return Colors.orange;
+    if (daysRemaining <= 14) return Colors.yellow[800]!;
+    return Colors.green;
   }
 }
 
@@ -352,12 +467,12 @@ class _FilterChip extends StatelessWidget {
 class _ResourceMonitoringCard extends StatelessWidget {
   final _CenterResourceViewModel resource;
   final VoidCallback? onDetailsPressed;
-  final VoidCallback? onTransferPressed;
+  final VoidCallback? onSupplyListPressed;
 
   const _ResourceMonitoringCard({
     required this.resource,
     this.onDetailsPressed,
-    this.onTransferPressed,
+    this.onSupplyListPressed,
   });
 
   Color _getStatusColor() {
@@ -526,9 +641,9 @@ class _ResourceMonitoringCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onTransferPressed,
-                    icon: const Icon(Icons.local_shipping),
-                    label: const Text('Transfer'),
+                    onPressed: onSupplyListPressed,
+                    icon: const Icon(Icons.local_pharmacy),
+                    label: const Text('Supplies'),
                   ),
                 ),
               ],

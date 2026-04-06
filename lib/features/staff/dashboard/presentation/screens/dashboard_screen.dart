@@ -9,6 +9,15 @@ class DashboardScreen extends ConsumerWidget {
 
   const DashboardScreen({super.key, required this.center});
 
+  void _refreshDashboardData(WidgetRef ref, String centerId) {
+    ref.invalidate(currentCenterProvider);
+    ref.invalidate(evacueeCountByCenterProvider(centerId));
+    ref.invalidate(evacueeCountByStationProvider);
+    ref.invalidate(evacueesByCenterProvider(centerId));
+    ref.invalidate(stationsByCenterProvider(centerId));
+    ref.invalidate(allSuppliesProvider);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentCenterAsync = ref.watch(currentCenterProvider);
@@ -28,7 +37,10 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
-            onPressed: () => context.go('/staff-shell'),
+            onPressed: () {
+              ref.invalidate(allCentersProvider);
+              context.go('/staff-shell');
+            },
           ),
         ],
       ),
@@ -153,8 +165,7 @@ class DashboardScreen extends ConsumerWidget {
                 onPressed: () async {
                   final result = await context.push('/register');
                   if (result == true && context.mounted) {
-                    ref.invalidate(evacueeCountByCenterProvider(center.id));
-                    ref.invalidate(currentCenterProvider);
+                    _refreshDashboardData(ref, center.id);
                   }
                 },
                 color: Colors.green,
@@ -162,16 +173,18 @@ class DashboardScreen extends ConsumerWidget {
               QuickActionButton(
                 icon: Icons.medical_services,
                 label: 'Supplies',
-                onPressed: () {
-                  context.push('/supplies');
+                onPressed: () async {
+                  await context.push('/supplies');
+                  _refreshDashboardData(ref, center.id);
                 },
                 color: Colors.blue,
               ),
               QuickActionButton(
                 icon: Icons.meeting_room,
                 label: 'Stations',
-                onPressed: () {
-                  context.push('/stations');
+                onPressed: () async {
+                  await context.push('/stations');
+                  _refreshDashboardData(ref, center.id);
                 },
                 color: Colors.orange,
               ),
@@ -180,8 +193,7 @@ class DashboardScreen extends ConsumerWidget {
                 label: 'Evacuees',
                 onPressed: () async {
                   await context.push('/evacuees');
-                  ref.invalidate(evacueeCountByCenterProvider(center.id));
-                  ref.invalidate(currentCenterProvider);
+                  _refreshDashboardData(ref, center.id);
                 },
                 color: Colors.purple,
               ),
