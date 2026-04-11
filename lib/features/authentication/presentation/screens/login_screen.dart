@@ -5,7 +5,6 @@ import 'package:kalig_onan_evac_system/core/auth/auth_service.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/connectivity_provider.dart';
-import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -96,12 +95,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      final destination = switch (currentUser.role) {
-        UserPermission.admin => '/admin-init',
-        UserPermission.staff => '/staff-shell',
-        UserPermission.user => '/userhome',
-      };
-      context.go(destination);
+      // final destination = switch (currentUser.role) {
+      //   UserPermission.admin => '/admin-init',
+      //   UserPermission.staff => '/staff-shell',
+      //   UserPermission.user => '/userhome',
+      // };
+      context.go('/userhome');
     } catch (e) {
       if (!mounted) return;
       debugPrint('Login error: $e');
@@ -183,12 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await prefs.setString('offline_user_id', user.id);
 
       if (!mounted) return;
-      final destination = switch (user.role) {
-        UserPermission.admin => '/admin-init',
-        UserPermission.staff => '/staff-shell',
-        UserPermission.user => '/userhome',
-      };
-      context.go(destination);
+      context.go('/userhome');
     } catch (e) {
       if (!mounted) return;
       debugPrint('Offline login error: $e');

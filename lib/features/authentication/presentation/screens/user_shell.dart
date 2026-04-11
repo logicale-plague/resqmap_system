@@ -1,34 +1,69 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/access_list_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/home_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/profile_screen.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
-class UserShell extends StatefulWidget {
-  const UserShell({super.key});
+class UserShell extends ConsumerStatefulWidget {
+  final int initialIndex;
+
+  const UserShell({super.key, this.initialIndex = 0});
 
   @override
-  State<UserShell> createState() => _UserShellState();
+  ConsumerState<UserShell> createState() => _UserShellState();
 }
 
-class _UserShellState extends State<UserShell> {
-  int _selectedIndex = 0;
+class _UserShellState extends ConsumerState<UserShell> {
+  late int _selectedIndex;
 
   final List<bool> _visitedTabs = [true, false, false, false];
 
-  static const List<String> _pageTitles = [
-    'Home',
-    'Map',
-    'Settings',
-    'Profile',
-  ];
+  bool _canAccessManagement(UserPermission? role) {
+    return role == UserPermission.admin || role == UserPermission.staff;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex.clamp(0, _visitedTabs.length - 1);
+    _visitedTabs[_selectedIndex] = true;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final role = currentUserAsync.maybeWhen(
+      data: (user) => user?.role,
+      orElse: () => null,
+    );
+    final hasManagementTab = _canAccessManagement(role);
+
+    final pageTitles = [
+      'Home',
+      'Map',
+      if (hasManagementTab) 'Management',
+      'Profile',
+    ];
+
+    if (_selectedIndex >= pageTitles.length) {
+      _selectedIndex = pageTitles.length - 1;
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_pageTitles[_selectedIndex]),
+        title: Text(pageTitles[_selectedIndex]),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
       ),
 
       body: IndexedStack(
@@ -40,64 +75,30 @@ class _UserShellState extends State<UserShell> {
           // MapsPage is just an empty box until they click the Map tab
           _visitedTabs[1] ? const MapsPage() : const SizedBox.shrink(),
 
-          _visitedTabs[2]
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer.withAlpha(50),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.handyman_rounded,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          "Settings",
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          "We're still fine-tuning the gears here.\nThis space is currently under development!",
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                                height: 1.5,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : const SizedBox.shrink(),
+          if (hasManagementTab)
+            _visitedTabs[2]
+                ? const AccessListScreen()
+                : const SizedBox.shrink(),
 
-          _visitedTabs[3] ? const ProfileScreen() : const SizedBox.shrink(),
+          _visitedTabs[hasManagementTab ? 3 : 2]
+              ? const ProfileScreen()
+              : const SizedBox.shrink(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          const BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
+          if (hasManagementTab)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.admin_panel_settings),
+              label: 'Management',
+            ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         onTap: (index) {

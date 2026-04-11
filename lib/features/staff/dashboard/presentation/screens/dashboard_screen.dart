@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/core/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 
 class DashboardScreen extends ConsumerWidget {
   final EvacuationCenter center;
@@ -20,6 +22,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUserAsync = ref.watch(currentUserProvider);
     final currentCenterAsync = ref.watch(currentCenterProvider);
     final liveCenter = currentCenterAsync.asData?.value;
     final displayCenter = liveCenter != null && liveCenter.id == center.id
@@ -39,11 +42,22 @@ class DashboardScreen extends ConsumerWidget {
             icon: const Icon(Icons.list),
             onPressed: () {
               ref.invalidate(allCentersProvider);
-              context.go('/staff-shell');
+              final role = currentUserAsync.asData?.value?.role;
+              if (role == UserPermission.admin) {
+                context.go('/admin-shell?tab=3');
+                return;
+              }
+              context.go('/userhome?tab=2');
             },
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/sync'),
+        icon: const Icon(Icons.sync),
+        label: const Text('Sync'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: evacueeCountAsync.when(
         data: (count) => _buildDashboard(context, ref, displayCenter, count),
         loading: () => const AppLoadingState(),

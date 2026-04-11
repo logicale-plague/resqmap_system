@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_cmd_center_shell.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/settings_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/splash_screen.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/user_shell.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
@@ -83,6 +84,17 @@ final router = GoRouter(
       builder: (context, state) => const SuppliesScreen(),
     ),
     GoRoute(path: '/map', builder: (context, state) => const MapsPage()),
-    GoRoute(path: '/userhome', builder: (context, state) => const UserShell()),
+    GoRoute(
+      path: '/userhome',
+      builder: (context, state) {
+        final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+        return UserShell(initialIndex: tab);
+      },
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(path: '/sync', builder: (context, state) => const SyncScreen()),
   ],
 );

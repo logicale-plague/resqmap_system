@@ -13,7 +13,7 @@ class _AdminInitShellState extends State<AdminInitShell> {
   static const List<String> titles = ['Overview', 'Command Centers', 'Profile'];
 
   static const List<Widget> screens = [
-    Center(child: Text('Overview', style: TextStyle(fontSize: 24))),
+    Center(child: Text('Admin Overview Placeholder')), // Overview Placeholder
     CmdCentersScreen(), // Command Centers Management Placeholder
     ProfileScreen(), // Profile Screen Placeholder
   ];

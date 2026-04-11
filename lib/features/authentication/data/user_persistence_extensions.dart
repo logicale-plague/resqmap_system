@@ -107,7 +107,10 @@ extension UserPersistenceExtensions on DatabaseService {
       final mappedUserId = (row['userId'] ?? row['user_id'] ?? userId)
           .toString();
       final commandCenterId =
-          (row['commandCenterId'] ?? row['command_center_id'])?.toString();
+          (row['commandCenterId'] ??
+                  row['command_center_id'] ??
+                  row['cmd_center_id'])
+              ?.toString();
       if (commandCenterId == null || commandCenterId.isEmpty) {
         continue;
       }

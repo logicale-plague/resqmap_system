@@ -4,7 +4,6 @@ import 'package:kalig_onan_evac_system/features/admin/command_center/presentatio
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/resource_monitoring_screen.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/visual_analytics_screen.dart';
-import 'package:kalig_onan_evac_system/features/maps/presentation/maps_page.dart';
 
 class AdminShell extends StatefulWidget {
   final int initialIndex;
@@ -21,7 +20,6 @@ class _AdminShellState extends State<AdminShell> {
     'Visual Analytics',
     'Resource Monitoring',
     'Evacuation Centers',
-    'Map',
   ];
 
   static const List<Widget> screens = [
@@ -29,7 +27,6 @@ class _AdminShellState extends State<AdminShell> {
     VisualAnalyticsScreen(), // Visual Analytics Screen
     ResourceMonitoringScreen(), // Resource Monitoring Screen
     AdminEvacCenterScreens(), // Evacuation Centers Screen
-    MapsPage(), // Map Screen
   ];
 
   late int _currentIndex;
@@ -48,7 +45,7 @@ class _AdminShellState extends State<AdminShell> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           IconButton(
-            onPressed: () => context.go('/admin-init'),
+            onPressed: () => context.go('/userhome?tab=2'),
             icon: Icon(Icons.home),
           ),
         ],
@@ -79,7 +76,6 @@ class _AdminShellState extends State<AdminShell> {
             icon: Icon(Icons.home_work_outlined),
             label: 'Centers',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
         ],
       ),
     );

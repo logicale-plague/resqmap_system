@@ -100,6 +100,7 @@ class _AdminEvacCenterScreensState
                       ],
                     ),
                   ),
+                  onTap: () => context.go('/dashboard', extra: center),
                 );
               },
             );
