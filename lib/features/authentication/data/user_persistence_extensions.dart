@@ -166,6 +166,19 @@ extension UserPersistenceExtensions on DatabaseService {
     );
   }
 
+  Future<void> deleteUserCommandCenterAccessRow(
+    String userId,
+    String commandCenterId, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
+    await db.delete(
+      'user_cmd_centers',
+      where: 'userId = ? AND commandCenterId = ?',
+      whereArgs: [userId, commandCenterId],
+    );
+  }
+
   Future<void> replaceUserEvacCenterAccess(
     String userId,
     List<Map<String, dynamic>> accessRows, {
@@ -255,6 +268,19 @@ extension UserPersistenceExtensions on DatabaseService {
     await db.update(
       'user_evac_centers',
       {'active': active ? 1 : 0},
+      where: 'userId = ? AND evacuationCenterId = ?',
+      whereArgs: [userId, evacuationCenterId],
+    );
+  }
+
+  Future<void> deleteUserEvacuationCenterAccessRow(
+    String userId,
+    String evacuationCenterId, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
+    await db.delete(
+      'user_evac_centers',
       where: 'userId = ? AND evacuationCenterId = ?',
       whereArgs: [userId, evacuationCenterId],
     );

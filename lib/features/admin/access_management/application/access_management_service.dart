@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
@@ -278,6 +279,15 @@ class AdminAccessManagementService {
       evacuationCenterId: centerId,
     );
 
+    final previousAccessRows = await _databaseService
+        .getUserEvacuationCenterAccessRows(
+          targetUser.id,
+          includeInactive: true,
+        );
+    final previousAccessActive = relationshipAlreadyExists
+        ? await _readEvacuationCenterAccessActive(targetUser.id, centerId)
+        : false;
+
     if (relationshipAlreadyExists) {
       await _supabase
           .from('user_evac_centers')
@@ -305,10 +315,29 @@ class AdminAccessManagementService {
     }
 
     final previousRole = targetUser.role;
-    await _supabase
-        .from('users')
-        .update({'role': UserPermission.staff.toCode()})
-        .eq('id', targetUser.id);
+    try {
+      await _supabase
+          .from('users')
+          .update({'role': UserPermission.staff.toCode()})
+          .eq('id', targetUser.id);
+    } catch (error, stackTrace) {
+      try {
+        await _rollbackEvacuationCenterAccess(
+          userId: targetUser.id,
+          evacuationCenterId: centerId,
+          relationshipAlreadyExists: relationshipAlreadyExists,
+          previousAccessRows: previousAccessRows,
+          previousActive: previousAccessActive,
+        );
+      } catch (rollbackError) {
+        debugPrint(
+          StateError(
+            'Failed to roll back evacuation-center access for ${targetUser.id} after role update failure: $rollbackError',
+          ).toString(),
+        );
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
 
     final updatedUser = targetUser.copyWith(role: UserPermission.staff);
     if (currentUser.id == targetUser.id) {
@@ -317,10 +346,27 @@ class AdminAccessManagementService {
         _ref.invalidate(currentUserProvider);
       } catch (error, stackTrace) {
         try {
+          await _rollbackEvacuationCenterAccess(
+            userId: targetUser.id,
+            evacuationCenterId: centerId,
+            relationshipAlreadyExists: relationshipAlreadyExists,
+            previousAccessRows: previousAccessRows,
+            previousActive: previousAccessActive,
+          );
+        } catch (rollbackError) {
+          debugPrint(
+            StateError(
+              'Failed to roll back evacuation-center access for ${targetUser.id} after local cache failure: $rollbackError',
+            ).toString(),
+          );
+        }
+        try {
           await _restoreUserRole(targetUser.id, previousRole);
         } catch (rollbackError) {
-          throw StateError(
-            'Failed to persist current user access cache and roll back the role update: $rollbackError',
+          debugPrint(
+            StateError(
+              'Failed to roll back user role for ${targetUser.id} after local cache failure: $rollbackError',
+            ).toString(),
           );
         }
         Error.throwWithStackTrace(error, stackTrace);
@@ -359,10 +405,14 @@ class AdminAccessManagementService {
           commandCenterId: selectedCommandCenterId,
         );
 
-    await _supabase
-        .from('users')
-        .update({'role': UserPermission.admin.toCode()})
-        .eq('id', targetUser.id);
+    final previousAccessRows = await _databaseService
+        .getUserCommandCenterAccessRows(targetUser.id, includeInactive: true);
+    final previousAccessActive = relationshipAlreadyExists
+        ? await _readCommandCenterAccessActive(
+            targetUser.id,
+            selectedCommandCenterId,
+          )
+        : false;
 
     if (relationshipAlreadyExists) {
       await _supabase
@@ -390,10 +440,63 @@ class AdminAccessManagementService {
       );
     }
 
+    final previousRole = targetUser.role;
+    try {
+      await _supabase
+          .from('users')
+          .update({'role': UserPermission.admin.toCode()})
+          .eq('id', targetUser.id);
+    } catch (error, stackTrace) {
+      try {
+        await _rollbackCommandCenterAccess(
+          userId: targetUser.id,
+          commandCenterId: selectedCommandCenterId,
+          relationshipAlreadyExists: relationshipAlreadyExists,
+          previousAccessRows: previousAccessRows,
+          previousActive: previousAccessActive,
+        );
+      } catch (rollbackError) {
+        debugPrint(
+          StateError(
+            'Failed to roll back command-center access for ${targetUser.id} after role update failure: $rollbackError',
+          ).toString(),
+        );
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+
     final updatedUser = targetUser.copyWith(role: UserPermission.admin);
     if (currentUser.id == targetUser.id) {
-      await _databaseService.replaceCurrentUser(updatedUser);
-      _ref.invalidate(currentUserProvider);
+      try {
+        await _databaseService.replaceCurrentUser(updatedUser);
+        _ref.invalidate(currentUserProvider);
+      } catch (error, stackTrace) {
+        try {
+          await _rollbackCommandCenterAccess(
+            userId: targetUser.id,
+            commandCenterId: selectedCommandCenterId,
+            relationshipAlreadyExists: relationshipAlreadyExists,
+            previousAccessRows: previousAccessRows,
+            previousActive: previousAccessActive,
+          );
+        } catch (rollbackError) {
+          debugPrint(
+            StateError(
+              'Failed to roll back command-center access for ${targetUser.id} after local cache failure: $rollbackError',
+            ).toString(),
+          );
+        }
+        try {
+          await _restoreUserRole(targetUser.id, previousRole);
+        } catch (rollbackError) {
+          debugPrint(
+            StateError(
+              'Failed to roll back user role for ${targetUser.id} after local cache failure: $rollbackError',
+            ).toString(),
+          );
+        }
+        Error.throwWithStackTrace(error, stackTrace);
+      }
     }
 
     _ref.invalidate(adminUsersProvider);
@@ -406,11 +509,6 @@ class AdminAccessManagementService {
     required String evacuationCenterId,
     required bool active,
   }) async {
-    final currentUser = await _ref.read(currentUserProvider.future);
-    if (currentUser?.role != UserPermission.admin) {
-      throw StateError('Only admins can manage access.');
-    }
-
     final selectedCommandCenterId = commandCenterId.trim();
     if (selectedCommandCenterId.isEmpty) {
       throw ArgumentError('Select a command center.');
@@ -421,31 +519,9 @@ class AdminAccessManagementService {
       throw ArgumentError('Select an evacuation center.');
     }
 
-    final manageableCommandCenters = await _ref.read(
-      manageableCommandCentersProvider.future,
-    );
-    final canManageCommandCenter = manageableCommandCenters.any(
-      (center) => center.id == selectedCommandCenterId,
-    );
-    if (!canManageCommandCenter) {
-      throw StateError(
-        'You can only update access under command centers you manage.',
-      );
-    }
-
-    final manageableCentersForCommandCenter = await _ref.read(
-      manageableEvacuationCentersByCommandCenterProvider(
-        selectedCommandCenterId,
-      ).future,
-    );
-    final canManageCenter = manageableCentersForCommandCenter.any(
-      (center) => center.id == centerId,
-    );
-    if (!canManageCenter) {
-      throw StateError(
-        'Selected evacuation center does not belong to the selected command center you manage.',
-      );
-    }
+    await _requireAdmin();
+    await _ensureManagedCommandCenter(selectedCommandCenterId);
+    await _ensureManagedEvacuationCenter(selectedCommandCenterId, centerId);
 
     final activeValue = active ? 1 : 0;
     final remoteRows = await _supabase
@@ -768,6 +844,147 @@ class AdminAccessManagementService {
         .eq('evac_center_id', evacuationCenterId)
         .limit(1);
     return remoteRows.isNotEmpty;
+  }
+
+  Future<bool> _readCommandCenterAccessActive(
+    String userId,
+    String commandCenterId,
+  ) async {
+    final remoteRows = await _supabase
+        .from('user_cmd_centers')
+        .select('active')
+        .eq('user_id', userId)
+        .eq('cmd_center_id', commandCenterId)
+        .limit(1);
+    if (remoteRows.isEmpty) {
+      return false;
+    }
+
+    final row = Map<String, dynamic>.from(remoteRows.first as Map);
+    return _readActiveFlag(row['active']);
+  }
+
+  Future<bool> _readEvacuationCenterAccessActive(
+    String userId,
+    String evacuationCenterId,
+  ) async {
+    final remoteRows = await _supabase
+        .from('user_evac_centers')
+        .select('active')
+        .eq('user_id', userId)
+        .eq('evac_center_id', evacuationCenterId)
+        .limit(1);
+    if (remoteRows.isEmpty) {
+      return false;
+    }
+
+    final row = Map<String, dynamic>.from(remoteRows.first as Map);
+    return _readActiveFlag(row['active']);
+  }
+
+  Future<void> _rollbackCommandCenterAccess({
+    required String userId,
+    required String commandCenterId,
+    required bool relationshipAlreadyExists,
+    required List<Map<String, dynamic>> previousAccessRows,
+    required bool previousActive,
+  }) async {
+    final failures = <String>[];
+    if (relationshipAlreadyExists) {
+      try {
+        await _supabase
+            .from('user_cmd_centers')
+            .update({'active': previousActive ? 1 : 0})
+            .eq('user_id', userId)
+            .eq('cmd_center_id', commandCenterId);
+      } catch (error) {
+        failures.add('remote rollback failed: $error');
+      }
+    } else {
+      try {
+        await _supabase
+            .from('user_cmd_centers')
+            .delete()
+            .eq('user_id', userId)
+            .eq('cmd_center_id', commandCenterId);
+      } catch (error) {
+        failures.add('remote rollback failed: $error');
+      }
+    }
+
+    try {
+      await _databaseService.replaceUserCommandCenterAccess(
+        userId,
+        previousAccessRows,
+      );
+    } catch (error) {
+      failures.add('local rollback failed: $error');
+    }
+
+    if (failures.isNotEmpty) {
+      throw StateError(
+        'Failed to roll back command-center access for $userId / $commandCenterId: ${failures.join('; ')}',
+      );
+    }
+  }
+
+  Future<void> _rollbackEvacuationCenterAccess({
+    required String userId,
+    required String evacuationCenterId,
+    required bool relationshipAlreadyExists,
+    required List<Map<String, dynamic>> previousAccessRows,
+    required bool previousActive,
+  }) async {
+    final failures = <String>[];
+    if (relationshipAlreadyExists) {
+      try {
+        await _supabase
+            .from('user_evac_centers')
+            .update({'active': previousActive ? 1 : 0})
+            .eq('user_id', userId)
+            .eq('evac_center_id', evacuationCenterId);
+      } catch (error) {
+        failures.add('remote rollback failed: $error');
+      }
+    } else {
+      try {
+        await _supabase
+            .from('user_evac_centers')
+            .delete()
+            .eq('user_id', userId)
+            .eq('evac_center_id', evacuationCenterId);
+      } catch (error) {
+        failures.add('remote rollback failed: $error');
+      }
+    }
+
+    try {
+      await _databaseService.replaceUserEvacCenterAccess(
+        userId,
+        previousAccessRows,
+      );
+    } catch (error) {
+      failures.add('local rollback failed: $error');
+    }
+
+    if (failures.isNotEmpty) {
+      throw StateError(
+        'Failed to roll back evacuation-center access for $userId / $evacuationCenterId: ${failures.join('; ')}',
+      );
+    }
+  }
+
+  bool _readActiveFlag(dynamic rawActive) {
+    if (rawActive is bool) {
+      return rawActive;
+    }
+    if (rawActive is num) {
+      return rawActive.toInt() == 1;
+    }
+    if (rawActive is String) {
+      return rawActive == '1' || rawActive.toLowerCase() == 'true';
+    }
+    return true;
   }
 
   Future<void> _restoreUserRole(String userId, UserPermission role) async {

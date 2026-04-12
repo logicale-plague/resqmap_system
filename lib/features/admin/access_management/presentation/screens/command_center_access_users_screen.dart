@@ -6,6 +6,7 @@ import 'package:kalig_onan_evac_system/features/admin/access_management/applicat
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 
 final commandCenterByIdProvider = FutureProvider.family<CommandCenter?, String>(
   (ref, commandCenterId) async {
@@ -27,6 +28,24 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
+      final currentUser = await ref.read(currentUserProvider.future);
+      final admins = await ref.read(
+        commandCenterAccessUsersProvider(commandCenterId).future,
+      );
+      if (currentUser?.id == user.id && admins.length == 1) {
+        if (!context.mounted) {
+          return;
+        }
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Assign another admin before removing your own access.',
+            ),
+          ),
+        );
+        return;
+      }
+
       await ref
           .read(adminAccessManagementServiceProvider)
           .removeCommandCenterAccess(
@@ -141,6 +160,21 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
       child: Card(
         elevation: 1,
         child: Padding(padding: const EdgeInsets.all(16), child: Text(message)),
+      ),
+    );
+  }
+
+  Widget _buildAddAccessButton(BuildContext context, String commandCenterId) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: FilledButton.icon(
+        onPressed: () {
+          context.push(
+            '/admin-access-management?commandCenterId=${Uri.encodeComponent(commandCenterId)}',
+          );
+        },
+        icon: const Icon(Icons.person_add_alt_1),
+        label: const Text('Add admin/staff via email'),
       ),
     );
   }
@@ -352,6 +386,7 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                _buildAddAccessButton(context, commandCenter.id),
                 const SizedBox(height: 16),
                 _buildSectionHeader(
                   'Admins',

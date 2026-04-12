@@ -79,6 +79,11 @@ class _AccessManagementScreenState
         return;
       }
 
+      if (commandCenterId != null && commandCenterId.isNotEmpty) {
+        ref.invalidate(commandCenterAccessUsersProvider(commandCenterId));
+        ref.invalidate(commandCenterStaffAccessUsersProvider(commandCenterId));
+      }
+
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -105,17 +110,6 @@ class _AccessManagementScreenState
         });
       }
     }
-  }
-
-  void _openCommandCenterUsers() {
-    final commandCenterId = _selectedCommandCenterId;
-    if (commandCenterId == null || commandCenterId.isEmpty) {
-      return;
-    }
-
-    context.push(
-      '/admin-command-center-access-users?commandCenterId=${Uri.encodeComponent(commandCenterId)}',
-    );
   }
 
   @override
@@ -243,19 +237,6 @@ class _AccessManagementScreenState
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _selectedCommandCenterId == null
-                                      ? null
-                                      : _openCommandCenterUsers,
-                                  icon: const Icon(Icons.people_outline),
-                                  label: const Text('View access list'),
-                                ),
-                              ),
-                            ],
-                          ),
                           if (_selectedRole == UserPermission.staff) ...[
                             const SizedBox(height: 12),
                             manageableCentersAsync.when(

@@ -34,7 +34,7 @@ class AccessListScreen extends ConsumerWidget {
             onSelected: (value) {
               if (value == 'manage_access') {
                 context.push(
-                  '/admin-access-management?commandCenterId=${Uri.encodeComponent(commandCenter.id)}',
+                  '/admin-command-center-access-users?commandCenterId=${Uri.encodeComponent(commandCenter.id)}',
                 );
               }
             },
@@ -144,18 +144,18 @@ class AccessListScreen extends ConsumerWidget {
 
           final headerChildren = <Widget>[];
 
-          if (user.role == UserPermission.admin) {
-            headerChildren.add(
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                child: FilledButton.icon(
-                  onPressed: () => context.push('/admin-access-management'),
-                  icon: const Icon(Icons.manage_accounts_outlined),
-                  label: const Text('Manage access'),
-                ),
-              ),
-            );
-          }
+          // if (user.role == UserPermission.admin) {
+          //   headerChildren.add(
+          //     Padding(
+          //       padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          //       child: FilledButton.icon(
+          //         onPressed: () => context.push('/admin-access-management'),
+          //         icon: const Icon(Icons.manage_accounts_outlined),
+          //         label: const Text('Manage access'),
+          //       ),
+          //     ),
+          //   );
+          // }
 
           if (user.role == UserPermission.staff) {
             final staffCentersAsync = ref.watch(staffAssignedCentersProvider);
