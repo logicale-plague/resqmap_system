@@ -11,15 +11,18 @@ class DashboardScreen extends ConsumerWidget {
 
   void _refreshDashboardData(WidgetRef ref, String centerId) {
     ref.invalidate(currentCenterProvider);
+    ref.invalidate(centerProvider(centerId));
     ref.invalidate(evacueeCountByCenterProvider(centerId));
     ref.invalidate(evacueeCountByStationProvider);
     ref.invalidate(evacueesByCenterProvider(centerId));
     ref.invalidate(stationsByCenterProvider(centerId));
     ref.invalidate(allSuppliesProvider);
+    ref.invalidate(centersByCommandCenterProvider(center.commandCenterId));
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // final currentUserAsync = ref.watch(currentUserProvider);
     final currentCenterAsync = ref.watch(currentCenterProvider);
     final liveCenter = currentCenterAsync.asData?.value;
     final displayCenter = liveCenter != null && liveCenter.id == center.id
@@ -34,16 +37,13 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(displayCenter.name),
         backgroundColor: Theme.of(context).colorScheme.primary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () {
-              ref.invalidate(allCentersProvider);
-              context.go('/staff-shell');
-            },
-          ),
-        ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/sync'),
+        icon: const Icon(Icons.sync),
+        label: const Text('Sync'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: evacueeCountAsync.when(
         data: (count) => _buildDashboard(context, ref, displayCenter, count),
         loading: () => const AppLoadingState(),

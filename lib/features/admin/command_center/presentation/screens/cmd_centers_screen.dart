@@ -15,7 +15,7 @@ class CmdCentersScreen extends ConsumerStatefulWidget {
 class _CmdCentersScreenState extends ConsumerState<CmdCentersScreen> {
   @override
   Widget build(BuildContext context) {
-    final cmdCentersAsync = ref.watch(allCommandCentersProvider);
+    final cmdCentersAsync = ref.watch(assignedCommandCentersProvider);
     final selectedCommandCenterId = ref.watch(selectedCommandCenterIdProvider);
 
     return Scaffold(
@@ -26,7 +26,7 @@ class _CmdCentersScreenState extends ConsumerState<CmdCentersScreen> {
           if (cmdCenters.isEmpty) {
             return const AppEmptyState(
               icon: Icons.apartment_outlined,
-              message: 'No command centers yet',
+              message: 'No assigned command centers',
             );
           }
 

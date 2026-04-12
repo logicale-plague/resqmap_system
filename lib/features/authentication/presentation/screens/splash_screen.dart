@@ -50,13 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         return;
       }
 
-      final destination = switch (currentUser.role) {
-        UserPermission.admin => '/admin-init',
-        UserPermission.staff => '/staff-shell',
-        UserPermission.user => '/userhome',
-      };
-
-      context.go(destination);
+      context.go('/userhome');
     } catch (e) {
       if (mounted) {
         ref.read(authServiceProvider).signOut();

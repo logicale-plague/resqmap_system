@@ -294,6 +294,7 @@ class SyncService {
 
   Future<void> _pullAndMergeFromSupabase({bool skipStations = false}) async {
     await _refreshCurrentUserCommandCenterAccess();
+    await _refreshCurrentUserEvacCenterAccess();
 
     final centerRows = await _supabase.from('evacuation_centers').select();
     for (final row in centerRows) {
@@ -347,6 +348,30 @@ class SyncService {
       await _databaseService.replaceUserCommandCenterAccess(userId, accessRows);
     } catch (e) {
       debugPrint('Failed to pull user_cmd_centers for user=$userId: $e');
+    }
+  }
+
+  Future<void> _refreshCurrentUserEvacCenterAccess() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    try {
+      final rawRows = await _supabase
+          .from('user_evac_centers')
+          .select()
+          .eq('user_id', userId);
+      final accessRows = [
+        for (final row in rawRows) Map<String, dynamic>.from(row as Map),
+      ];
+      await _databaseService.replaceUserEvacCenterAccess(userId, accessRows);
+    } catch (e) {
+      debugPrint('Failed to pull user_evac_centers for user=$userId: $e');
+      await _databaseService.replaceUserEvacCenterAccess(
+        userId,
+        const <Map<String, dynamic>>[],
+      );
     }
   }
 

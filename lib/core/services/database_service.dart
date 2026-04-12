@@ -28,7 +28,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 8,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -134,6 +134,7 @@ class DatabaseService {
     );
 
     await _createUserCommandCentersTable(db);
+    await _createUserEvacCentersTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -323,6 +324,40 @@ class DatabaseService {
     if (oldVersion < 8) {
       await _createUserCommandCentersTable(db);
     }
+
+    if (oldVersion < 9) {
+      await _createUserEvacCentersTable(db);
+    }
+
+    if (oldVersion < 10) {
+      final userCmdCentersExists = await _tableExists(db, 'user_cmd_centers');
+      if (userCmdCentersExists) {
+        final hasActive = await _columnExists(
+          db,
+          table: 'user_cmd_centers',
+          column: 'active',
+        );
+        if (!hasActive) {
+          await db.execute(
+            'ALTER TABLE user_cmd_centers ADD COLUMN active INTEGER NOT NULL DEFAULT 1',
+          );
+        }
+      }
+
+      final userEvacCentersExists = await _tableExists(db, 'user_evac_centers');
+      if (userEvacCentersExists) {
+        final hasActive = await _columnExists(
+          db,
+          table: 'user_evac_centers',
+          column: 'active',
+        );
+        if (!hasActive) {
+          await db.execute(
+            'ALTER TABLE user_evac_centers ADD COLUMN active INTEGER NOT NULL DEFAULT 1',
+          );
+        }
+      }
+    }
   }
 
   Future<void> _createUserCommandCentersTable(Database db) async {
@@ -330,7 +365,8 @@ class DatabaseService {
       CREATE TABLE IF NOT EXISTS user_cmd_centers(
         id TEXT PRIMARY KEY,
         userId TEXT NOT NULL,
-        commandCenterId TEXT NOT NULL
+        commandCenterId TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -340,6 +376,54 @@ class DatabaseService {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_user_cmd_centers_commandCenterId ON user_cmd_centers(commandCenterId)',
     );
+  }
+
+  Future<void> _createUserEvacCentersTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS user_evac_centers(
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        evacuationCenterId TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_user_evac_centers_userId ON user_evac_centers(userId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_user_evac_centers_evacuationCenterId ON user_evac_centers(evacuationCenterId)',
+    );
+  }
+
+  Future<void> insertUserCommandCenterAccessRow({
+    required String userId,
+    required String commandCenterId,
+    bool active = true,
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
+    await db.insert('user_cmd_centers', {
+      'id': '$userId::$commandCenterId',
+      'userId': userId,
+      'commandCenterId': commandCenterId,
+      'active': active ? 1 : 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> insertUserEvacCenterAccessRow({
+    required String userId,
+    required String evacuationCenterId,
+    bool active = true,
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
+    await db.insert('user_evac_centers', {
+      'id': '$userId::$evacuationCenterId',
+      'userId': userId,
+      'evacuationCenterId': evacuationCenterId,
+      'active': active ? 1 : 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<bool> _tableExists(Database db, String table) async {

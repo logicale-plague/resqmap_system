@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/presentation/helpers/center_navigation.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
 import '../../../../../core/widgets/index.dart';
@@ -100,6 +101,7 @@ class _AdminEvacCenterScreensState
                       ],
                     ),
                   ),
+                  onTap: () => openCenterDashboard(context, ref, center),
                 );
               },
             );

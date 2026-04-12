@@ -52,6 +52,11 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final syncStatus = ref.watch(syncStatusProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sync Status'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

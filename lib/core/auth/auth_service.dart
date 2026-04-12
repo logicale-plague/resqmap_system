@@ -141,6 +141,7 @@ class AuthService {
 
     final user = userFromMap(data);
     List<Map<String, dynamic>>? accessRows;
+    List<Map<String, dynamic>>? evacCenterRows;
     try {
       final rawRows = await _supabase
           .from('user_cmd_centers')
@@ -153,10 +154,24 @@ class AuthService {
       debugPrint('Failed to refresh user_cmd_centers for $userId: $e');
     }
 
+    try {
+      final rawRows = await _supabase
+          .from('user_evac_centers')
+          .select()
+          .eq('user_id', userId);
+      evacCenterRows = [
+        for (final row in rawRows) Map<String, dynamic>.from(row as Map),
+      ];
+    } catch (e) {
+      debugPrint('Failed to refresh user_evac_centers for $userId: $e');
+      evacCenterRows = const <Map<String, dynamic>>[];
+    }
+
     await _databaseService.replaceCurrentUser(user, password: password);
     if (accessRows != null) {
       await _databaseService.replaceUserCommandCenterAccess(userId, accessRows);
     }
+    await _databaseService.replaceUserEvacCenterAccess(userId, evacCenterRows);
     _ref.invalidate(currentUserProvider);
     return user;
   }

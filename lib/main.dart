@@ -13,9 +13,9 @@ import 'core/services/database_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('en_US', null);
-  await DatabaseService().database;
-
   await dotenv.load(fileName: "assets/.env");
+
+  await DatabaseService().database;
 
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']?.trim() ?? '',
