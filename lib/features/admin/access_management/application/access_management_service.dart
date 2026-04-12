@@ -217,8 +217,8 @@ final manageableEvacuationCentersByCommandCenterProvider =
       final centers = await ref.watch(
         centersByCommandCenterProvider(commandCenterId).future,
       );
-      centers.sort((a, b) => a.name.compareTo(b.name));
-      return centers;
+      final sorted = [...centers]..sort((a, b) => a.name.compareTo(b.name));
+      return sorted;
     });
 
 final adminAccessManagementServiceProvider =
@@ -278,17 +278,12 @@ class AdminAccessManagementService {
       evacuationCenterId: centerId,
     );
 
-    await _supabase
-        .from('users')
-        .update({'role': UserPermission.staff.toCode()})
-        .eq('id', targetUser.id);
-
     if (relationshipAlreadyExists) {
       await _supabase
           .from('user_evac_centers')
           .update({'active': 1})
           .eq('user_id', targetUser.id)
-          .eq('evacuation_center_id', centerId);
+          .eq('evac_center_id', centerId);
       await _databaseService.setUserEvacuationCenterAccessActive(
         targetUser.id,
         centerId,
@@ -298,7 +293,7 @@ class AdminAccessManagementService {
       await _supabase.from('user_evac_centers').insert({
         'id': const Uuid().v4(),
         'user_id': targetUser.id,
-        'evacuation_center_id': centerId,
+        'evac_center_id': centerId,
         'active': 1,
       });
 
@@ -309,10 +304,27 @@ class AdminAccessManagementService {
       );
     }
 
+    final previousRole = targetUser.role;
+    await _supabase
+        .from('users')
+        .update({'role': UserPermission.staff.toCode()})
+        .eq('id', targetUser.id);
+
     final updatedUser = targetUser.copyWith(role: UserPermission.staff);
     if (currentUser.id == targetUser.id) {
-      await _databaseService.replaceCurrentUser(updatedUser);
-      _ref.invalidate(currentUserProvider);
+      try {
+        await _databaseService.replaceCurrentUser(updatedUser);
+        _ref.invalidate(currentUserProvider);
+      } catch (error, stackTrace) {
+        try {
+          await _restoreUserRole(targetUser.id, previousRole);
+        } catch (rollbackError) {
+          throw StateError(
+            'Failed to persist current user access cache and roll back the role update: $rollbackError',
+          );
+        }
+        Error.throwWithStackTrace(error, stackTrace);
+      }
     }
 
     _ref.invalidate(adminUsersProvider);
@@ -440,7 +452,7 @@ class AdminAccessManagementService {
         .from('user_evac_centers')
         .select('id')
         .eq('user_id', userId)
-        .eq('evacuation_center_id', centerId);
+        .eq('evac_center_id', centerId);
     if (remoteRows.isEmpty) {
       throw StateError('No evacuation center access row exists for that user.');
     }
@@ -449,7 +461,7 @@ class AdminAccessManagementService {
         .from('user_evac_centers')
         .update({'active': activeValue})
         .eq('user_id', userId)
-        .eq('evacuation_center_id', centerId);
+        .eq('evac_center_id', centerId);
 
     await _databaseService.setUserEvacuationCenterAccessActive(
       userId,
@@ -756,6 +768,13 @@ class AdminAccessManagementService {
         .eq('evac_center_id', evacuationCenterId)
         .limit(1);
     return remoteRows.isNotEmpty;
+  }
+
+  Future<void> _restoreUserRole(String userId, UserPermission role) async {
+    await _supabase
+        .from('users')
+        .update({'role': role.toCode()})
+        .eq('id', userId);
   }
 
   Future<bool> _hasAnyActiveEvacuationAccess(String userId) async {

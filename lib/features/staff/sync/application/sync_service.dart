@@ -368,6 +368,10 @@ class SyncService {
       await _databaseService.replaceUserEvacCenterAccess(userId, accessRows);
     } catch (e) {
       debugPrint('Failed to pull user_evac_centers for user=$userId: $e');
+      await _databaseService.replaceUserEvacCenterAccess(
+        userId,
+        const <Map<String, dynamic>>[],
+      );
     }
   }
 

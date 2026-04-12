@@ -164,18 +164,14 @@ class AuthService {
       ];
     } catch (e) {
       debugPrint('Failed to refresh user_evac_centers for $userId: $e');
+      evacCenterRows = const <Map<String, dynamic>>[];
     }
 
     await _databaseService.replaceCurrentUser(user, password: password);
     if (accessRows != null) {
       await _databaseService.replaceUserCommandCenterAccess(userId, accessRows);
     }
-    if (evacCenterRows != null) {
-      await _databaseService.replaceUserEvacCenterAccess(
-        userId,
-        evacCenterRows,
-      );
-    }
+    await _databaseService.replaceUserEvacCenterAccess(userId, evacCenterRows);
     _ref.invalidate(currentUserProvider);
     return user;
   }
