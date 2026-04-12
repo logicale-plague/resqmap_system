@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/presentation/helpers/center_navigation.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/presentation/widgets/evacuation_center_widgets.dart';
 
 class AccessListScreen extends ConsumerWidget {
   const AccessListScreen({super.key});
@@ -27,6 +29,22 @@ class AccessListScreen extends ConsumerWidget {
           margin: EdgeInsets.zero,
           elevation: 1,
           isThreeLine: true,
+          trailing: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'manage_access') {
+                context.push(
+                  '/admin-access-management?commandCenterId=${Uri.encodeComponent(commandCenter.id)}',
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'manage_access',
+                child: Text('Manage access'),
+              ),
+            ],
+          ),
           leading: CircleAvatar(
             backgroundColor: Colors.orange[200],
             child: const Icon(Icons.apartment, color: Colors.white),
@@ -50,19 +68,6 @@ class AccessListScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openDashboardForCenter(
-    BuildContext context,
-    WidgetRef ref,
-    EvacuationCenter center,
-  ) async {
-    final db = ref.read(databaseServiceProvider);
-    await db.setCurrentCenterId(center.id);
-    ref.invalidate(currentCenterProvider);
-
-    if (!context.mounted) return;
-    context.push('/dashboard', extra: center);
-  }
-
   Widget _buildStaffList(
     BuildContext context,
     WidgetRef ref,
@@ -79,7 +84,7 @@ class AccessListScreen extends ConsumerWidget {
           margin: EdgeInsets.zero,
           elevation: 1,
           isThreeLine: true,
-          onTap: () => _openDashboardForCenter(context, ref, center),
+          onTap: () => openCenterDashboard(context, ref, center),
           leading: CircleAvatar(
             backgroundColor: statusColor(center.status),
             child: const Icon(Icons.apartment, color: Colors.white),
@@ -137,38 +142,71 @@ class AccessListScreen extends ConsumerWidget {
             );
           }
 
+          final headerChildren = <Widget>[];
+
+          if (user.role == UserPermission.admin) {
+            headerChildren.add(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: FilledButton.icon(
+                  onPressed: () => context.push('/admin-access-management'),
+                  icon: const Icon(Icons.manage_accounts_outlined),
+                  label: const Text('Manage access'),
+                ),
+              ),
+            );
+          }
+
+          if (user.role == UserPermission.staff) {
+            final staffCentersAsync = ref.watch(staffAssignedCentersProvider);
+            return staffCentersAsync.when(
+              data: (centers) {
+                if (centers.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No evacuation centers assigned to your account.',
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    if (headerChildren.isNotEmpty) ...headerChildren,
+                    Expanded(child: _buildStaffList(context, ref, centers)),
+                  ],
+                );
+              },
+              loading: () => AppLoadingState(),
+              error: (error, _) => AppErrorState(error: error),
+            );
+          }
+
           final assignedCommandCentersAsync = ref.watch(
             assignedCommandCentersProvider,
           );
           return assignedCommandCentersAsync.when(
             data: (assignedCommandCenters) {
+              if (user.role == UserPermission.admin) {
+                return Column(
+                  children: [
+                    if (headerChildren.isNotEmpty) ...headerChildren,
+                    Expanded(
+                      child: assignedCommandCenters.isEmpty
+                          ? const Center(
+                              child: Text('No assigned command centers.'),
+                            )
+                          : _buildAdminList(
+                              context,
+                              ref,
+                              assignedCommandCenters,
+                            ),
+                    ),
+                  ],
+                );
+              }
+
               if (assignedCommandCenters.isEmpty) {
                 return const Center(
                   child: Text('No assigned command centers.'),
-                );
-              }
-
-              if (user.role == UserPermission.admin) {
-                return _buildAdminList(context, ref, assignedCommandCenters);
-              }
-
-              if (user.role == UserPermission.staff) {
-                final staffCentersAsync = ref.watch(
-                  staffAssignedCentersProvider,
-                );
-                return staffCentersAsync.when(
-                  data: (centers) {
-                    if (centers.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No evacuation centers under your command center access.',
-                        ),
-                      );
-                    }
-                    return _buildStaffList(context, ref, centers);
-                  },
-                  loading: () => AppLoadingState(),
-                  error: (error, _) => AppErrorState(error: error),
                 );
               }
 

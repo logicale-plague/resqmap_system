@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/features/admin/access_management/presentation/screens/access_management_screen.dart';
+import 'package:kalig_onan_evac_system/features/admin/access_management/presentation/screens/command_center_access_users_screen.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_cmd_center_shell.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_init_shell.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/screens/settings_screen.dart';
@@ -30,6 +32,20 @@ final router = GoRouter(
       builder: (context, state) {
         final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
         return AdminShell(initialIndex: tab);
+      },
+    ),
+    GoRoute(
+      path: '/admin-access-management',
+      builder: (context, state) {
+        final commandCenterId = state.uri.queryParameters['commandCenterId'];
+        return AccessManagementScreen(initialCommandCenterId: commandCenterId);
+      },
+    ),
+    GoRoute(
+      path: '/admin-command-center-access-users',
+      builder: (context, state) {
+        final commandCenterId = state.uri.queryParameters['commandCenterId'];
+        return CommandCenterAccessUsersScreen(commandCenterId: commandCenterId);
       },
     ),
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/presentation/helpers/center_navigation.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
 import '../../../../../core/widgets/index.dart';
@@ -17,15 +17,6 @@ class AdminEvacCenterScreens extends ConsumerStatefulWidget {
 
 class _AdminEvacCenterScreensState
     extends ConsumerState<AdminEvacCenterScreens> {
-  Future<void> _openDashboardForCenter(EvacuationCenter center) async {
-    final databaseService = ref.read(databaseServiceProvider);
-    await databaseService.setCurrentCenterId(center.id);
-    ref.invalidate(currentCenterProvider);
-
-    if (!mounted) return;
-    context.push('/dashboard', extra: center);
-  }
-
   @override
   Widget build(BuildContext context) {
     final currentCommandCenterAsync = ref.watch(currentCommandCenterProvider);
@@ -38,7 +29,7 @@ class _AdminEvacCenterScreensState
             message:
                 'Select a command center in the Command Centers tab to view evacuation centers.',
             action: ElevatedButton.icon(
-              onPressed: () => context.push('/admin-shell?tab=0'),
+              onPressed: () => context.go('/admin-shell?tab=0'),
               icon: const Icon(Icons.apartment_outlined),
               label: const Text('Go To Command Centers'),
             ),
@@ -58,7 +49,7 @@ class _AdminEvacCenterScreensState
                 icon: Icons.home_work_outlined,
                 message: 'No evacuation centers yet',
                 action: ElevatedButton.icon(
-                  onPressed: () => context.push('/admin-shell?tab=2'),
+                  onPressed: () => context.go('/admin-shell?tab=2'),
                   icon: const Icon(Icons.map_outlined),
                   label: const Text('View Map'),
                 ),
@@ -110,7 +101,7 @@ class _AdminEvacCenterScreensState
                       ],
                     ),
                   ),
-                  onTap: () => _openDashboardForCenter(center),
+                  onTap: () => openCenterDashboard(context, ref, center),
                 );
               },
             );
@@ -122,7 +113,7 @@ class _AdminEvacCenterScreensState
         icon: Icons.error_outline,
         message: 'Unable to load selected command center.',
         action: ElevatedButton.icon(
-          onPressed: () => context.push('/admin-shell?tab=0'),
+          onPressed: () => context.go('/admin-shell?tab=0'),
           icon: const Icon(Icons.refresh),
           label: const Text('Retry'),
         ),

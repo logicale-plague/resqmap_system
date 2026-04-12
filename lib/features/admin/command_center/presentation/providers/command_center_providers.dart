@@ -90,21 +90,28 @@ final selectedCommandCenterCentersProvider =
 final staffAssignedCentersProvider = FutureProvider<List<EvacuationCenter>>((
   ref,
 ) async {
-  final assignedCommandCenters = await ref.watch(
-    assignedCommandCentersProvider.future,
+  final currentUser = await ref.watch(currentUserProvider.future);
+  if (currentUser == null) {
+    return [];
+  }
+
+  final databaseService = ref.watch(databaseServiceProvider);
+  final assignedCenterIds = await databaseService.getUserEvacuationCenterIds(
+    currentUser.id,
   );
+  if (assignedCenterIds.isEmpty) {
+    return [];
+  }
 
   final centerMap = <String, EvacuationCenter>{};
-  for (final commandCenter in assignedCommandCenters) {
-    final centers = await ref.watch(
-      centersByCommandCenterProvider(commandCenter.id).future,
-    );
-    for (final center in centers) {
+  for (final centerId in assignedCenterIds) {
+    final center = await ref.watch(centerProvider(centerId).future);
+    if (center != null) {
       centerMap[center.id] = center;
     }
   }
 
-  final mergedCenters = centerMap.values.toList(growable: false);
-  mergedCenters.sort((a, b) => a.name.compareTo(b.name));
-  return mergedCenters;
+  final centers = centerMap.values.toList(growable: false);
+  centers.sort((a, b) => a.name.compareTo(b.name));
+  return centers;
 });

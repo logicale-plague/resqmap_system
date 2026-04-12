@@ -11,6 +11,7 @@ class DashboardScreen extends ConsumerWidget {
 
   void _refreshDashboardData(WidgetRef ref, String centerId) {
     ref.invalidate(currentCenterProvider);
+    ref.invalidate(centerProvider(centerId));
     ref.invalidate(evacueeCountByCenterProvider(centerId));
     ref.invalidate(evacueeCountByStationProvider);
     ref.invalidate(evacueesByCenterProvider(centerId));
