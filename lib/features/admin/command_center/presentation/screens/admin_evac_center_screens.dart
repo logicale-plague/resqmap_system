@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
 
@@ -16,6 +17,15 @@ class AdminEvacCenterScreens extends ConsumerStatefulWidget {
 
 class _AdminEvacCenterScreensState
     extends ConsumerState<AdminEvacCenterScreens> {
+  Future<void> _openDashboardForCenter(EvacuationCenter center) async {
+    final databaseService = ref.read(databaseServiceProvider);
+    await databaseService.setCurrentCenterId(center.id);
+    ref.invalidate(currentCenterProvider);
+
+    if (!mounted) return;
+    context.go('/dashboard', extra: center);
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentCommandCenterAsync = ref.watch(currentCommandCenterProvider);
@@ -100,7 +110,7 @@ class _AdminEvacCenterScreensState
                       ],
                     ),
                   ),
-                  onTap: () => context.go('/dashboard', extra: center),
+                  onTap: () => _openDashboardForCenter(center),
                 );
               },
             );

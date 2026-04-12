@@ -134,6 +134,13 @@ class AccessListScreen extends ConsumerWidget {
             return const Center(child: Text('No authenticated user found.'));
           }
 
+          if (user.role != UserPermission.admin &&
+              user.role != UserPermission.staff) {
+            return const Center(
+              child: Text('Access list is only available for admin and staff.'),
+            );
+          }
+
           final assignedCommandCentersAsync = ref.watch(
             assignedCommandCentersProvider,
           );
@@ -154,10 +161,10 @@ class AccessListScreen extends ConsumerWidget {
                   future: _loadStaffCenters(ref, assignedCommandCenters),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return AppLoadingState();
                     }
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
+                      return AppErrorState(error: snapshot.error!);
                     }
 
                     final centers = snapshot.data ?? const <EvacuationCenter>[];

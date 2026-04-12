@@ -34,6 +34,50 @@ class _UserShellState extends ConsumerState<UserShell> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final role = ref
+        .read(currentUserProvider)
+        .maybeWhen(data: (user) => user?.role, orElse: () => null);
+    _clampSelectedIndex(_canAccessManagement(role) ? 3 : 2);
+  }
+
+  void _clampSelectedIndex(int maxIndex) {
+    if (_selectedIndex > maxIndex) {
+      setState(() {
+        _selectedIndex = maxIndex;
+      });
+    }
+  }
+
+  void _adjustSelectedIndexForManagementTabChange({
+    required bool previousHasManagementTab,
+    required bool nextHasManagementTab,
+  }) {
+    var nextIndex = _selectedIndex;
+
+    if (!previousHasManagementTab && nextHasManagementTab && nextIndex >= 2) {
+      nextIndex += 1;
+    } else if (previousHasManagementTab && !nextHasManagementTab) {
+      if (nextIndex > 2) {
+        nextIndex -= 1;
+      }
+    }
+
+    final maxIndex = nextHasManagementTab ? 3 : 2;
+    if (nextIndex > maxIndex) {
+      nextIndex = maxIndex;
+    }
+
+    if (nextIndex != _selectedIndex) {
+      setState(() {
+        _selectedIndex = nextIndex;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final currentUserAsync = ref.watch(currentUserProvider);
     final role = currentUserAsync.maybeWhen(
@@ -49,13 +93,26 @@ class _UserShellState extends ConsumerState<UserShell> {
       'Profile',
     ];
 
-    if (_selectedIndex >= pageTitles.length) {
-      _selectedIndex = pageTitles.length - 1;
-    }
+    final effectiveIndex = _selectedIndex.clamp(0, pageTitles.length - 1);
+
+    ref.listen<AsyncValue<User?>>(currentUserProvider, (previous, next) {
+      final previousRole = previous?.maybeWhen(
+        data: (user) => user?.role,
+        orElse: () => null,
+      );
+      final nextRole = next.maybeWhen(
+        data: (user) => user?.role,
+        orElse: () => null,
+      );
+      _adjustSelectedIndexForManagementTabChange(
+        previousHasManagementTab: _canAccessManagement(previousRole),
+        nextHasManagementTab: _canAccessManagement(nextRole),
+      );
+    });
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(pageTitles[_selectedIndex]),
+        title: Text(pageTitles[effectiveIndex]),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
@@ -67,7 +124,7 @@ class _UserShellState extends ConsumerState<UserShell> {
       ),
 
       body: IndexedStack(
-        index: _selectedIndex,
+        index: effectiveIndex,
         children: [
           // Home is always rendered because _visitedTabs[0] is true
           _visitedTabs[0] ? const HomeScreen() : const SizedBox.shrink(),
@@ -100,7 +157,7 @@ class _UserShellState extends ConsumerState<UserShell> {
             label: 'Profile',
           ),
         ],
-        currentIndex: _selectedIndex,
+        currentIndex: effectiveIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;

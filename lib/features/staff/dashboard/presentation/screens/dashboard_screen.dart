@@ -22,7 +22,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUserAsync = ref.watch(currentUserProvider);
+    // final currentUserAsync = ref.watch(currentUserProvider);
     final currentCenterAsync = ref.watch(currentCenterProvider);
     final liveCenter = currentCenterAsync.asData?.value;
     final displayCenter = liveCenter != null && liveCenter.id == center.id
@@ -40,9 +40,10 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
-            onPressed: () {
+            onPressed: () async {
               ref.invalidate(allCentersProvider);
-              final role = currentUserAsync.asData?.value?.role;
+              final role = (await ref.read(currentUserProvider.future))?.role;
+              if (!context.mounted) return;
               if (role == UserPermission.admin) {
                 context.go('/admin-shell?tab=3');
                 return;
