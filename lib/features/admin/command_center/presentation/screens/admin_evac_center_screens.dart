@@ -23,7 +23,7 @@ class _AdminEvacCenterScreensState
     ref.invalidate(currentCenterProvider);
 
     if (!mounted) return;
-    context.go('/dashboard', extra: center);
+    context.push('/dashboard', extra: center);
   }
 
   @override
@@ -38,7 +38,7 @@ class _AdminEvacCenterScreensState
             message:
                 'Select a command center in the Command Centers tab to view evacuation centers.',
             action: ElevatedButton.icon(
-              onPressed: () => context.go('/admin-shell?tab=0'),
+              onPressed: () => context.push('/admin-shell?tab=0'),
               icon: const Icon(Icons.apartment_outlined),
               label: const Text('Go To Command Centers'),
             ),
@@ -58,7 +58,7 @@ class _AdminEvacCenterScreensState
                 icon: Icons.home_work_outlined,
                 message: 'No evacuation centers yet',
                 action: ElevatedButton.icon(
-                  onPressed: () => context.go('/admin-shell?tab=2'),
+                  onPressed: () => context.push('/admin-shell?tab=2'),
                   icon: const Icon(Icons.map_outlined),
                   label: const Text('View Map'),
                 ),
@@ -122,7 +122,7 @@ class _AdminEvacCenterScreensState
         icon: Icons.error_outline,
         message: 'Unable to load selected command center.',
         action: ElevatedButton.icon(
-          onPressed: () => context.go('/admin-shell?tab=0'),
+          onPressed: () => context.push('/admin-shell?tab=0'),
           icon: const Icon(Icons.refresh),
           label: const Text('Retry'),
         ),

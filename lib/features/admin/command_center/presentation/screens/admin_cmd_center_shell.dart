@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/admin_evac_center_screens.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/command_center_dashboard_screen.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/screens/resource_monitoring_screen.dart';
@@ -43,12 +42,6 @@ class _AdminShellState extends State<AdminShell> {
       appBar: AppBar(
         title: Text(titles[_currentIndex]),
         backgroundColor: Theme.of(context).colorScheme.primary,
-        actions: [
-          IconButton(
-            onPressed: () => context.go('/userhome?tab=2'),
-            icon: Icon(Icons.home),
-          ),
-        ],
       ),
       body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(

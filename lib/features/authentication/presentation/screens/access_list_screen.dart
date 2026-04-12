@@ -1,36 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
-import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
-import 'package:kalig_onan_evac_system/features/centers/shared/presentation/providers/evacuation_center_providers.dart';
-import 'package:kalig_onan_evac_system/features/centers/shared/presentation/widgets/evacuation_center_widgets.dart';
 
 class AccessListScreen extends ConsumerWidget {
   const AccessListScreen({super.key});
-
-  Future<List<EvacuationCenter>> _loadStaffCenters(
-    WidgetRef ref,
-    List<CommandCenter> assignedCommandCenters,
-  ) async {
-    final centerMap = <String, EvacuationCenter>{};
-    for (final commandCenter in assignedCommandCenters) {
-      final centers = await ref.watch(
-        centersByCommandCenterProvider(commandCenter.id).future,
-      );
-      for (final center in centers) {
-        centerMap[center.id] = center;
-      }
-    }
-
-    final mergedCenters = centerMap.values.toList(growable: false);
-    mergedCenters.sort((a, b) => a.name.compareTo(b.name));
-    return mergedCenters;
-  }
 
   Widget _buildAdminList(
     BuildContext context,
@@ -64,14 +43,31 @@ class AccessListScreen extends ConsumerWidget {
             ref
                 .read(selectedCommandCenterIdProvider.notifier)
                 .select(commandCenter.id);
-            context.go('/admin-shell?tab=0');
+            context.push('/admin-shell?tab=0');
           },
         );
       },
     );
   }
 
-  Widget _buildStaffList(BuildContext context, List<EvacuationCenter> centers) {
+  Future<void> _openDashboardForCenter(
+    BuildContext context,
+    WidgetRef ref,
+    EvacuationCenter center,
+  ) async {
+    final db = ref.read(databaseServiceProvider);
+    await db.setCurrentCenterId(center.id);
+    ref.invalidate(currentCenterProvider);
+
+    if (!context.mounted) return;
+    context.push('/dashboard', extra: center);
+  }
+
+  Widget _buildStaffList(
+    BuildContext context,
+    WidgetRef ref,
+    List<EvacuationCenter> centers,
+  ) {
     return ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: centers.length,
@@ -83,7 +79,7 @@ class AccessListScreen extends ConsumerWidget {
           margin: EdgeInsets.zero,
           elevation: 1,
           isThreeLine: true,
-          onTap: () => context.go('/dashboard', extra: center),
+          onTap: () => _openDashboardForCenter(context, ref, center),
           leading: CircleAvatar(
             backgroundColor: statusColor(center.status),
             child: const Icon(Icons.apartment, color: Colors.white),
@@ -157,17 +153,11 @@ class AccessListScreen extends ConsumerWidget {
               }
 
               if (user.role == UserPermission.staff) {
-                return FutureBuilder<List<EvacuationCenter>>(
-                  future: _loadStaffCenters(ref, assignedCommandCenters),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return AppLoadingState();
-                    }
-                    if (snapshot.hasError) {
-                      return AppErrorState(error: snapshot.error!);
-                    }
-
-                    final centers = snapshot.data ?? const <EvacuationCenter>[];
+                final staffCentersAsync = ref.watch(
+                  staffAssignedCentersProvider,
+                );
+                return staffCentersAsync.when(
+                  data: (centers) {
                     if (centers.isEmpty) {
                       return const Center(
                         child: Text(
@@ -175,8 +165,10 @@ class AccessListScreen extends ConsumerWidget {
                         ),
                       );
                     }
-                    return _buildStaffList(context, centers);
+                    return _buildStaffList(context, ref, centers);
                   },
+                  loading: () => AppLoadingState(),
+                  error: (error, _) => AppErrorState(error: error),
                 );
               }
 

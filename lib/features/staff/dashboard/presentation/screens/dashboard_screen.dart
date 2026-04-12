@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
-import 'package:kalig_onan_evac_system/core/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
-import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 
 class DashboardScreen extends ConsumerWidget {
   final EvacuationCenter center;
@@ -18,6 +16,7 @@ class DashboardScreen extends ConsumerWidget {
     ref.invalidate(evacueesByCenterProvider(centerId));
     ref.invalidate(stationsByCenterProvider(centerId));
     ref.invalidate(allSuppliesProvider);
+    ref.invalidate(centersByCommandCenterProvider(center.commandCenterId));
   }
 
   @override
@@ -37,21 +36,6 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(displayCenter.name),
         backgroundColor: Theme.of(context).colorScheme.primary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () async {
-              ref.invalidate(allCentersProvider);
-              final role = (await ref.read(currentUserProvider.future))?.role;
-              if (!context.mounted) return;
-              if (role == UserPermission.admin) {
-                context.go('/admin-shell?tab=3');
-                return;
-              }
-              context.go('/userhome?tab=2');
-            },
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/sync'),
