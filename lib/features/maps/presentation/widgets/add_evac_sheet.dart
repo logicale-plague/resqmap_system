@@ -230,6 +230,16 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
                     ? _selectedCommandCenterId
                     : commandCenters.first.id;
 
+                if (_selectedCommandCenterId != selectedCommandCenterId) {
+                  // Update the selected command center if the current one is not in the list
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() {
+                      _selectedCommandCenterId = selectedCommandCenterId;
+                    });
+                  });
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

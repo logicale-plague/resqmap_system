@@ -609,6 +609,17 @@ class AdminAccessManagementService {
       throw ArgumentError('Select a command center.');
     }
 
+    final commandCenter = await _ref
+        .read(commandCenterRepositoryProvider)
+        .getById(selectedCommandCenterId);
+    if (commandCenter == null) {
+      throw StateError('The selected command center could not be found.');
+    }
+
+    if (commandCenter.creatorId == userId) {
+      throw StateError('You are not authorized for this action.');
+    }
+
     final manageableCommandCenters = await _ref.read(
       manageableCommandCentersProvider.future,
     );

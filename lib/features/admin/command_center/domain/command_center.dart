@@ -4,7 +4,7 @@ class CommandCenter {
   final String? region;
   final String? address;
   final String? contactNumber;
-  final String? email;
+  final String? creatorId;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -16,7 +16,7 @@ class CommandCenter {
     this.region,
     this.address,
     this.contactNumber,
-    this.email,
+    this.creatorId,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -29,7 +29,7 @@ class CommandCenter {
     String? region,
     String? address,
     String? contactNumber,
-    String? email,
+    String? creatorId,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -41,7 +41,7 @@ class CommandCenter {
       region: region ?? this.region,
       address: address ?? this.address,
       contactNumber: contactNumber ?? this.contactNumber,
-      email: email ?? this.email,
+      creatorId: creatorId ?? this.creatorId,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -51,5 +51,5 @@ class CommandCenter {
 
   @override
   String toString() =>
-      'CommandCenter(id: $id, name: $name, region: $region, postalCode: $postalCode)';
+      'CommandCenter(id: $id, name: $name, region: $region, creatorId: $creatorId, postalCode: $postalCode)';
 }

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
 import 'package:kalig_onan_evac_system/core/widgets/app_list_item_card.dart';
 import 'package:kalig_onan_evac_system/features/admin/access_management/application/access_management_service.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/authentication/data/user_dto.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
 
 final commandCenterByIdProvider = FutureProvider.family<CommandCenter?, String>(
   (ref, commandCenterId) async {
@@ -14,6 +17,26 @@ final commandCenterByIdProvider = FutureProvider.family<CommandCenter?, String>(
     return repository.getById(commandCenterId);
   },
 );
+
+final commandCenterCreatorEmailProvider =
+    FutureProvider.family<String?, String?>((ref, creatorId) async {
+      final selectedCreatorId = creatorId?.trim();
+      if (selectedCreatorId == null || selectedCreatorId.isEmpty) {
+        return null;
+      }
+
+      final supabase = ref.watch(supabaseProvider);
+      final row = await supabase
+          .from('users')
+          .select()
+          .eq('id', selectedCreatorId)
+          .maybeSingle();
+      if (row == null) {
+        return null;
+      }
+
+      return userFromMap(Map<String, dynamic>.from(row as Map)).email;
+    });
 
 class CommandCenterAccessUsersScreen extends ConsumerWidget {
   final String? commandCenterId;
@@ -24,10 +47,23 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String commandCenterId,
+    String? creatorId,
     User user,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
+      if (creatorId != null && creatorId == user.id) {
+        if (!context.mounted) {
+          return;
+        }
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('You are not authorized for this action.'),
+          ),
+        );
+        return;
+      }
+
       final currentUser = await ref.read(currentUserProvider.future);
       final admins = await ref.read(
         commandCenterAccessUsersProvider(commandCenterId).future,
@@ -68,40 +104,40 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _removeStaffAccess(
-    BuildContext context,
-    WidgetRef ref,
-    String commandCenterId,
-    StaffAccessUserWithCenters item,
-    String evacuationCenterId,
-    String evacuationCenterName,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref
-          .read(adminAccessManagementServiceProvider)
-          .removeEvacuationCenterAccess(
-            userId: item.user.id,
-            commandCenterId: commandCenterId,
-            evacuationCenterId: evacuationCenterId,
-          );
-      if (!context.mounted) {
-        return;
-      }
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Removed evacuation-center access for ${item.user.username} ($evacuationCenterName).',
-          ),
-        ),
-      );
-    } catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
-    }
-  }
+  // Future<void> _removeStaffAccess(
+  //   BuildContext context,
+  //   WidgetRef ref,
+  //   String commandCenterId,
+  //   StaffAccessUserWithCenters item,
+  //   String evacuationCenterId,
+  //   String evacuationCenterName,
+  // ) async {
+  //   final messenger = ScaffoldMessenger.of(context);
+  //   try {
+  //     await ref
+  //         .read(adminAccessManagementServiceProvider)
+  //         .removeEvacuationCenterAccess(
+  //           userId: item.user.id,
+  //           commandCenterId: commandCenterId,
+  //           evacuationCenterId: evacuationCenterId,
+  //         );
+  //     if (!context.mounted) {
+  //       return;
+  //     }
+  //     messenger.showSnackBar(
+  //       SnackBar(
+  //         content: Text(
+  //           'Removed evacuation-center access for ${item.user.username} ($evacuationCenterName).',
+  //         ),
+  //       ),
+  //     );
+  //   } catch (error) {
+  //     if (!context.mounted) {
+  //       return;
+  //     }
+  //     messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+  //   }
+  // }
 
   Future<void> _promoteStaffToAdmin(
     BuildContext context,
@@ -133,6 +169,188 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
       }
       messenger.showSnackBar(SnackBar(content: Text(error.toString())));
     }
+  }
+
+  Future<void> _applyStaffAccessSelection(
+    BuildContext context,
+    WidgetRef ref,
+    String commandCenterId,
+    User user,
+    List<EvacuationCenter> allCenters,
+    Set<String> selectedCenterIds,
+    Set<String> originalCenterIds,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final service = ref.read(adminAccessManagementServiceProvider);
+
+      for (final centerId in originalCenterIds.difference(selectedCenterIds)) {
+        await service.removeEvacuationCenterAccess(
+          userId: user.id,
+          commandCenterId: commandCenterId,
+          evacuationCenterId: centerId,
+        );
+      }
+
+      for (final centerId in selectedCenterIds.difference(originalCenterIds)) {
+        final center = allCenters.firstWhere((item) => item.id == centerId);
+        await service.assignUserToEvacuationCenter(
+          email: user.email,
+          commandCenterId: commandCenterId,
+          evacuationCenterId: center.id,
+        );
+      }
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ref.invalidate(commandCenterStaffAccessUsersProvider(commandCenterId));
+      ref.invalidate(adminUsersProvider);
+
+      messenger.showSnackBar(
+        SnackBar(content: Text('Updated access for ${user.username}.')),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _manageStaffAccess(
+    BuildContext context,
+    WidgetRef ref,
+    CommandCenter commandCenter,
+    StaffAccessUserWithCenters item,
+  ) async {
+    final allCenters = await ref.read(
+      manageableEvacuationCentersByCommandCenterProvider(
+        commandCenter.id,
+      ).future,
+    );
+    if (!context.mounted) {
+      return;
+    }
+
+    if (allCenters.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No evacuation centers are available for this command center.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final originalCenterIds = item.evacuationCenters
+        .map((center) => center.id)
+        .toSet();
+    final selectedCenterIds = <String>{...originalCenterIds};
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        var isSaving = false;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Manage access for ${item.user.username}'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select the evacuation centers this staff member can access.',
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 320,
+                      width: double.maxFinite,
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: allCenters.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final center = allCenters[index];
+                          final isSelected = selectedCenterIds.contains(
+                            center.id,
+                          );
+                          return CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                            value: isSelected,
+                            title: Text(center.name),
+                            subtitle: Text(center.id),
+                            onChanged: isSaving
+                                ? null
+                                : (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        selectedCenterIds.add(center.id);
+                                      } else {
+                                        selectedCenterIds.remove(center.id);
+                                      }
+                                    });
+                                  },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setState(() {
+                            isSaving = true;
+                          });
+                          await _applyStaffAccessSelection(
+                            context,
+                            ref,
+                            commandCenter.id,
+                            item.user,
+                            allCenters,
+                            selectedCenterIds,
+                            originalCenterIds,
+                          );
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildSectionHeader(String title, {String? subtitle}) {
@@ -183,8 +401,11 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String commandCenterId,
+    String? creatorId,
     User user,
   ) {
+    final isCreator = creatorId != null && creatorId == user.id;
+
     return AppListItemCard(
       margin: EdgeInsets.zero,
       elevation: 1,
@@ -192,20 +413,28 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
       leading: CircleAvatar(
         child: const Icon(Icons.admin_panel_settings_outlined),
       ),
-      trailing: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert),
-        onSelected: (value) {
-          if (value == 'remove_admin_access') {
-            _removeAdminAccess(context, ref, commandCenterId, user);
-          }
-        },
-        itemBuilder: (context) => const [
-          PopupMenuItem<String>(
-            value: 'remove_admin_access',
-            child: Text('Remove access'),
-          ),
-        ],
-      ),
+      trailing: isCreator
+          ? const Icon(Icons.verified_outlined)
+          : PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'remove_admin_access') {
+                  _removeAdminAccess(
+                    context,
+                    ref,
+                    commandCenterId,
+                    creatorId,
+                    user,
+                  );
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(
+                  value: 'remove_admin_access',
+                  child: Text('Remove access'),
+                ),
+              ],
+            ),
       title: Text(
         user.username,
         style: const TextStyle(fontWeight: FontWeight.w700),
@@ -218,6 +447,7 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
           children: [
             Text(user.email),
             Chip(label: Text(user.role.toCode())),
+            if (isCreator) const Chip(label: Text('creator')),
           ],
         ),
       ),
@@ -228,6 +458,7 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String commandCenterId,
+    CommandCenter commandCenter,
     StaffAccessUserWithCenters item,
   ) {
     return AppListItemCard(
@@ -245,22 +476,8 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
             _promoteStaffToAdmin(context, ref, commandCenterId, item.user);
             return;
           }
-          if (value.startsWith('remove_center:')) {
-            final evacuationCenterId = value.substring('remove_center:'.length);
-            final centerName = item.evacuationCenters
-                .firstWhere(
-                  (center) => center.id == evacuationCenterId,
-                  orElse: () => item.evacuationCenters.first,
-                )
-                .name;
-            _removeStaffAccess(
-              context,
-              ref,
-              commandCenterId,
-              item,
-              evacuationCenterId,
-              centerName,
-            );
+          if (value == 'manage_access') {
+            _manageStaffAccess(context, ref, commandCenter, item);
           }
         },
         itemBuilder: (context) => [
@@ -268,12 +485,10 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
             value: 'promote_admin',
             child: Text('Promote to admin'),
           ),
-          const PopupMenuDivider(),
-          for (final center in item.evacuationCenters)
-            PopupMenuItem<String>(
-              value: 'remove_center:${center.id}',
-              child: Text('Remove ${center.name} access'),
-            ),
+          const PopupMenuItem<String>(
+            value: 'manage_access',
+            child: Text('Manage access for this user'),
+          ),
         ],
       ),
       title: Text(
@@ -377,10 +592,26 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(
-                            commandCenter.email ?? 'No email provided',
-                            style: TextStyle(color: Colors.grey.shade700),
-                          ),
+                          ref
+                              .watch(
+                                commandCenterCreatorEmailProvider(
+                                  commandCenter.creatorId,
+                                ),
+                              )
+                              .when(
+                                data: (email) => Text(
+                                  email ?? 'No creator email provided',
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                                loading: () => Text(
+                                  'Loading creator email...',
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                                error: (_, __) => Text(
+                                  'No creator email provided',
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                              ),
                         ],
                       ),
                     ),
@@ -412,6 +643,7 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
                           context,
                           ref,
                           commandCenter.id,
+                          commandCenter.creatorId,
                           users[index],
                         );
                       },
@@ -450,6 +682,7 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
                           context,
                           ref,
                           commandCenter.id,
+                          commandCenter,
                           items[index],
                         );
                       },
