@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/providers/map_provider.dart';
 
@@ -22,6 +23,7 @@ class AddEvacSheet extends ConsumerStatefulWidget {
 
 class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
   final TextEditingController _centerNameController = TextEditingController();
+  String? _selectedCommandCenterId;
   bool _isSubmitting = false;
 
   @override
@@ -32,6 +34,14 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
+
+    final selectedCommandCenterId = _selectedCommandCenterId?.trim();
+    if (selectedCommandCenterId == null || selectedCommandCenterId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a command center.')),
+      );
+      return;
+    }
 
     final centerName = _centerNameController.text.trim();
     if (centerName.isEmpty) {
@@ -53,6 +63,7 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
             centerName: centerName,
             fullAddress: widget.fullAddress,
             postalCode: widget.postalCode,
+            commandCenterId: selectedCommandCenterId,
           );
 
       if (!mounted) return;
@@ -83,6 +94,7 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final commandCentersAsync = ref.watch(assignedCommandCentersProvider);
 
     final lat = widget.point.coordinates.lat.toStringAsFixed(5);
     final lng = widget.point.coordinates.lng.toStringAsFixed(5);
@@ -187,6 +199,88 @@ class _AddEvacSheetState extends ConsumerState<AddEvacSheet> {
               ),
             ),
             const SizedBox(height: 24),
+
+            commandCentersAsync.when(
+              data: (commandCenters) {
+                if (commandCenters.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.errorContainer.withAlpha(80),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.error.withAlpha(70),
+                      ),
+                    ),
+                    child: Text(
+                      'No command centers are assigned to your account.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  );
+                }
+
+                final selectedCommandCenterId =
+                    commandCenters.any(
+                      (commandCenter) =>
+                          commandCenter.id == _selectedCommandCenterId,
+                    )
+                    ? _selectedCommandCenterId
+                    : commandCenters.first.id;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Command Center',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedCommandCenterId,
+                      items: commandCenters
+                          .map(
+                            (commandCenter) => DropdownMenuItem<String>(
+                              value: commandCenter.id,
+                              child: Text(commandCenter.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCommandCenterId = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                        prefixIcon: const Icon(Icons.apartment),
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: LinearProgressIndicator(),
+              ),
+              error: (error, _) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('Failed to load command centers: $error'),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             TextFormField(
               controller: _centerNameController,

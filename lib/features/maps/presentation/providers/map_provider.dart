@@ -262,22 +262,23 @@ class MapController extends Notifier<MapState> {
   Future<void> renderAnnotationsForMap({
     required User? user,
     required List<EvacuationCenter> centers,
+    bool showHomeMarker = false,
   }) async {
-    switch (user!.role) {
-      case UserPermission.admin:
-      case UserPermission.staff:
-        break;
-      case UserPermission.user:
-        if (user.latitude != null && user.longitude != null) {
-          await upsertUserHomeMarker(
-            point: Point(
-              coordinates: Position(
-                num.parse(user.longitude.toString()),
-                num.parse(user.latitude.toString()),
-              ),
-            ),
-          );
-        }
+    final shouldRenderHomeMarker =
+        user != null &&
+        user.latitude != null &&
+        user.longitude != null &&
+        (user.role == UserPermission.user || showHomeMarker);
+
+    if (shouldRenderHomeMarker) {
+      await upsertUserHomeMarker(
+        point: Point(
+          coordinates: Position(
+            num.parse(user.longitude.toString()),
+            num.parse(user.latitude.toString()),
+          ),
+        ),
+      );
     }
 
     if (centers.isNotEmpty) {
@@ -288,8 +289,22 @@ class MapController extends Notifier<MapState> {
           ),
           label: center.name,
           annotationId: center.id,
+          iconPath: _centerIconPath(center.status),
         );
       }
+    }
+  }
+
+  String _centerIconPath(CenterStatus status) {
+    switch (status) {
+      case CenterStatus.operational:
+        return 'assets/map_icons/shelter-icon.png';
+      case CenterStatus.nearCapacity:
+        return 'assets/map_icons/shelter-icon-orange.png';
+      case CenterStatus.atCapacity:
+        return 'assets/map_icons/shelter-icon-red.png';
+      case CenterStatus.closed:
+        return 'assets/map_icons/shelter-icon-red.png';
     }
   }
 
@@ -366,6 +381,7 @@ class MapController extends Notifier<MapState> {
     required String centerName,
     required String fullAddress,
     required String postalCode,
+    required String commandCenterId,
   }) async {
     // Check online status before allowing creation
     final syncService = ref.read(syncServiceProvider);
@@ -380,18 +396,11 @@ class MapController extends Notifier<MapState> {
     _isAddingMarker = true;
 
     try {
-      final currentCommandCenterId = ref.read(selectedCommandCenterIdProvider);
-      if (currentCommandCenterId == null) {
-        throw StateError(
-          'No command center selected. Please select a command center before adding evacuation centers.',
-        );
-      }
-
       final newCenterId = IdService.newId();
       final newCenter = EvacuationCenter(
         id: newCenterId,
         name: centerName,
-        commandCenterId: currentCommandCenterId,
+        commandCenterId: commandCenterId,
         latitude: point.coordinates.lat.toDouble(),
         longitude: point.coordinates.lng.toDouble(),
         fullAddress: fullAddress,
@@ -429,7 +438,7 @@ class MapController extends Notifier<MapState> {
         );
 
         ref.invalidate(allCentersProvider);
-        ref.invalidate(centersByCommandCenterProvider(currentCommandCenterId));
+        ref.invalidate(centersByCommandCenterProvider(commandCenterId));
         ref.invalidate(selectedCommandCenterCentersProvider);
       } catch (e) {
         // Insert failed remotely (e.g. offline).

@@ -390,9 +390,9 @@ class AdminAccessManagementService {
       );
     }
 
-    if (targetUser.role == UserPermission.admin) {
-      throw StateError('Admin accounts are not managed from this page.');
-    }
+    // if (targetUser.role == UserPermission.admin) {
+    //   throw StateError('Admin accounts are not managed from this page.');
+    // }
 
     final selectedCommandCenterId = _validateAndTrimCommandCenterId(
       commandCenterId,

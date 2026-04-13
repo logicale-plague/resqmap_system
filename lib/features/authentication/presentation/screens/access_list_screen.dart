@@ -29,22 +29,6 @@ class AccessListScreen extends ConsumerWidget {
           margin: EdgeInsets.zero,
           elevation: 1,
           isThreeLine: true,
-          trailing: PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              if (value == 'manage_access') {
-                context.push(
-                  '/admin-command-center-access-users?commandCenterId=${Uri.encodeComponent(commandCenter.id)}',
-                );
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(
-                value: 'manage_access',
-                child: Text('Manage access'),
-              ),
-            ],
-          ),
           leading: CircleAvatar(
             backgroundColor: Colors.orange[200],
             child: const Icon(Icons.apartment, color: Colors.white),
@@ -54,15 +38,42 @@ class AccessListScreen extends ConsumerWidget {
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(commandCenter.email ?? 'No email provided'),
+            padding: const EdgeInsets.only(top: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          ref
+                              .read(selectedCommandCenterIdProvider.notifier)
+                              .select(commandCenter.id);
+                          context.push('/admin-shell?tab=0');
+                        },
+                        icon: const Icon(Icons.dashboard_outlined),
+                        label: const Text('Dashboard'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          context.push(
+                            '/admin-command-center-access-users?commandCenterId=${Uri.encodeComponent(commandCenter.id)}',
+                          );
+                        },
+                        icon: const Icon(Icons.manage_accounts_outlined),
+                        label: const Text('Manage'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          onTap: () {
-            ref
-                .read(selectedCommandCenterIdProvider.notifier)
-                .select(commandCenter.id);
-            context.push('/admin-shell?tab=0');
-          },
         );
       },
     );
