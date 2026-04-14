@@ -100,9 +100,15 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           throw Exception('No unassigned evacuees available for assignment.');
         }
 
+        final selectedEvacueeId = _selectedFloatingEvacueeId;
+        if (selectedEvacueeId == null) {
+          throw Exception('No unassigned evacuee selected for assignment.');
+        }
+
         final selectedEvacuee = floating.firstWhere(
-          (ev) => ev.id == _selectedFloatingEvacueeId,
-          orElse: () => floating.first,
+          (ev) => ev.id == selectedEvacueeId,
+          orElse: () =>
+              throw Exception('Selected unassigned evacuee not found.'),
         );
 
         final eligibilityParams = (

@@ -46,9 +46,6 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     String commandCenterId,
   ) async {
     final localCenters = await _getByCommandCenterIdFromLocal(commandCenterId);
-    if (localCenters.isNotEmpty) {
-      return localCenters;
-    }
 
     List<dynamic> rows;
     try {
@@ -62,6 +59,9 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
         print('Error fetching centers from Supabase: $error');
         print('Stack trace: $stackTrace');
       }
+      return localCenters;
+    }
+    if (rows.isEmpty) {
       return localCenters;
     }
     return [

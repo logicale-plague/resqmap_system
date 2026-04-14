@@ -333,6 +333,13 @@ Future<void> _guardStationEligibilityChange({
     return;
   }
 
+  final stationWithUpdatedFilters = station.copyWith(
+    allowedAgeGroup: selectedAgeGroup,
+    allowedMedicalCondition: selectedMedical,
+    clearAllowedAgeGroup: selectedAgeGroup == null,
+    clearAllowedMedicalCondition: selectedMedical == null,
+  );
+
   final evacuees = await ref
       .read(evacueeRepositoryProvider)
       .getEvacueesByStation(station.id);
@@ -342,9 +349,10 @@ Future<void> _guardStationEligibilityChange({
 
   final incompatible = evacuees
       .where(
-        (evacuee) =>
-            !_matchesAgeSelection(evacuee, selectedAgeGroup) ||
-            !_matchesMedicalSelection(evacuee, selectedMedical),
+        (evacuee) => !stationWithUpdatedFilters.allows(
+          ageGroup: evacuee.ageGroup,
+          medicalCondition: evacuee.medicalCondition,
+        ),
       )
       .toList(growable: false);
   if (incompatible.isEmpty) {
@@ -359,17 +367,6 @@ Future<void> _guardStationEligibilityChange({
       incompatibleCount: incompatible.length,
     ),
   );
-}
-
-bool _matchesAgeSelection(Evacuee evacuee, AgeGroup? selectedAgeGroup) {
-  return selectedAgeGroup == null || evacuee.ageGroup == selectedAgeGroup;
-}
-
-bool _matchesMedicalSelection(
-  Evacuee evacuee,
-  MedicalCondition? selectedMedical,
-) {
-  return selectedMedical == null || evacuee.medicalCondition == selectedMedical;
 }
 
 String _buildEligibilityConflictMessage({

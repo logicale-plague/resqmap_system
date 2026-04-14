@@ -6,7 +6,6 @@ import 'package:kalig_onan_evac_system/core/widgets/app_list_item_card.dart';
 import 'package:kalig_onan_evac_system/features/admin/access_management/application/access_management_service.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
 import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
-import 'package:kalig_onan_evac_system/features/authentication/data/user_dto.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/domain/evacuation_center.dart';
@@ -28,14 +27,16 @@ final commandCenterCreatorEmailProvider =
       final supabase = ref.watch(supabaseProvider);
       final row = await supabase
           .from('users')
-          .select()
+          .select('email')
           .eq('id', selectedCreatorId)
           .maybeSingle();
       if (row == null) {
         return null;
       }
 
-      return userFromMap(Map<String, dynamic>.from(row as Map)).email;
+      final data = Map<String, dynamic>.from(row as Map);
+      final email = data['email'];
+      return email is String && email.trim().isNotEmpty ? email : null;
     });
 
 class CommandCenterAccessUsersScreen extends ConsumerWidget {
@@ -224,11 +225,22 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
     CommandCenter commandCenter,
     StaffAccessUserWithCenters item,
   ) async {
-    final allCenters = await ref.read(
-      manageableEvacuationCentersByCommandCenterProvider(
-        commandCenter.id,
-      ).future,
-    );
+    late final List<EvacuationCenter> allCenters;
+    try {
+      allCenters = await ref.read(
+        manageableEvacuationCentersByCommandCenterProvider(
+          commandCenter.id,
+        ).future,
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load evacuation centers: $error')),
+      );
+      return;
+    }
     if (!context.mounted) {
       return;
     }
@@ -607,7 +619,7 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
                                   style: TextStyle(color: Colors.grey.shade700),
                                 ),
                                 error: (_, __) => Text(
-                                  'No creator email provided',
+                                  'Failed to load creator email',
                                   style: TextStyle(color: Colors.grey.shade700),
                                 ),
                               ),
