@@ -183,23 +183,22 @@ class CommandCenterAccessUsersScreen extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final service = ref.read(adminAccessManagementServiceProvider);
+      final centersById = {for (final center in allCenters) center.id: center};
+      final centerIdsToRemove = originalCenterIds
+          .difference(selectedCenterIds)
+          .where(centersById.containsKey)
+          .toList(growable: false);
+      final centerIdsToAdd = selectedCenterIds
+          .difference(originalCenterIds)
+          .where(centersById.containsKey)
+          .toList(growable: false);
 
-      for (final centerId in originalCenterIds.difference(selectedCenterIds)) {
-        await service.removeEvacuationCenterAccess(
-          userId: user.id,
-          commandCenterId: commandCenterId,
-          evacuationCenterId: centerId,
-        );
-      }
-
-      for (final centerId in selectedCenterIds.difference(originalCenterIds)) {
-        final center = allCenters.firstWhere((item) => item.id == centerId);
-        await service.assignUserToEvacuationCenter(
-          email: user.email,
-          commandCenterId: commandCenterId,
-          evacuationCenterId: center.id,
-        );
-      }
+      await service.applyEvacuationCenterAccessDiff(
+        userId: user.id,
+        commandCenterId: commandCenterId,
+        evacuationCenterIdsToRemove: centerIdsToRemove,
+        evacuationCenterIdsToAdd: centerIdsToAdd,
+      );
 
       if (!context.mounted) {
         return;

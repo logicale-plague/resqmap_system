@@ -45,6 +45,11 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
   Future<List<EvacuationCenter>> getByCommandCenterId(
     String commandCenterId,
   ) async {
+    final localCenters = await _getByCommandCenterIdFromLocal(commandCenterId);
+    if (localCenters.isNotEmpty) {
+      return localCenters;
+    }
+
     List<dynamic> rows;
     try {
       rows = await _supabaseClient
@@ -57,7 +62,7 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
         print('Error fetching centers from Supabase: $error');
         print('Stack trace: $stackTrace');
       }
-      return _getByCommandCenterIdFromLocal(commandCenterId);
+      return localCenters;
     }
     return [
       for (final row in rows)

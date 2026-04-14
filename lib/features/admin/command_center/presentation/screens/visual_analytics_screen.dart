@@ -291,7 +291,7 @@ class VisualAnalyticsScreen extends ConsumerWidget {
   }) {
     if (centers.isEmpty) {
       return _buildEmptyChartState(
-        'Select a command center to view supply analytics.',
+        'No centers are assigned to this command center.',
       );
     }
 
@@ -458,22 +458,34 @@ class VisualAnalyticsScreen extends ConsumerWidget {
               : right,
         );
 
+    final criticalSupply =
+        shortageSupply != null &&
+            shortageSupply.daysRemaining != null &&
+            shortageSupply.daysRemaining! <= 7
+        ? shortageSupply
+        : null;
+
+    final alertOvercrowding =
+        overcrowdedCenter != null && overcrowdedCenter.occupancyPercentage >= 80
+        ? overcrowdedCenter
+        : null;
+
     return Column(
       children: [
         _InsightItem(
           title: 'Supply Prediction',
-          description: shortageSupply == null
+          description: criticalSupply == null
               ? 'No supply shortage forecast available for the selected command center.'
-              : 'Supply shortage of ${shortageSupply.name} expected in ${centerById[shortageSupply.evacuationCenterId]?.name ?? 'Unknown Center'} within ${shortageSupply.daysRemaining ?? 0} day${(shortageSupply.daysRemaining ?? 0) == 1 ? '' : 's'}',
-          color: shortageSupply == null ? Colors.blueGrey : Colors.orange,
+              : 'Supply shortage of ${criticalSupply.name} expected in ${centerById[criticalSupply.evacuationCenterId]?.name ?? 'Unknown Center'} within ${criticalSupply.daysRemaining ?? 0} day${(criticalSupply.daysRemaining ?? 0) == 1 ? '' : 's'}',
+          color: criticalSupply == null ? Colors.blueGrey : Colors.orange,
         ),
         const SizedBox(height: 12),
         _InsightItem(
           title: 'Overcrowding Alert',
-          description: overcrowdedCenter == null
+          description: alertOvercrowding == null
               ? 'No overcrowding detected across the selected evacuation centers.'
-              : '${overcrowdedCenter.name} is the most occupied center at ${overcrowdedCenter.occupancyPercentage.toStringAsFixed(0)}% capacity.',
-          color: overcrowdedCenter == null ? Colors.blueGrey : Colors.red,
+              : '${alertOvercrowding.name} is the most occupied center at ${alertOvercrowding.occupancyPercentage.toStringAsFixed(0)}% capacity.',
+          color: alertOvercrowding == null ? Colors.blueGrey : Colors.red,
         ),
         const SizedBox(height: 12),
         _InsightItem(
