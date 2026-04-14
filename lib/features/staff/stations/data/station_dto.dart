@@ -23,6 +23,7 @@ Map<String, dynamic> stationToRemoteMap(Station station) {
     'capacity': station.capacity,
     'allowed_age_group': station.allowedAgeGroup?.index,
     'allowed_medical_condition': station.allowedMedicalCondition?.index,
+    'active': station.active ? 1 : 0,
     'synced': station.synced ? 1 : 0,
   };
 }

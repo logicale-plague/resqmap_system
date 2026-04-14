@@ -1,13 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
 import 'package:kalig_onan_evac_system/core/widgets/index.dart';
+import 'package:kalig_onan_evac_system/features/staff/sync/application/sync_service.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   final EvacuationCenter center;
 
   const DashboardScreen({super.key, required this.center});
+
+  @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _didRequestExitSync = false;
+
+  Future<void> _syncOnExit() async {
+    if (_didRequestExitSync) {
+      return;
+    }
+    _didRequestExitSync = true;
+
+    try {
+      await ref.read(syncServiceProvider).syncNow();
+    } catch (_) {
+      // Best-effort sync on exit: failures are handled by retry logic in SyncService.
+    }
+  }
 
   void _refreshDashboardData(WidgetRef ref, String centerId) {
     ref.invalidate(currentCenterProvider);
@@ -18,40 +41,51 @@ class DashboardScreen extends ConsumerWidget {
     ref.invalidate(evacueesByCenterProvider(centerId));
     ref.invalidate(stationsByCenterProvider(centerId));
     ref.invalidate(allSuppliesProvider);
-    ref.invalidate(centersByCommandCenterProvider(center.commandCenterId));
+    ref.invalidate(
+      centersByCommandCenterProvider(widget.center.commandCenterId),
+    );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // final currentUserAsync = ref.watch(currentUserProvider);
     final currentCenterAsync = ref.watch(currentCenterProvider);
     final liveCenter = currentCenterAsync.asData?.value;
-    final displayCenter = liveCenter != null && liveCenter.id == center.id
+    final displayCenter =
+        liveCenter != null && liveCenter.id == widget.center.id
         ? liveCenter
-        : center;
+        : widget.center;
 
     final evacueeCountAsync = ref.watch(
       evacueeCountByCenterProvider(displayCenter.id),
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(displayCenter.name),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/sync'),
-        icon: const Icon(Icons.sync),
-        label: const Text('Sync'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: evacueeCountAsync.when(
-        data: (count) => _buildDashboard(context, ref, displayCenter, count),
-        loading: () => const AppLoadingState(),
-        error: (err, stack) => AppErrorState(
-          error: err,
-          stackTrace: stack,
-          prefix: 'Error loading evacuee count',
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          return;
+        }
+        unawaited(_syncOnExit());
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(displayCenter.name),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.push('/sync'),
+          icon: const Icon(Icons.sync),
+          label: const Text('Sync'),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        body: evacueeCountAsync.when(
+          data: (count) => _buildDashboard(context, ref, displayCenter, count),
+          loading: () => const AppLoadingState(),
+          error: (err, stack) => AppErrorState(
+            error: err,
+            stackTrace: stack,
+            prefix: 'Error loading evacuee count',
+          ),
         ),
       ),
     );

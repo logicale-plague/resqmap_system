@@ -435,6 +435,21 @@ class SyncService {
   }
 
   Future<void> _mergeStation(Map<String, dynamic> row) async {
+    final db = await _databaseService.database;
+    final localRows = await db.query(
+      'stations',
+      columns: ['synced'],
+      where: 'id = ?',
+      whereArgs: [_readString(row, 'id')],
+      limit: 1,
+    );
+    if (localRows.isNotEmpty) {
+      final localSynced = _asBool(localRows.first['synced']);
+      if (!localSynced) {
+        return;
+      }
+    }
+
     final remote = Station(
       id: _readString(row, 'id'),
       name: _readString(row, 'name'),
@@ -448,6 +463,7 @@ class SyncService {
         MedicalCondition.values,
         _readAnyOrNull(row, 'allowed_medical_condition'),
       ),
+      active: _asBool(_readAnyOrNull(row, 'active') ?? 1),
       synced: true,
     );
 
@@ -574,6 +590,7 @@ class SyncService {
       'capacity': station.capacity,
       'allowed_age_group': station.allowedAgeGroup?.index,
       'allowed_medical_condition': station.allowedMedicalCondition?.index,
+      'active': station.active ? 1 : 0,
     };
   }
 
