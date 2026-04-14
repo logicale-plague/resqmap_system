@@ -57,7 +57,7 @@ class _CmdCentersScreenState extends ConsumerState<CmdCentersScreen> {
                 ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(cmdCenter.email ?? 'No email provided'),
+                  child: Text(cmdCenter.creatorId ?? 'No creator ID provided'),
                 ),
                 trailing: isSelected
                     ? Icon(

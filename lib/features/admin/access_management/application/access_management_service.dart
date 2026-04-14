@@ -390,9 +390,9 @@ class AdminAccessManagementService {
       );
     }
 
-    if (targetUser.role == UserPermission.admin) {
-      throw StateError('Admin accounts are not managed from this page.');
-    }
+    // if (targetUser.role == UserPermission.admin) {
+    //   throw StateError('Admin accounts are not managed from this page.');
+    // }
 
     final selectedCommandCenterId = _validateAndTrimCommandCenterId(
       commandCenterId,
@@ -609,6 +609,17 @@ class AdminAccessManagementService {
       throw ArgumentError('Select a command center.');
     }
 
+    final commandCenter = await _ref
+        .read(commandCenterRepositoryProvider)
+        .getById(selectedCommandCenterId);
+    if (commandCenter == null) {
+      throw StateError('The selected command center could not be found.');
+    }
+
+    if (commandCenter.creatorId == userId) {
+      throw StateError('You are not authorized for this action.');
+    }
+
     final manageableCommandCenters = await _ref.read(
       manageableCommandCentersProvider.future,
     );
@@ -726,6 +737,213 @@ class AdminAccessManagementService {
     _ref.invalidate(
       commandCenterStaffAccessUsersProvider(selectedCommandCenterId),
     );
+    _ref.invalidate(adminUsersProvider);
+  }
+
+  Future<void> applyEvacuationCenterAccessDiff({
+    required String userId,
+    required String commandCenterId,
+    required List<String> evacuationCenterIdsToRemove,
+    required List<String> evacuationCenterIdsToAdd,
+  }) async {
+    final currentUser = await _requireAdmin();
+    final selectedCommandCenterId = _validateAndTrimCommandCenterId(
+      commandCenterId,
+    );
+
+    final normalizedUserId = userId.trim();
+    if (normalizedUserId.isEmpty) {
+      throw ArgumentError('User id is required.');
+    }
+
+    final idsToRemove = evacuationCenterIdsToRemove
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final idsToAdd = evacuationCenterIdsToAdd
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final overlappingIds = idsToRemove.intersection(idsToAdd);
+    if (overlappingIds.isNotEmpty) {
+      throw ArgumentError(
+        'Evacuation centers cannot be removed and added in the same update.',
+      );
+    }
+
+    await _ensureManagedCommandCenter(selectedCommandCenterId);
+    for (final centerId in {...idsToRemove, ...idsToAdd}) {
+      await _ensureManagedEvacuationCenter(selectedCommandCenterId, centerId);
+    }
+
+    final targetUserRow = await _supabase
+        .from('users')
+        .select()
+        .eq('id', normalizedUserId)
+        .maybeSingle();
+    if (targetUserRow == null) {
+      throw StateError('No user profile found for that account.');
+    }
+
+    final targetUser = userFromMap(
+      Map<String, dynamic>.from(targetUserRow as Map),
+    );
+    if (targetUser.role == UserPermission.admin) {
+      throw StateError('Admin accounts are not managed from this page.');
+    }
+
+    final previousRemoteAccessRows = await _supabase
+        .from('user_evac_centers')
+        .select('id, user_id, evac_center_id, active')
+        .eq('user_id', normalizedUserId);
+    final previousLocalAccessRows = await _databaseService
+        .getUserEvacuationCenterAccessRows(
+          normalizedUserId,
+          includeInactive: true,
+        );
+    final previousRole = targetUser.role;
+
+    try {
+      final existingRemoteRowsByCenterId = {
+        for (final row in previousRemoteAccessRows)
+          (Map<String, dynamic>.from(
+                row as Map,
+              )['evac_center_id']?.toString() ??
+              ''): Map<String, dynamic>.from(
+            row as Map,
+          ),
+      };
+
+      for (final centerId in idsToRemove) {
+        final existing = existingRemoteRowsByCenterId[centerId];
+        if (existing == null) {
+          continue;
+        }
+
+        await _supabase
+            .from('user_evac_centers')
+            .update({'active': 0})
+            .eq('user_id', normalizedUserId)
+            .eq('evac_center_id', centerId);
+
+        await _databaseService.setUserEvacuationCenterAccessActive(
+          normalizedUserId,
+          centerId,
+          false,
+        );
+      }
+
+      for (final centerId in idsToAdd) {
+        final existing = existingRemoteRowsByCenterId[centerId];
+        if (existing != null) {
+          await _supabase
+              .from('user_evac_centers')
+              .update({'active': 1})
+              .eq('user_id', normalizedUserId)
+              .eq('evac_center_id', centerId);
+
+          await _databaseService.setUserEvacuationCenterAccessActive(
+            normalizedUserId,
+            centerId,
+            true,
+          );
+          continue;
+        }
+
+        await _supabase.from('user_evac_centers').insert({
+          'id': const Uuid().v4(),
+          'user_id': normalizedUserId,
+          'evac_center_id': centerId,
+          'active': 1,
+        });
+
+        await _databaseService.insertUserEvacCenterAccessRow(
+          userId: normalizedUserId,
+          evacuationCenterId: centerId,
+          active: true,
+        );
+      }
+
+      final hasActiveEvacAccess = await _hasAnyActiveEvacuationAccess(
+        normalizedUserId,
+      );
+      final nextRole = hasActiveEvacAccess
+          ? UserPermission.staff
+          : UserPermission.user;
+      await _supabase
+          .from('users')
+          .update({'role': nextRole.toCode()})
+          .eq('id', normalizedUserId);
+
+      if (currentUser.id == normalizedUserId) {
+        final updatedCurrentUser = currentUser.copyWith(role: nextRole);
+        await _databaseService.replaceCurrentUser(updatedCurrentUser);
+        _ref.invalidate(currentUserProvider);
+      }
+    } catch (error, stackTrace) {
+      try {
+        await _supabase
+            .from('user_evac_centers')
+            .delete()
+            .eq('user_id', normalizedUserId);
+
+        if (previousRemoteAccessRows.isNotEmpty) {
+          await _supabase.from('user_evac_centers').insert([
+            for (final row in previousRemoteAccessRows)
+              {
+                'id': Map<String, dynamic>.from(row as Map)['id'],
+                'user_id':
+                    Map<String, dynamic>.from(row)['user_id']?.toString() ??
+                    normalizedUserId,
+                'evac_center_id': Map<String, dynamic>.from(
+                  row,
+                )['evac_center_id']?.toString(),
+                'active':
+                    _readActiveFlag(Map<String, dynamic>.from(row)['active'])
+                    ? 1
+                    : 0,
+              },
+          ]);
+        }
+      } catch (rollbackError) {
+        debugPrint(
+          StateError(
+            'Failed to roll back remote evacuation-center access for $normalizedUserId: $rollbackError',
+          ).toString(),
+        );
+      }
+
+      try {
+        await _databaseService.replaceUserEvacCenterAccess(
+          normalizedUserId,
+          previousLocalAccessRows,
+        );
+      } catch (rollbackError) {
+        debugPrint(
+          StateError(
+            'Failed to roll back local evacuation-center access for $normalizedUserId: $rollbackError',
+          ).toString(),
+        );
+      }
+
+      try {
+        await _restoreUserRole(normalizedUserId, previousRole);
+      } catch (rollbackError) {
+        debugPrint(
+          StateError(
+            'Failed to roll back user role for $normalizedUserId: $rollbackError',
+          ).toString(),
+        );
+      }
+
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+
+    _ref.invalidate(
+      commandCenterStaffAccessUsersProvider(selectedCommandCenterId),
+    );
+    _ref.invalidate(commandCenterAccessUsersProvider(selectedCommandCenterId));
     _ref.invalidate(adminUsersProvider);
   }
 

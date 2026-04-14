@@ -2,15 +2,136 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/indices/provider_index.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/authentication/domain/user.dart';
 import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/providers/map_provider.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/add_evac_sheet.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/index.dart';
+import 'package:kalig_onan_evac_system/features/centers/shared/presentation/providers/evacuation_center_providers.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/add_user_location.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/evac_info_botsheet.dart';
 import 'package:kalig_onan_evac_system/features/maps/presentation/widgets/guide_user.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+
+final commandCenterByIdProvider = FutureProvider.family<CommandCenter?, String>(
+  (ref, commandCenterId) async {
+    final repository = ref.watch(commandCenterRepositoryProvider);
+    return repository.getById(commandCenterId);
+  },
+);
+
+final staffManagedCommandCentersProvider = FutureProvider<List<CommandCenter>>((
+  ref,
+) async {
+  final assignedCenters = await ref.watch(staffAssignedCentersProvider.future);
+  if (assignedCenters.isEmpty) {
+    return [];
+  }
+
+  final commandCenterIds =
+      assignedCenters.map((center) => center.commandCenterId).toSet().toList()
+        ..sort();
+
+  final repository = ref.watch(commandCenterRepositoryProvider);
+  final commandCenters = <CommandCenter>[];
+  for (final commandCenterId in commandCenterIds) {
+    final commandCenter = await repository.getById(commandCenterId);
+    if (commandCenter != null) {
+      commandCenters.add(commandCenter);
+    }
+  }
+
+  commandCenters.sort((a, b) => a.name.compareTo(b.name));
+  return commandCenters;
+});
+
+final currentUserPostalCentersProvider = FutureProvider<List<EvacuationCenter>>(
+  (ref) async {
+    final user = await ref.watch(currentUserProvider.future);
+    final postalCode = user?.postalCode?.trim();
+    if (postalCode == null || postalCode.isEmpty) {
+      return [];
+    }
+
+    final centers = await ref.watch(allCentersProvider.future);
+    final filtered = centers
+        .where((center) => center.postalCode == postalCode)
+        .toList();
+    filtered.sort((a, b) => a.name.compareTo(b.name));
+    return filtered;
+  },
+);
+
+enum _MapScopeType { commandCenter, postal }
+
+class _MapScopeOption {
+  final String id;
+  final String label;
+  final _MapScopeType type;
+  final String? commandCenterId;
+
+  const _MapScopeOption._({
+    required this.id,
+    required this.label,
+    required this.type,
+    this.commandCenterId,
+  });
+
+  factory _MapScopeOption.commandCenter(CommandCenter commandCenter) {
+    return _MapScopeOption._(
+      id: 'command-center:${commandCenter.id}',
+      label: commandCenter.name,
+      type: _MapScopeType.commandCenter,
+      commandCenterId: commandCenter.id,
+    );
+  }
+
+  factory _MapScopeOption.postal() {
+    return const _MapScopeOption._(
+      id: 'postal',
+      label: 'Home location',
+      type: _MapScopeType.postal,
+    );
+  }
+}
+
+final mapScopeOptionsProvider = FutureProvider<List<_MapScopeOption>>((
+  ref,
+) async {
+  final user = await ref.watch(currentUserProvider.future);
+  if (user == null) {
+    return [];
+  }
+
+  final options = <_MapScopeOption>[];
+
+  if (user.role == UserPermission.admin) {
+    final commandCenters = await ref.watch(
+      assignedCommandCentersProvider.future,
+    );
+    options.addAll(commandCenters.map(_MapScopeOption.commandCenter));
+    if ((user.postalCode?.trim().isNotEmpty ?? false)) {
+      options.add(_MapScopeOption.postal());
+    }
+    return options;
+  }
+
+  if (user.role == UserPermission.staff) {
+    if ((user.postalCode?.trim().isNotEmpty ?? false)) {
+      options.add(_MapScopeOption.postal());
+    }
+
+    final commandCenters = await ref.watch(
+      staffManagedCommandCentersProvider.future,
+    );
+    options.addAll(commandCenters.map(_MapScopeOption.commandCenter));
+    return options;
+  }
+
+  return options;
+});
 
 class MapsPage extends ConsumerStatefulWidget {
   const MapsPage({super.key});
@@ -21,6 +142,7 @@ class MapsPage extends ConsumerStatefulWidget {
 
 class _MapsPageState extends ConsumerState<MapsPage> {
   User? currentUser;
+  String? _selectedMapScopeId;
   @override
   void initState() {
     super.initState();
@@ -36,7 +158,6 @@ class _MapsPageState extends ConsumerState<MapsPage> {
   }
 
   Future<void> _reloadMapData() async {
-    final controller = ref.read(mapControllerProvider.notifier);
     final theme = Theme.of(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -48,12 +169,14 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     );
 
     try {
-      final freshUser = await controller.refreshMapData();
+      final freshUser = await ref.read(currentUserProvider.future);
 
       if (!mounted) return;
       setState(() {
         currentUser = freshUser;
       });
+
+      await _refreshVisibleMapData();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,17 +188,98 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     }
   }
 
-  void _onMapCreated(MapboxMap mapboxMap) async {
+  _MapScopeOption? _resolveSelectedScope(List<_MapScopeOption> options) {
+    if (options.isEmpty) {
+      return null;
+    }
+
+    final selectedId = _selectedMapScopeId;
+    if (selectedId != null) {
+      for (final option in options) {
+        if (option.id == selectedId) {
+          return option;
+        }
+      }
+    }
+
+    return options.first;
+  }
+
+  Future<void> _loadScopeOption(
+    _MapScopeOption option, {
+    bool includeHomeMarker = false,
+  }) async {
+    final controller = ref.read(mapControllerProvider.notifier);
+    final user = await ref.read(currentUserProvider.future);
+
+    List<EvacuationCenter> centers;
+    switch (option.type) {
+      case _MapScopeType.commandCenter:
+        final commandCenterId = option.commandCenterId;
+        if (commandCenterId == null || commandCenterId.isEmpty) {
+          centers = [];
+        } else {
+          centers = await ref.read(
+            centersByCommandCenterProvider(commandCenterId).future,
+          );
+        }
+        break;
+      case _MapScopeType.postal:
+        centers = await ref.read(currentUserPostalCentersProvider.future);
+        break;
+    }
+
+    if (!mounted) return;
+
+    await controller.clearAllMarkers();
+    controller.cacheCenters(centers);
+    await controller.renderAnnotationsForMap(
+      user: user,
+      centers: centers,
+      showHomeMarker: includeHomeMarker,
+    );
+  }
+
+  Future<void> _refreshVisibleMapData() async {
+    final user = await ref.read(currentUserProvider.future);
+    if (!mounted || user == null) return;
+
+    if (user.role == UserPermission.admin ||
+        user.role == UserPermission.staff) {
+      final options = await ref.read(mapScopeOptionsProvider.future);
+      if (options.isEmpty) {
+        final controller = ref.read(mapControllerProvider.notifier);
+        await controller.clearAllMarkers();
+        return;
+      }
+
+      final selectedOption = _resolveSelectedScope(options);
+      if (selectedOption == null) return;
+      await _loadScopeOption(
+        selectedOption,
+        includeHomeMarker: selectedOption.type == _MapScopeType.postal,
+      );
+      return;
+    }
+
+    final controller = ref.read(mapControllerProvider.notifier);
     final centers = await ref.read(relatedCentersProvider.future);
+    await controller.clearAllMarkers();
+    controller.cacheCenters(centers);
+    await controller.renderAnnotationsForMap(user: user, centers: centers);
+  }
+
+  void _onMapCreated(MapboxMap mapboxMap) async {
+    if (!mounted) return;
+
+    final controller = ref.read(mapControllerProvider.notifier);
+    await controller.configureMap(mapboxMap);
     final user = await ref.read(currentUserProvider.future);
     if (!mounted) return;
     setState(() {
       currentUser = user;
     });
 
-    final controller = ref.read(mapControllerProvider.notifier);
-    await controller.configureMap(mapboxMap);
-    controller.cacheCenters(centers);
     ref
         .read(mapControllerProvider)
         .pointAnnotationManager
@@ -91,7 +295,7 @@ class _MapsPageState extends ConsumerState<MapsPage> {
             return true;
           },
         );
-    await controller.renderAnnotationsForMap(user: user, centers: centers);
+    await _refreshVisibleMapData();
   }
 
   String? _extractCenterId(Object? rawCustomData) {
@@ -145,39 +349,109 @@ class _MapsPageState extends ConsumerState<MapsPage> {
 
     switch (currentUser?.role) {
       case UserPermission.admin:
-        await showModalBottomSheet(
+        await showDialog<void>(
           context: context,
-          isScrollControlled: true,
-          builder: (context) {
-            return isOnline
-                ? Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom,
-                    ),
-                    child: AddEvacSheet(
-                      point: point,
-                      fullAddress: data['properties']['full_address'],
-                      postalCode:
-                          data['properties']['context']['postcode']['name'],
-                    ),
-                  )
-                : _showOfflineMessage(theme);
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Choose an action'),
+              content: const Text(
+                'What would you like to add at this location?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    Navigator.of(dialogContext).pop();
+                    if (!isOnline) {
+                      await showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (context) => _showOfflineMessage(theme),
+                      );
+                      return;
+                    }
+
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (context) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).viewInsets.bottom,
+                          ),
+                          child: AddEvacSheet(
+                            point: point,
+                            fullAddress: data['properties']['full_address'],
+                            postalCode:
+                                data['properties']['context']['postcode']['name'],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: const Text('Add evacuation center'),
+                ),
+                OutlinedButton(
+                  onPressed: () async {
+                    Navigator.of(dialogContext).pop();
+                    if (!isOnline) {
+                      await showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => _showOfflineMessage(theme),
+                      );
+                      return;
+                    }
+
+                    await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).viewInsets.bottom,
+                          ),
+                          child: AddUserLocation(
+                            point: point,
+                            fullAddress: data['properties']['full_address'],
+                            postalCode:
+                                data['properties']['context']['postcode']['name'],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: const Text('Add home location'),
+                ),
+              ],
+            );
           },
         );
         return;
       case UserPermission.staff:
         await showModalBottomSheet(
           context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
           builder: (context) {
-            return isOnline
-                ? Container(
-                    padding: const EdgeInsets.all(24),
-                    child: const Text(
-                      "View only mode: Only admins can add evacuation centers.",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  )
-                : _showOfflineMessage(theme);
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: isOnline
+                  ? AddUserLocation(
+                      point: point,
+                      fullAddress: data['properties']['full_address'],
+                      postalCode:
+                          data['properties']['context']['postcode']['name'],
+                    )
+                  : _showOfflineMessage(theme),
+            );
           },
         );
         return;
@@ -282,9 +556,98 @@ class _MapsPageState extends ConsumerState<MapsPage> {
     final mapState = ref.watch(mapControllerProvider);
     final mapProvider = ref.watch(mapControllerProvider.notifier);
     final theme = Theme.of(context);
+    final mapScopeOptionsAsync = ref.watch(mapScopeOptionsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
+    AppBar appBar = AppBar(
+      backgroundColor: Colors.white.withAlpha(95),
+      surfaceTintColor: Colors.transparent,
+      elevation: 2,
+      shadowColor: Colors.black.withAlpha(20),
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.green.withAlpha(15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.map_outlined,
+            color: theme.colorScheme.primary,
+            size: 22,
+          ),
+        ),
+      ),
+      titleSpacing: 8,
+      centerTitle: false,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            currentUser?.postalCode != null
+                ? "Postal: ${currentUser!.postalCode}"
+                : "Loading Location...",
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.primary,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            currentUser?.fullAddress ?? "Fetching coordinates...",
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: IconButton(
+            icon: Icon(Icons.help_outline_rounded, color: Colors.grey.shade700),
+            style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const MapTutorialDialog(),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: IconButton(
+            icon: Icon(Icons.refresh_outlined, color: Colors.grey.shade700),
+            style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
+            onPressed: () => _reloadMapData(),
+          ),
+        ),
+      ],
+    );
+
+    if (mapScopeOptionsAsync.hasValue &&
+        mapScopeOptionsAsync.value!.isNotEmpty) {
+      final options = mapScopeOptionsAsync.value!;
+      final selectedOption = _resolveSelectedScope(options);
+      final activeOptionId = selectedOption?.id;
+
+      final effectiveSelectedId = _selectedMapScopeId ?? activeOptionId;
+      final dropdownOptions = options
+          .map(
+            (option) => DropdownMenuItem<String>(
+              value: option.id,
+              child: Text(option.label),
+            ),
+          )
+          .toList();
+
+      appBar = AppBar(
         backgroundColor: Colors.white.withAlpha(95),
         surfaceTintColor: Colors.transparent,
         elevation: 2,
@@ -332,6 +695,36 @@ class _MapsPageState extends ConsumerState<MapsPage> {
             ),
           ],
         ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(72),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: DropdownButtonFormField<String>(
+              value: effectiveSelectedId,
+              items: dropdownOptions,
+              onChanged: (value) async {
+                if (value == null) return;
+                final option = options.firstWhere((item) => item.id == value);
+                setState(() {
+                  _selectedMapScopeId = value;
+                });
+                await _loadScopeOption(
+                  option,
+                  includeHomeMarker: option.type == _MapScopeType.postal,
+                );
+              },
+              decoration: InputDecoration(
+                labelText: 'Map view',
+                prefixIcon: const Icon(Icons.filter_list_rounded),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+          ),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -362,7 +755,11 @@ class _MapsPageState extends ConsumerState<MapsPage> {
             ),
           ),
         ],
-      ),
+      );
+    }
+
+    return Scaffold(
+      appBar: appBar,
       extendBodyBehindAppBar: true,
       body: MapWidget(
         key: const ValueKey("mapWidget"),

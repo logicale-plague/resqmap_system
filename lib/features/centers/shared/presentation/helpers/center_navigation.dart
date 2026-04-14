@@ -16,5 +16,11 @@ Future<void> openCenterDashboard(
   ref.invalidate(currentCenterProvider);
 
   if (!context.mounted) return;
-  context.push('/dashboard', extra: center);
+  await context.push('/dashboard', extra: center);
+
+  if (!context.mounted) return;
+  ref.invalidate(currentCenterProvider);
+  ref.invalidate(centerProvider(center.id));
+  ref.invalidate(allCentersProvider);
+  ref.invalidate(centersByCommandCenterProvider(center.commandCenterId));
 }

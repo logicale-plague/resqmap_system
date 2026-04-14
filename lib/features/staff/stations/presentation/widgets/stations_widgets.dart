@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/utils/id_service.dart';
 import 'package:kalig_onan_evac_system/features/centers/shared/presentation/providers/evacuation_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/staff/evacuees/domain/evacuee.dart';
 import 'package:kalig_onan_evac_system/features/staff/evacuees/presentation/providers/evacuee_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/providers/station_providers.dart';
 import 'package:kalig_onan_evac_system/features/staff/stations/presentation/widgets/station_arrivals_sheet.dart';
@@ -285,6 +286,13 @@ Future<void> _saveStationChanges(
 ) async {
   final stationRepository = ref.read(stationRepositoryProvider);
 
+  await _guardStationEligibilityChange(
+    ref: ref,
+    station: station,
+    selectedAgeGroup: selectedAgeGroup,
+    selectedMedical: selectedMedical,
+  );
+
   final stationToSave = _buildStationToSave(
     station,
     center,
@@ -307,6 +315,78 @@ Future<void> _saveStationChanges(
   ref.invalidate(stationsByCenterProvider(center.id));
   ref.invalidate(currentCenterProvider);
   ref.invalidate(eligibleStationsProvider);
+}
+
+Future<void> _guardStationEligibilityChange({
+  required WidgetRef ref,
+  required Station? station,
+  required AgeGroup? selectedAgeGroup,
+  required MedicalCondition? selectedMedical,
+}) async {
+  if (station == null) {
+    return;
+  }
+
+  final ageChanged = station.allowedAgeGroup != selectedAgeGroup;
+  final medicalChanged = station.allowedMedicalCondition != selectedMedical;
+  if (!ageChanged && !medicalChanged) {
+    return;
+  }
+
+  final stationWithUpdatedFilters = station.copyWith(
+    allowedAgeGroup: selectedAgeGroup,
+    allowedMedicalCondition: selectedMedical,
+    clearAllowedAgeGroup: selectedAgeGroup == null,
+    clearAllowedMedicalCondition: selectedMedical == null,
+  );
+
+  final evacuees = await ref
+      .read(evacueeRepositoryProvider)
+      .getEvacueesByStation(station.id);
+  if (evacuees.isEmpty) {
+    return;
+  }
+
+  final incompatible = evacuees
+      .where(
+        (evacuee) => !stationWithUpdatedFilters.allows(
+          ageGroup: evacuee.ageGroup,
+          medicalCondition: evacuee.medicalCondition,
+        ),
+      )
+      .toList(growable: false);
+  if (incompatible.isEmpty) {
+    return;
+  }
+
+  throw StateError(
+    _buildEligibilityConflictMessage(
+      stationName: station.name,
+      selectedAgeGroup: selectedAgeGroup,
+      selectedMedical: selectedMedical,
+      incompatibleCount: incompatible.length,
+    ),
+  );
+}
+
+String _buildEligibilityConflictMessage({
+  required String stationName,
+  required AgeGroup? selectedAgeGroup,
+  required MedicalCondition? selectedMedical,
+  required int incompatibleCount,
+}) {
+  final reasons = <String>[];
+  if (selectedAgeGroup != null) {
+    reasons.add('Age Group: ${ageLabel(selectedAgeGroup)}');
+  }
+  if (selectedMedical != null) {
+    reasons.add('Medical Condition: ${medicalLabel(selectedMedical)}');
+  }
+
+  final reasonText = reasons.isEmpty
+      ? 'the selected station filters'
+      : reasons.join(', ');
+  return 'Cannot update "$stationName". $incompatibleCount assigned evacuee(s) do not match $reasonText. Reassign or update those evacuees first.';
 }
 
 Station _buildStationToSave(
