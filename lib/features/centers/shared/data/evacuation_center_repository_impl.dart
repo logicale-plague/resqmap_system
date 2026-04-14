@@ -61,16 +61,24 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
       }
       return localCenters;
     }
+
     if (rows.isEmpty) {
       return localCenters;
     }
-    return [
+
+    final remoteCenters = [
       for (final row in rows)
         _centerFromRemoteMap(
           Map<String, dynamic>.from(row as Map),
           commandCenterId,
         ),
     ];
+
+    if (localCenters.isEmpty) {
+      return remoteCenters;
+    }
+
+    return _mergeCentersPreferLocalUnsynced(localCenters, remoteCenters);
   }
 
   @override
@@ -107,6 +115,24 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
       whereArgs: [commandCenterId],
     );
     return [for (final map in maps) centerFromMap(map)];
+  }
+
+  List<EvacuationCenter> _mergeCentersPreferLocalUnsynced(
+    List<EvacuationCenter> localCenters,
+    List<EvacuationCenter> remoteCenters,
+  ) {
+    final mergedById = {for (final center in remoteCenters) center.id: center};
+
+    for (final localCenter in localCenters) {
+      final hasRemote = mergedById.containsKey(localCenter.id);
+      if (!localCenter.synced || !hasRemote) {
+        mergedById[localCenter.id] = localCenter;
+      }
+    }
+
+    final merged = mergedById.values.toList(growable: false)
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return merged;
   }
 
   EvacuationCenter _centerFromRemoteMap(
