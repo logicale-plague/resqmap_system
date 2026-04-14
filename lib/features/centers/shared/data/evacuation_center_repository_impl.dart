@@ -61,16 +61,28 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
       }
       return localCenters;
     }
+
     if (rows.isEmpty) {
-      return localCenters;
+      final sortedLocal = [...localCenters]
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return sortedLocal;
     }
-    return [
+
+    final remoteCenters = [
       for (final row in rows)
         _centerFromRemoteMap(
           Map<String, dynamic>.from(row as Map),
           commandCenterId,
         ),
     ];
+
+    if (localCenters.isEmpty) {
+      final sortedRemote = [...remoteCenters]
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return sortedRemote;
+    }
+
+    return _mergeCentersPreferLocalUnsynced(localCenters, remoteCenters);
   }
 
   @override
@@ -107,6 +119,32 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
       whereArgs: [commandCenterId],
     );
     return [for (final map in maps) centerFromMap(map)];
+  }
+
+  List<EvacuationCenter> _mergeCentersPreferLocalUnsynced(
+    List<EvacuationCenter> localCenters,
+    List<EvacuationCenter> remoteCenters,
+  ) {
+    final mergedById = {for (final center in remoteCenters) center.id: center};
+
+    for (final localCenter in localCenters) {
+      final remoteCenter = mergedById[localCenter.id];
+      if (remoteCenter == null) {
+        mergedById[localCenter.id] = localCenter;
+        continue;
+      }
+
+      final shouldPreferLocalUnsynced =
+          !localCenter.synced &&
+          !remoteCenter.lastUpdated.isAfter(localCenter.lastUpdated);
+      if (shouldPreferLocalUnsynced) {
+        mergedById[localCenter.id] = localCenter;
+      }
+    }
+
+    final merged = mergedById.values.toList(growable: false)
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return merged;
   }
 
   EvacuationCenter _centerFromRemoteMap(
