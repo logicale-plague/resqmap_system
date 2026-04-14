@@ -63,7 +63,9 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     }
 
     if (rows.isEmpty) {
-      return localCenters;
+      final sortedLocal = [...localCenters]
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return sortedLocal;
     }
 
     final remoteCenters = [
@@ -75,7 +77,9 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     ];
 
     if (localCenters.isEmpty) {
-      return remoteCenters;
+      final sortedRemote = [...remoteCenters]
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return sortedRemote;
     }
 
     return _mergeCentersPreferLocalUnsynced(localCenters, remoteCenters);
@@ -124,8 +128,16 @@ class EvacuationCenterRepositoryImpl implements EvacuationCenterRepository {
     final mergedById = {for (final center in remoteCenters) center.id: center};
 
     for (final localCenter in localCenters) {
-      final hasRemote = mergedById.containsKey(localCenter.id);
-      if (!localCenter.synced || !hasRemote) {
+      final remoteCenter = mergedById[localCenter.id];
+      if (remoteCenter == null) {
+        mergedById[localCenter.id] = localCenter;
+        continue;
+      }
+
+      final shouldPreferLocalUnsynced =
+          !localCenter.synced &&
+          !remoteCenter.lastUpdated.isAfter(localCenter.lastUpdated);
+      if (shouldPreferLocalUnsynced) {
         mergedById[localCenter.id] = localCenter;
       }
     }
