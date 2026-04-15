@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/tabs/contacts_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -37,9 +38,7 @@ class _HomeScreenState extends State<HomeScreen>
               labelColor: const Color(0xFF00ff00),
               tabs: const [
                 Tab(text: 'Tips'),
-                Tab(text: 'News'),
-                Tab(text: 'NOAH'),
-                Tab(text: 'USGS'),
+                Tab(text: 'Contacts'),
                 Tab(text: 'About'),
               ],
             ),
@@ -49,12 +48,8 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   // Tips Tab
                   _buildTipsTab(),
-                  // News Tab
-                  _buildPlaceholderTab('News'),
-                  // NOAH Tab
-                  _buildPlaceholderTab('NOAH'),
-                  // USGS Tab
-                  _buildPlaceholderTab('USGS'),
+                  // Contacts Tab
+                  const ContactsTab(),
                   // About Tab
                   _buildPlaceholderTab('About'),
                 ],

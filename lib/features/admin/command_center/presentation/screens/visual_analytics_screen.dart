@@ -376,46 +376,6 @@ class VisualAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // Widget _buildMedicalCoverageChart(List<EvacuationCenter> centers) {
-  //   final medicalAvailableCount = centers
-  //       .where((center) => center.medicalAvailable)
-  //       .length;
-  //   final noMedicalCount = centers.length - medicalAvailableCount;
-
-  //   if (centers.isEmpty) {
-  //     return _buildEmptyChartState(
-  //       'No centers are assigned to this command center.',
-  //     );
-  //   }
-
-  //   final chartData = <_ChartSegment>[
-  //     _ChartSegment('Medical support', medicalAvailableCount, Colors.teal),
-  //     _ChartSegment('No medical support', noMedicalCount, Colors.blueGrey),
-  //   ].where((segment) => segment.value > 0).toList(growable: false);
-
-  //   return SizedBox(
-  //     height: 260,
-  //     child: SfCircularChart(
-  //       legend: const Legend(
-  //         isVisible: true,
-  //         overflowMode: LegendItemOverflowMode.wrap,
-  //       ),
-  //       tooltipBehavior: TooltipBehavior(enable: true),
-  //       series: <CircularSeries<_ChartSegment, String>>[
-  //         DoughnutSeries<_ChartSegment, String>(
-  //           dataSource: chartData,
-  //           xValueMapper: (data, _) => data.label,
-  //           yValueMapper: (data, _) => data.value,
-  //           pointColorMapper: (data, _) => data.color,
-  //           dataLabelMapper: (data, _) => '${data.value}',
-  //           dataLabelSettings: const DataLabelSettings(isVisible: true),
-  //           innerRadius: '62%',
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   Widget _buildEmptyChartState(String message) {
     return SizedBox(
       height: 240,
