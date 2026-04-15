@@ -413,6 +413,8 @@ class SyncService {
       name: _readAny(row, 'name') as String?,
       stationId: _readAnyOrNull(row, 'station_id') as String?,
       ageGroup: AgeGroup.values[_readNum(row, 'age_group').toInt()],
+      gender: _readAnyOrNull(row, 'gender')?.toString() ?? 'Other',
+      address: _readAnyOrNull(row, 'address')?.toString(),
       medicalCondition:
           MedicalCondition.values[_readNum(row, 'medical_condition').toInt()],
       registeredAt: DateTime.parse(_readString(row, 'registered_at')),
@@ -565,6 +567,8 @@ class SyncService {
       'name': evacuee.name?.trim() ?? '',
       'station_id': evacuee.stationId,
       'age_group': evacuee.ageGroup.index,
+      'gender': evacuee.gender,
+      'address': evacuee.address,
       'medical_condition': evacuee.medicalCondition.index,
       'registered_at': evacuee.registeredAt.toIso8601String(),
       'active': evacuee.active ? 1 : 0,

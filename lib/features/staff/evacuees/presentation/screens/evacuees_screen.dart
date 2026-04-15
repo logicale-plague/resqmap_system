@@ -57,7 +57,9 @@ class EvacueesScreen extends ConsumerWidget {
                   ),
                 ),
                 title: Text(
-                  evacuee.name ?? 'ID: ${evacuee.id.substring(0, 8)}',
+                  (evacuee.name == null || evacuee.name!.isEmpty)
+                      ? 'Evacuee: ${evacuee.id.substring(0, 6)}'
+                      : evacuee.name!,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(

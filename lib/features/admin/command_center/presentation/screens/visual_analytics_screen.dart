@@ -63,16 +63,14 @@ class VisualAnalyticsScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Showing up to 5 centers prioritized by current needs.',
+                                'Distribution uses all centers; capacity and supply charts show up to 5 prioritized centers.',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: Colors.grey[600]),
                               ),
                               const SizedBox(height: 24),
                               _AnalyticsCard(
                                 title: 'Evacuation Centers Distribution',
-                                child: _buildCenterStatusChart(
-                                  prioritizedCenters,
-                                ),
+                                child: _buildCenterStatusChart(centers),
                               ),
                               const SizedBox(height: 16),
                               _AnalyticsCard(
@@ -91,7 +89,7 @@ class VisualAnalyticsScreen extends ConsumerWidget {
                               _AnalyticsCard(
                                 title: 'AI Insights & Predictions',
                                 child: _buildAIInsights(
-                                  centers: prioritizedCenters,
+                                  centers: centers,
                                   supplies: supplies,
                                 ),
                               ),
