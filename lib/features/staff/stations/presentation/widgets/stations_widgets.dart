@@ -484,6 +484,7 @@ Future<void> openConfirmDelete(
     centerProvider(station.evacuationCenterId).future,
   );
   localRef.invalidate(centerProvider(station.evacuationCenterId));
+  localRef.invalidate(currentCenterProvider);
   localRef.invalidate(allCentersProvider);
   if (deletedCenter != null) {
     localRef.invalidate(

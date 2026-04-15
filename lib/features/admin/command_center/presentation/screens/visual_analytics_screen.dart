@@ -635,15 +635,21 @@ List<EvacuationCenter> _selectCentersByNeed({
   required List<Supply> supplies,
   int maxCenters = 5,
 }) {
-  if (centers.length <= maxCenters) {
-    return [...centers]..sort(_compareCentersByNeed);
-  }
-
   final suppliesByCenter = <String, List<Supply>>{};
   for (final supply in supplies) {
     suppliesByCenter
         .putIfAbsent(supply.evacuationCenterId, () => [])
         .add(supply);
+  }
+
+  if (centers.length <= maxCenters) {
+    return [...centers]..sort(
+      (left, right) => _compareCentersByNeed(
+        left,
+        right,
+        suppliesByCenter: suppliesByCenter,
+      ),
+    );
   }
 
   final ranked = [...centers]
