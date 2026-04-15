@@ -84,13 +84,15 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Arrival logged. Assigned to ${assignedStation.name}. Register name in Stations screen.',
+        ScaffoldMessenger.of(context)
+          ..removeCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                'Arrival logged. Assigned to ${assignedStation.name}. Register name in Stations screen.',
+              ),
             ),
-          ),
-        );
+          );
 
         ref.invalidate(allEvacueesProvider);
         ref.invalidate(evacueeCountProvider);
@@ -142,11 +144,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Assigned evacuee to ${assignedStation.name}.'),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..removeCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('Assigned evacuee to ${assignedStation.name}.'),
+            ),
+          );
 
         ref.invalidate(allEvacueesProvider);
         ref.invalidate(evacueesByCenterProvider(center.id));
@@ -158,8 +162,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       }
 
       if (!mounted) return;
-
-      // Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

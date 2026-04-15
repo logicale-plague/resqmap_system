@@ -403,6 +403,7 @@ Station _buildStationToSave(
             name: trimmedName,
             evacuationCenterId: center.id,
             capacity: parsedCapacity,
+            updatedAt: DateTime.now(),
           ))
       .copyWith(
         name: trimmedName,

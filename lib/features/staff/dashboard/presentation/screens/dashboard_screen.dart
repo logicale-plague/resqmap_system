@@ -197,11 +197,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               QuickActionButton(
                 icon: Icons.add_circle_outline,
                 label: 'Add Evacuee',
-                onPressed: () async {
-                  final result = await context.push('/register');
-                  if (result == true && context.mounted) {
-                    _refreshDashboardData(ref, center.id);
-                  }
+                onPressed: () {
+                  context.push('/register');
                 },
                 color: Colors.green,
               ),

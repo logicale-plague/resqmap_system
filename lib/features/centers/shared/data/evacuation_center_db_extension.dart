@@ -112,14 +112,19 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     return maps.isEmpty ? null : centerFromMap(maps.first);
   }
 
-  Future<void> upsertCenterFromRemote(EvacuationCenter center) async {
+  Future<void> upsertCenterFromRemote(
+    EvacuationCenter center, {
+    bool updateCurrentCenter = true,
+  }) async {
     final db = await database;
     await db.insert(
       'evacuation_centers',
       centerToMap(center.copyWith(synced: true)),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    await setCurrentCenterId(center.id);
+    if (updateCurrentCenter) {
+      await setCurrentCenterId(center.id);
+    }
   }
 
   Future<void> replaceCenterId(String oldId, String newId) async {

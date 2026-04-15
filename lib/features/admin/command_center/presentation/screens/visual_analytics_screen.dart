@@ -233,24 +233,22 @@ class VisualAnalyticsScreen extends ConsumerWidget {
       );
     }
 
-    final chartData =
-        centers
-            .map(
-              (center) => _CapacityData(
-                _abbreviatedCenterName(center.name),
-                center.currentOccupancy,
-                center.availableSpaces,
-                center.totalCapacity,
-                center.occupancyPercentage,
-                center.occupancyPercentage >= 80
-                    ? Colors.red
-                    : center.occupancyPercentage >= 60
-                    ? Colors.orange
-                    : Colors.green,
-              ),
-            )
-            .toList(growable: false)
-          ..sort((left, right) => right.percentage.compareTo(left.percentage));
+    final chartData = centers
+        .map(
+          (center) => _CapacityData(
+            _abbreviatedCenterName(center.name),
+            center.currentOccupancy,
+            center.availableSpaces,
+            center.totalCapacity,
+            center.occupancyPercentage,
+            center.occupancyPercentage >= 80
+                ? Colors.red
+                : center.occupancyPercentage >= 60
+                ? Colors.orange
+                : Colors.green,
+          ),
+        )
+        .toList(growable: false);
 
     return SizedBox(
       height: 300,

@@ -28,7 +28,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -42,7 +42,7 @@ class DatabaseService {
         name TEXT,
         stationId TEXT,
         ageGroup INTEGER NOT NULL,
-        gender TEXT NOT NULL DEFAULT 'Unspecified',
+        gender TEXT NOT NULL DEFAULT 'Other',
         address TEXT,
         medicalCondition INTEGER NOT NULL,
         registeredAt TEXT NOT NULL,
@@ -79,6 +79,7 @@ class DatabaseService {
         capacity INTEGER NOT NULL DEFAULT 0,
         allowedAgeGroup INTEGER,
         allowedMedicalCondition INTEGER,
+        updatedAt TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
         active INTEGER NOT NULL DEFAULT 1,
         synced INTEGER NOT NULL DEFAULT 0
       )
@@ -371,7 +372,7 @@ class DatabaseService {
         );
         if (!hasGender) {
           await db.execute(
-            "ALTER TABLE evacuees ADD COLUMN gender TEXT NOT NULL DEFAULT 'Unspecified'",
+            "ALTER TABLE evacuees ADD COLUMN gender TEXT NOT NULL DEFAULT 'Other'",
           );
         }
 
@@ -382,6 +383,22 @@ class DatabaseService {
         );
         if (!hasAddress) {
           await db.execute('ALTER TABLE evacuees ADD COLUMN address TEXT');
+        }
+      }
+    }
+
+    if (oldVersion < 12) {
+      final stationsExists = await _tableExists(db, 'stations');
+      if (stationsExists) {
+        final hasUpdatedAt = await _columnExists(
+          db,
+          table: 'stations',
+          column: 'updatedAt',
+        );
+        if (!hasUpdatedAt) {
+          await db.execute(
+            "ALTER TABLE stations ADD COLUMN updatedAt TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'",
+          );
         }
       }
     }
