@@ -7,6 +7,8 @@ class Evacuee {
   final String? name;
   final String? stationId;
   final AgeGroup ageGroup;
+  final String gender;
+  final String? address;
   final MedicalCondition medicalCondition;
   final DateTime registeredAt;
   final bool synced;
@@ -17,6 +19,8 @@ class Evacuee {
     this.name,
     this.stationId,
     required this.ageGroup,
+    required this.gender,
+    this.address,
     required this.medicalCondition,
     required this.registeredAt,
     this.synced = false,
@@ -29,6 +33,8 @@ class Evacuee {
     String? stationId,
     AgeGroup? ageGroup,
     MedicalCondition? medicalCondition,
+    String? gender,
+    String? address,
     DateTime? registeredAt,
     bool? synced,
     bool? active,
@@ -39,6 +45,8 @@ class Evacuee {
       name: name ?? this.name,
       stationId: clearStationId ? null : (stationId ?? this.stationId),
       ageGroup: ageGroup ?? this.ageGroup,
+      gender: gender ?? this.gender,
+      address: address ?? this.address,
       medicalCondition: medicalCondition ?? this.medicalCondition,
       registeredAt: registeredAt ?? this.registeredAt,
       synced: synced ?? this.synced,

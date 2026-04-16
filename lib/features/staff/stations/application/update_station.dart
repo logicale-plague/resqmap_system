@@ -19,6 +19,7 @@ class UpdateStationUseCase {
 
   Future<void> updateStation(Station station) async {
     final db = await _databaseService.database;
+    final stampedStation = station.copyWith(updatedAt: DateTime.now());
     await db.transaction((txn) async {
       final stationRows = await txn.query(
         'stations',
@@ -69,7 +70,7 @@ class UpdateStationUseCase {
         }
       }
 
-      final stationRow = stationToMap(station);
+      final stationRow = stationToMap(stampedStation);
       stationRow['active'] = station.active ? 1 : 0;
       stationRow['synced'] = 0;
       final previousCenterId = stationRows.first['evacuationCenterId']

@@ -7,6 +7,7 @@ class Station {
   final int capacity;
   final AgeGroup? allowedAgeGroup;
   final MedicalCondition? allowedMedicalCondition;
+  final DateTime updatedAt;
   final bool synced;
   final bool active;
 
@@ -17,6 +18,7 @@ class Station {
     required this.capacity,
     this.allowedAgeGroup,
     this.allowedMedicalCondition,
+    required this.updatedAt,
     this.synced = false,
     this.active = true,
   });
@@ -39,6 +41,7 @@ class Station {
     int? capacity,
     AgeGroup? allowedAgeGroup,
     MedicalCondition? allowedMedicalCondition,
+    DateTime? updatedAt,
     bool? synced,
     bool clearAllowedAgeGroup = false,
     bool clearAllowedMedicalCondition = false,
@@ -55,6 +58,7 @@ class Station {
       allowedMedicalCondition: clearAllowedMedicalCondition
           ? null
           : (allowedMedicalCondition ?? this.allowedMedicalCondition),
+      updatedAt: updatedAt ?? this.updatedAt,
       synced: synced ?? this.synced,
       active: active ?? this.active,
     );

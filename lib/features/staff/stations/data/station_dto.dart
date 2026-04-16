@@ -9,6 +9,7 @@ Map<String, dynamic> stationToMap(Station station) {
     'capacity': station.capacity,
     'allowedAgeGroup': station.allowedAgeGroup?.index,
     'allowedMedicalCondition': station.allowedMedicalCondition?.index,
+    'updatedAt': station.updatedAt.toIso8601String(),
     'synced': station.synced ? 1 : 0,
     'active': station.active ? 1 : 0,
   };
@@ -23,6 +24,8 @@ Map<String, dynamic> stationToRemoteMap(Station station) {
     'capacity': station.capacity,
     'allowed_age_group': station.allowedAgeGroup?.index,
     'allowed_medical_condition': station.allowedMedicalCondition?.index,
+    'updated_at': station.updatedAt.toIso8601String(),
+    'active': station.active ? 1 : 0,
     'synced': station.synced ? 1 : 0,
   };
 }
@@ -32,6 +35,7 @@ Station stationFromMap(Map<String, dynamic> map) {
   final rawAge = map['allowedAgeGroup'] ?? map['allowed_age_group'];
   final rawMedical =
       map['allowedMedicalCondition'] ?? map['allowed_medical_condition'];
+  final rawUpdatedAt = map['updatedAt'] ?? map['updated_at'];
 
   return Station(
     id: map['id'] as String,
@@ -41,6 +45,7 @@ Station stationFromMap(Map<String, dynamic> map) {
     capacity: (map['capacity'] as num?)?.toInt() ?? 0,
     allowedAgeGroup: _parseAgeGroup(rawAge),
     allowedMedicalCondition: _parseMedicalCondition(rawMedical),
+    updatedAt: _parseDateTime(rawUpdatedAt),
     synced: (map['synced'] as int? ?? 0) == 1,
     active: (map['active'] as int? ?? 1) == 1,
   );
@@ -60,6 +65,15 @@ AgeGroup? _parseAgeGroup(dynamic value) {
     return AgeGroup.values[index];
   }
   return null;
+}
+
+DateTime _parseDateTime(dynamic value) {
+  if (value == null) {
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  return DateTime.tryParse(value.toString()) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
 }
 
 MedicalCondition? _parseMedicalCondition(dynamic value) {

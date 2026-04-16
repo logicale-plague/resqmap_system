@@ -396,7 +396,10 @@ class SyncService {
 
     final local = await _databaseService.getCenterById(remote.id);
     if (local == null) {
-      await _databaseService.upsertCenterFromRemote(remote);
+      await _databaseService.upsertCenterFromRemote(
+        remote,
+        updateCurrentCenter: false,
+      );
       return;
     }
 
@@ -404,7 +407,10 @@ class SyncService {
       return;
     }
 
-    await _databaseService.upsertCenterFromRemote(remote);
+    await _databaseService.upsertCenterFromRemote(
+      remote,
+      updateCurrentCenter: false,
+    );
   }
 
   Future<bool> _mergeEvacuee(Map<String, dynamic> row) async {
@@ -413,6 +419,8 @@ class SyncService {
       name: _readAny(row, 'name') as String?,
       stationId: _readAnyOrNull(row, 'station_id') as String?,
       ageGroup: AgeGroup.values[_readNum(row, 'age_group').toInt()],
+      gender: _readAnyOrNull(row, 'gender')?.toString() ?? 'Other',
+      address: _readAnyOrNull(row, 'address')?.toString(),
       medicalCondition:
           MedicalCondition.values[_readNum(row, 'medical_condition').toInt()],
       registeredAt: DateTime.parse(_readString(row, 'registered_at')),
@@ -448,8 +456,20 @@ class SyncService {
         MedicalCondition.values,
         _readAnyOrNull(row, 'allowed_medical_condition'),
       ),
+      updatedAt: _readDateTime(row, 'updated_at'),
+      active: _asBool(_readAnyOrNull(row, 'active') ?? 1),
       synced: true,
     );
+
+    final local = await _databaseService.getStationById(remote.id);
+    if (local == null) {
+      await _databaseService.upsertStationFromRemote(remote);
+      return;
+    }
+
+    if (!local.synced && !remote.updatedAt.isAfter(local.updatedAt)) {
+      return;
+    }
 
     await _databaseService.upsertStationFromRemote(remote);
   }
@@ -549,6 +569,8 @@ class SyncService {
       'name': evacuee.name?.trim() ?? '',
       'station_id': evacuee.stationId,
       'age_group': evacuee.ageGroup.index,
+      'gender': evacuee.gender,
+      'address': evacuee.address,
       'medical_condition': evacuee.medicalCondition.index,
       'registered_at': evacuee.registeredAt.toIso8601String(),
       'active': evacuee.active ? 1 : 0,
@@ -574,6 +596,8 @@ class SyncService {
       'capacity': station.capacity,
       'allowed_age_group': station.allowedAgeGroup?.index,
       'allowed_medical_condition': station.allowedMedicalCondition?.index,
+      'updated_at': station.updatedAt.toIso8601String(),
+      'active': station.active ? 1 : 0,
     };
   }
 
@@ -614,6 +638,16 @@ class SyncService {
 
   String _readString(Map<String, dynamic> row, String key, {String? fallback}) {
     return _readAny(row, key, fallback: fallback).toString();
+  }
+
+  DateTime _readDateTime(
+    Map<String, dynamic> row,
+    String key, {
+    String? fallback,
+  }) {
+    final rawValue = _readAnyOrNull(row, key, fallback: fallback);
+    return DateTime.tryParse(rawValue?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   num _readNum(Map<String, dynamic> row, String key, {String? fallback}) {

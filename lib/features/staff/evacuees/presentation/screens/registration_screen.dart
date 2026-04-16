@@ -18,6 +18,7 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   AgeGroup? _selectedAgeGroup;
   MedicalCondition? _selectedMedicalCondition;
+  String? _selectedGender;
   _AssignmentMode _assignmentMode = _AssignmentMode.autoAssignNew;
   String? _selectedFloatingEvacueeId;
   bool _isSubmitting = false;
@@ -27,11 +28,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     super.initState();
     _selectedAgeGroup = AgeGroup.adult;
     _selectedMedicalCondition = MedicalCondition.none;
+    _selectedGender = 'Other';
   }
 
   Future<void> _submitForm() async {
     if (_assignmentMode == _AssignmentMode.autoAssignNew &&
-        (_selectedAgeGroup == null || _selectedMedicalCondition == null)) {
+        (_selectedAgeGroup == null ||
+            _selectedMedicalCondition == null ||
+            _selectedGender == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select all required fields')),
       );
@@ -69,6 +73,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           name: null,
           stationId: assignedStation.id,
           ageGroup: _selectedAgeGroup!,
+          gender: _selectedGender!,
+          address: null,
           medicalCondition: _selectedMedicalCondition!,
           registeredAt: DateTime.now(),
           synced: false,
@@ -78,13 +84,15 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Arrival logged. Assigned to ${assignedStation.name}. Register name in Stations screen.',
+        ScaffoldMessenger.of(context)
+          ..removeCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                'Arrival logged. Assigned to ${assignedStation.name}. Register name in Stations screen.',
+              ),
             ),
-          ),
-        );
+          );
 
         ref.invalidate(allEvacueesProvider);
         ref.invalidate(evacueeCountProvider);
@@ -136,11 +144,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Assigned evacuee to ${assignedStation.name}.'),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..removeCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('Assigned evacuee to ${assignedStation.name}.'),
+            ),
+          );
 
         ref.invalidate(allEvacueesProvider);
         ref.invalidate(evacueesByCenterProvider(center.id));
@@ -152,8 +162,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       }
 
       if (!mounted) return;
-
-      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -297,6 +305,26 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                     selectedColor: Colors.orange,
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 28),
+              Text('Gender *', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedGender,
+                decoration: const InputDecoration(
+                  labelText: 'Select Gender',
+                  prefixIcon: Icon(Icons.wc),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Male', child: Text('Male')),
+                  DropdownMenuItem(value: 'Female', child: Text('Female')),
+                  DropdownMenuItem(value: 'Other', child: Text('Other')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGender = value;
+                  });
+                },
               ),
               const SizedBox(height: 28),
             ] else ...[

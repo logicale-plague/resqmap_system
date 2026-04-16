@@ -38,6 +38,12 @@ class VisualAnalyticsScreen extends ConsumerWidget {
                   data: (centers) {
                     return suppliesAsync.when(
                       data: (supplies) {
+                        final prioritizedCenters = _selectCentersByNeed(
+                          centers: centers,
+                          supplies: supplies,
+                          maxCenters: 5,
+                        );
+
                         return SingleChildScrollView(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
@@ -55,6 +61,12 @@ class VisualAnalyticsScreen extends ConsumerWidget {
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(color: Colors.grey[600]),
                               ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Distribution uses all centers; capacity and supply charts show up to 5 prioritized centers.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: Colors.grey[600]),
+                              ),
                               const SizedBox(height: 24),
                               _AnalyticsCard(
                                 title: 'Evacuation Centers Distribution',
@@ -63,20 +75,15 @@ class VisualAnalyticsScreen extends ConsumerWidget {
                               const SizedBox(height: 16),
                               _AnalyticsCard(
                                 title: 'Capacity Utilization',
-                                child: _buildCapacityChart(centers),
+                                child: _buildCapacityChart(prioritizedCenters),
                               ),
                               const SizedBox(height: 16),
                               _AnalyticsCard(
                                 title: 'Supply Status by Center',
                                 child: _buildSupplyStatusChart(
-                                  centers: centers,
+                                  centers: prioritizedCenters,
                                   supplies: supplies,
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              _AnalyticsCard(
-                                title: 'Medical Support Coverage',
-                                child: _buildMedicalCoverageChart(centers),
                               ),
                               const SizedBox(height: 16),
                               _AnalyticsCard(
@@ -226,24 +233,22 @@ class VisualAnalyticsScreen extends ConsumerWidget {
       );
     }
 
-    final chartData =
-        centers
-            .map(
-              (center) => _CapacityData(
-                _abbreviatedCenterName(center.name),
-                center.currentOccupancy,
-                center.availableSpaces,
-                center.totalCapacity,
-                center.occupancyPercentage,
-                center.occupancyPercentage >= 80
-                    ? Colors.red
-                    : center.occupancyPercentage >= 60
-                    ? Colors.orange
-                    : Colors.green,
-              ),
-            )
-            .toList(growable: false)
-          ..sort((left, right) => right.percentage.compareTo(left.percentage));
+    final chartData = centers
+        .map(
+          (center) => _CapacityData(
+            _abbreviatedCenterName(center.name),
+            center.currentOccupancy,
+            center.totalCapacity - center.currentOccupancy,
+            center.totalCapacity,
+            center.occupancyPercentage,
+            center.occupancyPercentage >= 80
+                ? Colors.red
+                : center.occupancyPercentage >= 60
+                ? Colors.orange
+                : Colors.green,
+          ),
+        )
+        .toList(growable: false);
 
     return SizedBox(
       height: 300,
@@ -365,46 +370,6 @@ class VisualAnalyticsScreen extends ConsumerWidget {
             yValueMapper: (data, _) => data.healthyCount,
             pointColorMapper: (data, _) => Colors.green,
             name: 'Healthy',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicalCoverageChart(List<EvacuationCenter> centers) {
-    final medicalAvailableCount = centers
-        .where((center) => center.medicalAvailable)
-        .length;
-    final noMedicalCount = centers.length - medicalAvailableCount;
-
-    if (centers.isEmpty) {
-      return _buildEmptyChartState(
-        'No centers are assigned to this command center.',
-      );
-    }
-
-    final chartData = <_ChartSegment>[
-      _ChartSegment('Medical support', medicalAvailableCount, Colors.teal),
-      _ChartSegment('No medical support', noMedicalCount, Colors.blueGrey),
-    ].where((segment) => segment.value > 0).toList(growable: false);
-
-    return SizedBox(
-      height: 260,
-      child: SfCircularChart(
-        legend: const Legend(
-          isVisible: true,
-          overflowMode: LegendItemOverflowMode.wrap,
-        ),
-        tooltipBehavior: TooltipBehavior(enable: true),
-        series: <CircularSeries<_ChartSegment, String>>[
-          DoughnutSeries<_ChartSegment, String>(
-            dataSource: chartData,
-            xValueMapper: (data, _) => data.label,
-            yValueMapper: (data, _) => data.value,
-            pointColorMapper: (data, _) => data.color,
-            dataLabelMapper: (data, _) => '${data.value}',
-            dataLabelSettings: const DataLabelSettings(isVisible: true),
-            innerRadius: '62%',
           ),
         ],
       ),
@@ -619,6 +584,77 @@ bool _isWatchSupply(Supply supply) {
 
 bool _isHealthySupply(Supply supply) {
   return supply.daysRemaining == null || supply.daysRemaining! > 14;
+}
+
+List<EvacuationCenter> _selectCentersByNeed({
+  required List<EvacuationCenter> centers,
+  required List<Supply> supplies,
+  int maxCenters = 5,
+}) {
+  final suppliesByCenter = <String, List<Supply>>{};
+  for (final supply in supplies) {
+    suppliesByCenter
+        .putIfAbsent(supply.evacuationCenterId, () => [])
+        .add(supply);
+  }
+
+  if (centers.length <= maxCenters) {
+    return [...centers]..sort(
+      (left, right) => _compareCentersByNeed(
+        left,
+        right,
+        suppliesByCenter: suppliesByCenter,
+      ),
+    );
+  }
+
+  final ranked = [...centers]
+    ..sort(
+      (left, right) => _compareCentersByNeed(
+        left,
+        right,
+        suppliesByCenter: suppliesByCenter,
+      ),
+    );
+
+  return ranked.take(maxCenters).toList(growable: false);
+}
+
+int _compareCentersByNeed(
+  EvacuationCenter left,
+  EvacuationCenter right, {
+  Map<String, List<Supply>>? suppliesByCenter,
+}) {
+  final leftScore = _needScore(left, suppliesByCenter?[left.id] ?? const []);
+  final rightScore = _needScore(right, suppliesByCenter?[right.id] ?? const []);
+
+  final byScore = rightScore.compareTo(leftScore);
+  if (byScore != 0) return byScore;
+
+  final byOccupancy = right.occupancyPercentage.compareTo(
+    left.occupancyPercentage,
+  );
+  if (byOccupancy != 0) return byOccupancy;
+
+  return left.name.compareTo(right.name);
+}
+
+double _needScore(EvacuationCenter center, List<Supply> centerSupplies) {
+  // Higher score means higher urgency.
+  final statusWeight = switch (center.status) {
+    CenterStatus.atCapacity => 70,
+    CenterStatus.nearCapacity => 45,
+    CenterStatus.closed => 25,
+    CenterStatus.operational => 10,
+  };
+
+  final occupancyWeight = center.occupancyPercentage;
+  final medicalPenalty = center.medicalAvailable ? 0 : 12;
+  final criticalSupplies = centerSupplies.where(_isCriticalSupply).length;
+  final lowSupplies = centerSupplies.where(_isLowSupply).length;
+  final supplyWeight = (criticalSupplies * 8) + (lowSupplies * 4);
+
+  return statusWeight + occupancyWeight + medicalPenalty + supplyWeight;
 }
 
 extension _FirstOrNull<E> on Iterable<E> {

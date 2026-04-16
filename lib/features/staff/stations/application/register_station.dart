@@ -42,14 +42,17 @@ class RegisterStationUseCase {
         'An internet connection is required to register a station.',
       );
     }
-    final payload = stationToRemoteMap(station)
+    final stampedStation = station.copyWith(
+      name: station.name.trim(),
+      updatedAt: DateTime.now(),
+      synced: true,
+    );
+    final payload = stationToRemoteMap(stampedStation)
       ..remove('synced')
-      ..['name'] = station.name.trim();
+      ..['name'] = stampedStation.name;
 
     await _supabaseService.from('stations').insert(payload);
-    await _databaseService.upsertStationFromRemote(
-      station.copyWith(name: station.name.trim(), synced: true),
-    );
+    await _databaseService.upsertStationFromRemote(stampedStation);
 
     // Invalidate all related providers so new station is reflected everywhere
     _ref.invalidate(currentCenterProvider);

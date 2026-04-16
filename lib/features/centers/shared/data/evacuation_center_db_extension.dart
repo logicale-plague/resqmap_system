@@ -112,14 +112,19 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     return maps.isEmpty ? null : centerFromMap(maps.first);
   }
 
-  Future<void> upsertCenterFromRemote(EvacuationCenter center) async {
+  Future<void> upsertCenterFromRemote(
+    EvacuationCenter center, {
+    bool updateCurrentCenter = true,
+  }) async {
     final db = await database;
     await db.insert(
       'evacuation_centers',
       centerToMap(center.copyWith(synced: true)),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    await setCurrentCenterId(center.id);
+    if (updateCurrentCenter) {
+      await setCurrentCenterId(center.id);
+    }
   }
 
   Future<void> replaceCenterId(String oldId, String newId) async {
@@ -162,7 +167,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
     final db = executor ?? await database;
 
     final capacityResult = await db.rawQuery(
-      'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ?',
+      'SELECT COALESCE(SUM(capacity), 0) as totalCapacity FROM stations WHERE evacuationCenterId = ? AND active = 1',
       [centerId],
     );
     final totalCapacity =
@@ -170,15 +175,23 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
 
     final centerRows = await db.query(
       'evacuation_centers',
-      columns: ['currentOccupancy'],
+      columns: ['id'],
       where: 'id = ?',
       whereArgs: [centerId],
       limit: 1,
     );
     if (centerRows.isEmpty) return;
 
-    final currentOccupancy =
-        (centerRows.first['currentOccupancy'] as num?)?.toInt() ?? 0;
+    final occupancyResult = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count
+      FROM evacuees e
+      JOIN stations s ON s.id = e.stationId
+      WHERE e.active = 1 AND s.evacuationCenterId = ? AND s.active = 1
+      ''',
+      [centerId],
+    );
+    final currentOccupancy = (occupancyResult.first['count'] as num).toInt();
     final status = calculateUpdatedCenterStatus(
       currentOccupancy,
       totalCapacity,
@@ -188,6 +201,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       'evacuation_centers',
       {
         'totalCapacity': totalCapacity,
+        'currentOccupancy': currentOccupancy,
         'status': status.index,
         'lastUpdated': DateTime.now().toIso8601String(),
         'synced': 0,
@@ -222,7 +236,7 @@ extension EvacuationCenterDatabaseExtensions on DatabaseService {
       SELECT COUNT(*) as count 
       FROM evacuees e
       JOIN stations s ON s.id = e.stationId
-      WHERE e.active = 1 and s.evacuationCenterId = ?
+      WHERE e.active = 1 and s.evacuationCenterId = ? AND s.active = 1
       ''',
       [centerId],
     );

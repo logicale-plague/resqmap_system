@@ -66,6 +66,18 @@ Future<void> openEvacueeDetailsDialog(
   String? centerId,
 ) async {
   final nameController = TextEditingController(text: evacuee.name ?? '');
+  var controllerDisposed = false;
+
+  Future<void> disposeControllerAfterDialog() async {
+    if (controllerDisposed) {
+      return;
+    }
+    controllerDisposed = true;
+    await Future<void>.delayed(Duration.zero);
+    nameController.dispose();
+  }
+
+  String _selectedGender = _normalizeGender(evacuee.gender);
   AgeGroup selectedAgeGroup = evacuee.ageGroup;
   MedicalCondition selectedCondition = evacuee.medicalCondition;
   bool isActive = evacuee.active;
@@ -104,6 +116,31 @@ Future<void> openEvacueeDetailsDialog(
                       hintText: 'Enter evacuee name',
                     ),
                     textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField(
+                    initialValue: _selectedGender,
+                    decoration: const InputDecoration(labelText: 'Gender'),
+                    items: [
+                      const DropdownMenuItem(
+                        value: 'Male',
+                        child: Text('Male'),
+                      ),
+                      const DropdownMenuItem(
+                        value: 'Female',
+                        child: Text('Female'),
+                      ),
+                      const DropdownMenuItem(
+                        value: 'Other',
+                        child: Text('Other'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() {
+                        _selectedGender = _normalizeGender(value);
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<AgeGroup>(
@@ -191,7 +228,6 @@ Future<void> openEvacueeDetailsDialog(
                       });
                     },
                   ),
-                  const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
                     initialValue: selectedStationId,
                     decoration: const InputDecoration(
@@ -246,7 +282,7 @@ Future<void> openEvacueeDetailsDialog(
   );
 
   if (shouldSave != true) {
-    nameController.dispose();
+    await disposeControllerAfterDialog();
     return;
   }
 
@@ -256,6 +292,7 @@ Future<void> openEvacueeDetailsDialog(
           ? null
           : nameController.text.trim(),
       ageGroup: selectedAgeGroup,
+      gender: _selectedGender,
       medicalCondition: selectedCondition,
       active: isActive,
       stationId: selectedStationId,
@@ -265,7 +302,7 @@ Future<void> openEvacueeDetailsDialog(
     await ref.read(evacueeRepositoryProvider).update(updatedEvacuee);
 
     if (!context.mounted) {
-      nameController.dispose();
+      await disposeControllerAfterDialog();
       return;
     }
 
@@ -291,7 +328,7 @@ Future<void> openEvacueeDetailsDialog(
     );
   } catch (e) {
     if (!context.mounted) {
-      nameController.dispose();
+      await disposeControllerAfterDialog();
       return;
     }
 
@@ -299,7 +336,7 @@ Future<void> openEvacueeDetailsDialog(
       context,
     ).showSnackBar(SnackBar(content: Text('Failed to update evacuee: $e')));
   } finally {
-    nameController.dispose();
+    await disposeControllerAfterDialog();
   }
 }
 
@@ -361,4 +398,15 @@ bool _isStationEligibleForEvacuee(
       station.allowedMedicalCondition == null ||
       station.allowedMedicalCondition == medicalCondition;
   return matchesAgeGroup && matchesMedicalCondition;
+}
+
+String _normalizeGender(String? gender) {
+  switch (gender) {
+    case 'Male':
+    case 'Female':
+    case 'Other':
+      return gender!;
+    default:
+      return 'Other';
+  }
 }

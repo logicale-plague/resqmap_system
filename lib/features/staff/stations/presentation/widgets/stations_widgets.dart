@@ -403,6 +403,7 @@ Station _buildStationToSave(
             name: trimmedName,
             evacuationCenterId: center.id,
             capacity: parsedCapacity,
+            updatedAt: DateTime.now(),
           ))
       .copyWith(
         name: trimmedName,
@@ -479,6 +480,18 @@ Future<void> openConfirmDelete(
 
   final stationRepository = localRef.read(stationRepositoryProvider);
   await stationRepository.delete(station);
+
+  final deletedCenter = await localRef.read(
+    centerProvider(station.evacuationCenterId).future,
+  );
+  localRef.invalidate(centerProvider(station.evacuationCenterId));
+  localRef.invalidate(currentCenterProvider);
+  localRef.invalidate(allCentersProvider);
+  if (deletedCenter != null) {
+    localRef.invalidate(
+      centersByCommandCenterProvider(deletedCenter.commandCenterId),
+    );
+  }
 
   if (context.mounted) {
     localRef.invalidate(stationsByCenterProvider(station.evacuationCenterId));
