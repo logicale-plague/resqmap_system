@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:kalig_onan_evac_system/core/config/secrets.dart';
 import 'package:kalig_onan_evac_system/core/exceptions/offline_exception.dart';
 import 'package:kalig_onan_evac_system/core/providers/database_provider.dart';
 import 'package:kalig_onan_evac_system/core/providers/supabase_provider.dart';
@@ -195,7 +195,7 @@ class MapController extends Notifier<MapState> {
     double lat,
     double lng,
   ) async {
-    final accessToken = dotenv.env["MAPBOX_ACCESS_TOKEN"] ?? "";
+    final accessToken = Secrets.mapBoxKey;
     final url =
         'https://api.mapbox.com/search/geocode/v6/reverse?longitude=$lng&latitude=$lat&access_token=$accessToken&limit=1';
 
