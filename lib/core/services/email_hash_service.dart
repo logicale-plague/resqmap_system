@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:kalig_onan_evac_system/core/config/secrets.dart';
 
 class EmailHashService {
   static final HashAlgorithm _algorithm = Sha256();
@@ -12,8 +12,8 @@ class EmailHashService {
 
   static Future<String> hashNormalizedEmail(String email) async {
     final normalizedEmail = normalizeEmail(email);
-    final salt = dotenv.env['LOCAL_EMAIL_HASH_SALT']?.trim();
-    if (salt == null || salt.isEmpty) {
+    final salt = Secrets.localSaltKey;
+    if (salt.isEmpty) {
       throw StateError(
         'Missing LOCAL_EMAIL_HASH_SALT. Configure it in the loaded environment.',
       );
