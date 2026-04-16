@@ -1,26 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/domain/command_center.dart';
+import 'package:kalig_onan_evac_system/features/admin/command_center/presentation/providers/command_center_providers.dart';
+import 'package:kalig_onan_evac_system/features/authentication/presentation/providers/user_provider.dart';
 
-class ContactsTab extends StatefulWidget {
+class ContactsTab extends ConsumerStatefulWidget {
   const ContactsTab({
     super.key,
     this.userPostalCode,
     this.localDRRMByPostalCode = const <String, String>{},
   });
 
+  /// Optional override, primarily for tests/previews.
   final String? userPostalCode;
+
+  /// Optional override directory (postalCode -> phone), primarily for tests.
   final Map<String, String> localDRRMByPostalCode;
 
   @override
-  State<ContactsTab> createState() => _ContactsTabState();
+  ConsumerState<ContactsTab> createState() => _ContactsTabState();
 }
 
-class _ContactsTabState extends State<ContactsTab> {
+class _ContactsTabState extends ConsumerState<ContactsTab> {
   final List<_PersonalContact> _personalContacts = <_PersonalContact>[];
 
   @override
   Widget build(BuildContext context) {
-    final sections = _buildSections();
+    final providedPostal = widget.userPostalCode?.trim();
+
+    final currentUserPostal = ref
+        .watch(currentUserProvider)
+        .maybeWhen(data: (u) => u?.postalCode?.trim(), orElse: () => null);
+
+    final userPostalCode = (providedPostal != null && providedPostal.isNotEmpty)
+        ? providedPostal
+        : ((currentUserPostal != null && currentUserPostal.isNotEmpty)
+              ? currentUserPostal
+              : null);
+
+    final injectedLocalDRRMPhone = _lookupLocalDRRMPhone(
+      userPostalCode: userPostalCode,
+      directory: widget.localDRRMByPostalCode,
+    );
+
+    final commandCenterPhone = ref
+        .watch(allCommandCentersProvider)
+        .maybeWhen(
+          data: (centers) => _lookupCommandCenterPhone(
+            postalCode: userPostalCode,
+            centers: centers,
+          ),
+          orElse: () => null,
+        );
+
+    final localDRRMPhone = injectedLocalDRRMPhone ?? commandCenterPhone;
+
+    final sections = _buildSections(localDRRMPhone: localDRRMPhone);
 
     return Material(
       color: Colors.transparent,
@@ -45,12 +81,29 @@ class _ContactsTabState extends State<ContactsTab> {
     );
   }
 
-  List<_ContactSection> _buildSections() {
-    final localDRRMPhone = _lookupLocalDRRMPhone(
-      userPostalCode: widget.userPostalCode,
-      directory: widget.localDRRMByPostalCode,
-    );
+  String? _lookupCommandCenterPhone({
+    required String? postalCode,
+    required List<CommandCenter> centers,
+  }) {
+    final postal = postalCode?.trim();
+    if (postal == null || postal.isEmpty) return null;
 
+    String? inactivePhone;
+
+    for (final center in centers) {
+      if (center.postalCode.trim() != postal) continue;
+
+      final phone = center.contactNumber?.trim();
+      if (phone == null || phone.isEmpty) continue;
+
+      if (center.isActive) return phone;
+      inactivePhone ??= phone;
+    }
+
+    return inactivePhone;
+  }
+
+  List<_ContactSection> _buildSections({required String? localDRRMPhone}) {
     return <_ContactSection>[
       _ContactSection(
         title: 'Emergency Hotlines',
@@ -359,7 +412,16 @@ class _ContactCard extends StatelessWidget {
   }
 
   Future<void> _copyPhone(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: item.phone));
+    try {
+      await Clipboard.setData(ClipboardData(text: item.phone));
+    } on PlatformException {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Failed to copy number')));
+      return;
+    }
+
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
       ..removeCurrentSnackBar()

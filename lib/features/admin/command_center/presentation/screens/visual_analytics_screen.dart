@@ -238,7 +238,7 @@ class VisualAnalyticsScreen extends ConsumerWidget {
           (center) => _CapacityData(
             _abbreviatedCenterName(center.name),
             center.currentOccupancy,
-            center.availableSpaces,
+            center.totalCapacity - center.currentOccupancy,
             center.totalCapacity,
             center.occupancyPercentage,
             center.occupancyPercentage >= 80
